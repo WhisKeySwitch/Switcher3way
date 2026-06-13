@@ -10,4 +10,5 @@ DerivedData/
 *.dmg
 *.zip
 .vscode/
+.claude/
 *.certSigningRequest
