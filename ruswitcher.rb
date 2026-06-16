@@ -7,7 +7,7 @@ cask "ruswitcher" do
   desc "Lightweight keyboard layout switcher, free alternative to PuntoSwitcher"
   homepage "https://github.com/rashn/RuSwitcher"
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "RuSwitcher.app"
 
