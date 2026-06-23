@@ -24,22 +24,27 @@
 
 ## English
 
-Typed `ghbdtn` instead of `hello`? Just tap **⌥ Alt** and RuSwitcher converts the last word into the right layout. Works with any pair of installed keyboard layouts — Russian, Ukrainian, Belarusian, German, French, and more.
+Typed `ghbdtn` when you meant `привет`? Just tap **Option ⌥** and RuSwitcher converts the last word into the right layout — typing it directly, no copy-paste. Works with any pair of installed keyboard layouts — Russian, Ukrainian, Belarusian, German, French, and more — and the trigger key is fully configurable.
 
 ### How it works
 
 | Action | Result |
 |---|---|
-| Type a word, tap **⌥ Alt** | Last typed word is converted |
-| Tap **⌥ Alt** again | Reverse conversion (undo) |
-| Select text, tap **⌥ Alt** | Selected text is converted |
+| Type a word, tap **Option ⌥** | Last typed word is converted |
+| Tap **Option ⌥** again | Reverse conversion (undo) |
+| Select text, tap **Option ⌥** | Selected text is converted |
+
+The trigger is configurable — **Option**, **Command**, **Control** or **Shift**, left or right side, single or double-tap.
 
 ### Features
 
 - **Any two layouts** — configure any pair from your installed system layouts. No hardcoded tables.
+- **Configurable trigger** — pick Option, Command, Control or Shift; left or right side; single or double-tap.
+- **Clipboard-free** — the converted word is typed directly via synthesized Unicode, so it works even in Electron / VS Code / Atom-class editors. Your clipboard is never touched (it's only a fallback for unusual apps).
 - **Smart word detection** — converts the last typed word, including punctuation.
-- **Selected text** — select any text and tap Alt to convert it in place.
-- **Double Alt** — reverse conversion if you changed your mind.
+- **Selected text** — select any text and tap the trigger to convert it in place.
+- **Tap again to undo** — reverse conversion if you changed your mind.
+- **Per-app layout memory** — remembers the active layout for each application and restores it when you switch back.
 - **16 interface languages** — English, Русский, Українська, Беларуская, Deutsch, Français, Español, Português, Polski, 中文, 日本語, 한국어, Ελληνικά, Български, Հայերեն, ქართული.
 - **Auto-start at login** — set and forget.
 - **Minimal footprint** — no Electron, no web views, pure Swift + AppKit.
@@ -84,6 +89,7 @@ The app adds itself to the permission lists automatically — you only need to f
 
 - `CGEventTap` (passive, listen-only) for keyboard monitoring.
 - `UCKeyTranslate` (Carbon) for dynamic character mapping between any layout pair.
+- `CGEvent.keyboardSetUnicodeString` to type the converted text directly — no clipboard, no pasteboard side effects.
 - `CGEventSource.userData` marker to filter the app's own simulated events.
 - `AXUIElement` API for focused element detection.
 - `SMAppService` for login item management.
@@ -93,7 +99,7 @@ The app adds itself to the permission lists automatically — you only need to f
 
 Access via the menu bar icon → **Settings** (⌘,).
 
-- **General** — auto-switch, launch at login, interface language, layout pair.
+- **General** — conversion trigger, per-app layout memory, launch at login, interface language, layout pair.
 - **About** — version, donate, contact, check updates.
 - **Advanced** — debug logging, log management.
 
@@ -112,22 +118,27 @@ If you find RuSwitcher useful:
 
 ## Русский
 
-Набрали `ghbdtn` вместо `привет`? Просто нажмите **⌥ Alt** — и RuSwitcher сконвертирует последнее слово в правильную раскладку. Работает с любой парой установленных раскладок — русская, украинская, белорусская, немецкая, французская и другие.
+Набрали `ghbdtn` вместо `привет`? Просто нажмите **Option ⌥** — и RuSwitcher сконвертирует последнее слово в правильную раскладку, печатая его напрямую, без копипасты. Работает с любой парой установленных раскладок — русская, украинская, белорусская, немецкая, французская и другие — а клавишу-триггер можно настроить.
 
 ### Как работает
 
 | Действие | Результат |
 |---|---|
-| Набрать слово, нажать **⌥ Alt** | Последнее слово сконвертировано |
-| Нажать **⌥ Alt** повторно | Обратная конвертация (отмена) |
-| Выделить текст, нажать **⌥ Alt** | Выделенный текст сконвертирован |
+| Набрать слово, нажать **Option ⌥** | Последнее слово сконвертировано |
+| Нажать **Option ⌥** повторно | Обратная конвертация (отмена) |
+| Выделить текст, нажать **Option ⌥** | Выделенный текст сконвертирован |
+
+Триггер настраивается — **Option**, **Command**, **Control** или **Shift**, левый или правый, одиночный или двойной тап.
 
 ### Возможности
 
 - **Любая пара раскладок** — настраивается любая пара из установленных в системе. Без захардкоженных таблиц.
+- **Настраиваемый триггер** — Option, Command, Control или Shift; левый или правый; одиночный или двойной тап.
+- **Без буфера обмена** — конвертированное слово печатается напрямую через синтез Unicode, поэтому работает даже в Electron / VS Code / Atom. Буфер обмена не трогается (только как запасной вариант для нестандартных приложений).
 - **Умное определение слова** — конвертирует последнее набранное слово, включая знаки препинания.
-- **Выделенный текст** — выделите любой текст и нажмите Alt для конвертации на месте.
-- **Повторный Alt** — обратная конвертация, если передумали.
+- **Выделенный текст** — выделите любой текст и нажмите триггер для конвертации на месте.
+- **Повторное нажатие — отмена** — обратная конвертация, если передумали.
+- **Память раскладки по приложению** — запоминает активную раскладку для каждой программы и восстанавливает при возврате.
 - **16 языков интерфейса** — English, Русский, Українська, Беларуская, Deutsch, Français, Español, Português, Polski, 中文, 日本語, 한국어, Ελληνικά, Български, Հայերեն, ქართული.
 - **Автозапуск при входе** — настроил и забыл.
 - **Минимальное потребление** — без Electron и веб-вьюх, чистый Swift + AppKit.
@@ -172,6 +183,7 @@ cp -R RuSwitcher.app /Applications/
 
 - `CGEventTap` (пассивный, только чтение) для мониторинга клавиатуры.
 - `UCKeyTranslate` (Carbon) для динамического маппинга символов между любой парой раскладок.
+- `CGEvent.keyboardSetUnicodeString` для прямой печати конвертированного текста — без буфера обмена и побочных эффектов с pasteboard.
 - Маркер `CGEventSource.userData` для фильтрации собственных симулированных событий.
 - `AXUIElement` API для определения сфокусированного элемента.
 - `SMAppService` для управления автозапуском.
@@ -181,7 +193,7 @@ cp -R RuSwitcher.app /Applications/
 
 Доступ через иконку в строке меню → **Настройки** (⌘,).
 
-- **Общие** — автопереключение, автозапуск, язык интерфейса, пара раскладок.
+- **Общие** — триггер конвертации, память раскладки по приложению, автозапуск, язык интерфейса, пара раскладок.
 - **О программе** — версия, донат, контакт, проверка обновлений.
 - **Дополнительно** — режим отладки, управление логами.
 
