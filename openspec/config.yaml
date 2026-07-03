@@ -1,0 +1,14 @@
+schema: spec-driven
+
+context: |
+  Repository purpose: Switcher3way is a macOS menu-bar app that converts typed text between keyboard layouts and can auto-detect wrong-layout input across three or more installed layouts.
+  Layout: The codebase is a SwiftPM package at the repository root with the implementation in Sources/RuSwitcher and app packaging/building scripts in the root.
+  Stack: Swift 6, AppKit, Carbon, ApplicationServices, UserDefaults, macOS Accessibility and Input Monitoring permissions, and macOS TIS input-source APIs.
+  Key capabilities: manual conversion and undo, automatic conversion on word boundaries, layout switching and language detection, per-app layout memory, settings and exception lists, and permission/startup lifecycle handling.
+  Tooling: SwiftPM, Xcode/CLI build via build_app.sh, stable self-signed signing for local installs, and no dedicated automated test suite in the repo.
+
+rules:
+  spec:
+    - Keep specs grounded in current behavior and avoid aspirational features.
+    - Note macOS permission and accessibility dependencies whenever they affect a capability.
+    - Cover manual trigger, undo, and auto-convert guardrails for any conversion-related requirement.
