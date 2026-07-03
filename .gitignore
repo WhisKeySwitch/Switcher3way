@@ -12,3 +12,7 @@ DerivedData/
 .vscode/
 .claude/
 *.certSigningRequest
+
+# self-signed code-signing key — never commit
+signing/cert.p12
+signing/key.pem

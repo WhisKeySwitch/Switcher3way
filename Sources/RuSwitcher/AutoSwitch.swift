@@ -32,14 +32,7 @@ enum LayoutDetector {
         if AutoSwitchPolicy.isAlwaysConvert(converted) { return .switchToConverted }
 
         // --- мягкие вето (дёшево, до словаря) ---
-        guard typed.count >= 3 else { return .undecided }                  // 1–2 буквы: слишком много коллизий между раскладками
-        guard typed.allSatisfy({ $0.isLetter }) else { return .undecided } // цифры/пунктуация/URL/код/почта
-        // Под Caps Lock весь текст в ВЕРХНЕМ регистре — это НЕ акроним и НЕ camelCase,
-        // поэтому эти два вето применяем только когда Caps Lock выключен.
-        if !capsLock {
-            if isAllCaps(typed) { return .undecided }                      // акронимы
-            if looksLikeCodeIdentifier(typed) { return .undecided }        // camelCase / смешанные алфавиты
-        }
+        guard passesSoftGates(typed, capsLock: capsLock) else { return .undecided }
 
         let cur = String(currentLang.prefix(2))
         let oth = String(otherLang.prefix(2))
@@ -51,6 +44,21 @@ enum LayoutDetector {
             return .keep
         }
         return .switchToConverted
+    }
+
+    /// Мягкие вето, общие для 2-way (`decide`) и N-way (`NWayResolver`): пропускаем
+    /// слово в детектор только если это «настоящее» слово, а не 1–2 буквы, акроним,
+    /// код или токен с цифрами/пунктуацией. Точность-first — при сомнении false.
+    static func passesSoftGates(_ typed: String, capsLock: Bool) -> Bool {
+        guard typed.count >= 3 else { return false }                  // 1–2 буквы: слишком много коллизий между раскладками
+        guard typed.allSatisfy({ $0.isLetter }) else { return false } // цифры/пунктуация/URL/код/почта
+        // Под Caps Lock весь текст в ВЕРХНЕМ регистре — это НЕ акроним и НЕ camelCase,
+        // поэтому эти два вето применяем только когда Caps Lock выключен.
+        if !capsLock {
+            if isAllCaps(typed) { return false }                      // акронимы
+            if looksLikeCodeIdentifier(typed) { return false }        // camelCase / смешанные алфавиты
+        }
+        return true
     }
 
     private static func isAllCaps(_ s: String) -> Bool {

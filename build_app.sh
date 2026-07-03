@@ -2,7 +2,8 @@
 set -e
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-APP_NAME="RuSwitcher"
+PRODUCT_NAME="RuSwitcher"   # SwiftPM build product / module name (can't start with a digit)
+APP_NAME="Switcher3way"     # user-facing app + bundle name
 APP_BUNDLE="$PROJECT_DIR/$APP_NAME.app"
 # Universal-сборка кладёт продукт сюда (а не в .build/release)
 BUILD_DIR="$PROJECT_DIR/.build/apple/Products/Release"
@@ -33,8 +34,8 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
-# 3. Копируем бинарник
-cp "$BUILD_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+# 3. Копируем бинарник (SwiftPM собирает под PRODUCT_NAME, кладём как APP_NAME)
+cp "$BUILD_DIR/$PRODUCT_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
 # 3a. Самопроверка: бинарь обязан быть universal (arm64 + x86_64), иначе Intel-маки не запустят
 ARCHS=$(lipo -archs "$APP_BUNDLE/Contents/MacOS/$APP_NAME")
@@ -52,25 +53,29 @@ cp "$PROJECT_DIR/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
   || /usr/libexec/PlistBuddy -c "Add :RSDevTag string $DEV_TAG" "$APP_BUNDLE/Contents/Info.plist"
 echo "→ Stamped Info.plist: CFBundleShortVersionString=$SHORT_VERSION$DEV_TAG CFBundleVersion=$BUILD_VERSION"
 
-# 5. Копируем иконку
-cp "$PROJECT_DIR/RuSwitcher.icns" "$APP_BUNDLE/Contents/Resources/RuSwitcher.icns"
+# 5. Копируем иконку (имя файла = APP_NAME, чтобы совпадало с CFBundleIconFile)
+cp "$PROJECT_DIR/Switcher3way.icns" "$APP_BUNDLE/Contents/Resources/$APP_NAME.icns"
 
 # 6. Создаём PkgInfo
 echo -n "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 
-# 7. Подписываем Developer ID (разрешения macOS привязаны к подписи —
-#    при одинаковой подписи разрешения сохраняются между обновлениями)
-SIGN_ID="Developer ID Application: Rashid Nasibulin (9GEWCZ59HK)"
-echo "→ Code signing with Developer ID..."
-codesign --force --deep --sign "$SIGN_ID" \
-    --options runtime \
-    --entitlements "$PROJECT_DIR/RuSwitcher.entitlements" \
-    "$APP_BUNDLE"
+# 7. Подписываем СТАБИЛЬНЫМ self-signed сертификатом (см. signing/README). Designated
+#    requirement привязан к фиксированному сертификату → выданные разрешения
+#    Accessibility/Input Monitoring переживают пересборки. Ad-hoc — фолбэк, если ключа нет.
+SIGN_ID="Switcher3way Self-Signed"
+if security find-identity -p codesigning 2>/dev/null | grep -q "$SIGN_ID"; then
+    echo "→ Code signing with '$SIGN_ID'..."
+    codesign --force --deep --sign "$SIGN_ID" "$APP_BUNDLE"
+else
+    echo "→ Stable identity not found — code signing ad-hoc (permissions won't persist across rebuilds)..."
+    codesign --force --deep --sign - "$APP_BUNDLE"
+fi
+codesign --verify --deep --strict "$APP_BUNDLE" && echo "→ signature OK"
 
 echo ""
 echo "=== Done! ==="
 echo "App bundle: $APP_BUNDLE"
-echo "Signed with: $SIGN_ID"
+echo "Signed: ad-hoc (right-click → Open on first launch on another Mac)"
 echo ""
 echo "To install:"
 echo "  cp -R $APP_BUNDLE /Applications/"

@@ -129,22 +129,7 @@ final class SettingsWindowController {
         view.addSubview(perAppCheckbox)
         y -= 30
 
-        // Авто-проверка обновлений
-        let updCheckbox = NSButton(checkboxWithTitle: L10n.settingsCheckUpdates,
-                                   target: self, action: #selector(checkUpdatesEnabledChanged))
-        updCheckbox.frame = NSRect(x: 20, y: y, width: 420, height: 22)
-        updCheckbox.state = SettingsManager.shared.checkUpdatesEnabled ? .on : .off
-        updCheckbox.toolTip = L10n.settingsCheckUpdatesHint
-        view.addSubview(updCheckbox)
-        checkUpdatesCheckbox = updCheckbox
-        y -= 18
-
-        let updHint = NSTextField(wrappingLabelWithString: L10n.settingsCheckUpdatesHint)
-        updHint.frame = NSRect(x: 40, y: y - 18, width: 400, height: 32)
-        updHint.font = .systemFont(ofSize: 11)
-        updHint.textColor = .secondaryLabelColor
-        view.addSubview(updHint)
-        y -= 40
+        // «Авто-проверка обновлений» удалена — обновления отключены в форке Switcher3way.
 
         // Язык интерфейса
         let langLabel = NSTextField(labelWithString: L10n.settingsLanguage)
@@ -183,11 +168,20 @@ final class SettingsWindowController {
         popup2.action = #selector(layout2Changed)
         view.addSubview(popup2)
         layout2Popup = popup2
-        y -= 50
+        y -= 44
+
+        // Пояснение: авто-конвертация покрывает ВСЕ установленные раскладки; пара выше —
+        // только для ручного триггера (поэтому «третьей» раскладки в настройках нет).
+        let autoNote = NSTextField(wrappingLabelWithString: L10n.settingsAutoLayoutsNote)
+        autoNote.frame = NSRect(x: 20, y: y - 44, width: 420, height: 48)
+        autoNote.font = .systemFont(ofSize: 11)
+        autoNote.textColor = .secondaryLabelColor
+        view.addSubview(autoNote)
+        y -= 56
 
         // Описание хоткея
         let hotkeyLabel = NSTextField(wrappingLabelWithString: L10n.settingsHotkey)
-        hotkeyLabel.frame = NSRect(x: 20, y: y - 40, width: 420, height: 55)
+        hotkeyLabel.frame = NSRect(x: 20, y: y - 36, width: 420, height: 40)
         hotkeyLabel.font = .systemFont(ofSize: 12)
         hotkeyLabel.textColor = .secondaryLabelColor
         view.addSubview(hotkeyLabel)
@@ -292,7 +286,7 @@ final class SettingsWindowController {
         var y: CGFloat = 310
 
         // Название и версия
-        let titleLabel = NSTextField(labelWithString: "RuSwitcher")
+        let titleLabel = NSTextField(labelWithString: "Switcher3way")
         titleLabel.font = .boldSystemFont(ofSize: 20)
         titleLabel.frame = NSRect(x: 20, y: y, width: 420, height: 28)
         view.addSubview(titleLabel)
@@ -307,32 +301,7 @@ final class SettingsWindowController {
         view.addSubview(versionLabel)
         y -= 40
 
-        // Кнопка "Звезда на GitHub"
-        let starBtn = NSButton(title: L10n.settingsStarOnGithub, target: self, action: #selector(openGitHub))
-        starBtn.frame = NSRect(x: 20, y: y, width: 420, height: 32)
-        starBtn.bezelStyle = .rounded
-        view.addSubview(starBtn)
-        y -= 40
-
-        // Кнопка доната
-        let donateBtn = NSButton(title: L10n.settingsDonate, target: self, action: #selector(openDonate))
-        donateBtn.frame = NSRect(x: 20, y: y, width: 200, height: 32)
-        donateBtn.bezelStyle = .rounded
-        view.addSubview(donateBtn)
-
-        // Кнопка контакта
-        let contactBtn = NSButton(title: L10n.settingsContact, target: self, action: #selector(openContact))
-        contactBtn.frame = NSRect(x: 230, y: y, width: 200, height: 32)
-        contactBtn.bezelStyle = .rounded
-        view.addSubview(contactBtn)
-        y -= 40
-
-        // Проверить обновления
-        let updateBtn = NSButton(title: L10n.menuCheckUpdates, target: self, action: #selector(checkUpdates))
-        updateBtn.frame = NSRect(x: 20, y: y, width: 200, height: 32)
-        updateBtn.bezelStyle = .rounded
-        view.addSubview(updateBtn)
-
+        // Все кнопки (Star on GitHub / Donate / Contact / Check for Updates) удалены в форке Switcher3way.
         item.view = view
         return item
     }
@@ -360,11 +329,7 @@ final class SettingsWindowController {
         showLogBtn.bezelStyle = .rounded
         view.addSubview(showLogBtn)
 
-        // Отправить лог
-        let sendLogBtn = NSButton(title: L10n.settingsSendLog, target: self, action: #selector(sendLogFile))
-        sendLogBtn.frame = NSRect(x: 210, y: y, width: 180, height: 32)
-        sendLogBtn.bezelStyle = .rounded
-        view.addSubview(sendLogBtn)
+        // «Отправить лог» удалён в форке Switcher3way — остаётся только «Показать лог».
         y -= 50
 
         // Путь к логу
@@ -556,7 +521,7 @@ final class SettingsWindowController {
 
     @objc private func openContact() {
         let email = SettingsManager.shared.contactEmail
-        let subject = "RuSwitcher Feedback"
+        let subject = "Switcher3way Feedback"
         if let url = URL(string: "mailto:\(email)?subject=\(subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? subject)") {
             NSWorkspace.shared.open(url)
         }

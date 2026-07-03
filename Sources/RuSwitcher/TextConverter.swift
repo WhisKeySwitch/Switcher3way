@@ -109,6 +109,32 @@ final class TextConverter {
         return true
     }
 
+    /// N-way перепечатка: `converted` уже вычислен вызывающим (детектор выбрал целевую
+    /// раскладку из 3+), поэтому здесь только стираем набранное и впечатываем результат.
+    /// Тот же буферный движок, что и `convert`, но цель задаётся снаружи, а не парой.
+    func convertBuffer(original: String, converted: String, keyCount: Int, trailingSpaces: Int) -> Bool {
+        guard !isConverting else { return false }
+        guard !converted.isEmpty, keyCount > 0 else { return false }
+        isConverting = true
+
+        let spaces = String(repeating: " ", count: trailingSpaces)
+        let bsCount = keyCount + trailingSpaces
+        let insert = converted + spaces
+        lastOriginal = original + spaces
+        lastConverted = converted + spaces
+        lastWasBuffer = true
+        rslog("nway convert: \(keyCount) keys (+\(trailingSpaces) sp)")
+
+        injectQueue.async { [weak self] in
+            guard let self else { return }
+            self.backspace(bsCount)
+            usleep(20_000)
+            self.insertText(insert)
+            Task { @MainActor in self.isConverting = false }
+        }
+        return true
+    }
+
     /// Повторная конвертация (второй триггер) — на тот движок, которым делали последнюю.
     func reconvert() -> Bool {
         guard !isConverting else { return false }

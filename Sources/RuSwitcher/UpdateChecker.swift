@@ -49,6 +49,14 @@ enum UpdateChecker {
     }
 
     private static func check(silent: Bool) async {
+        // ── ОТКЛЮЧЕНО в форке Switcher3way ──────────────────────────────────────
+        // Апстрим (rashn/RuSwitcher) — сток 2-way версия; авто-апдейт оттуда затёр бы
+        // нашу кастомную 3-way сборку. Сеть не трогаем; авто-проверки молчат, ручная
+        // проверка просто подтверждает «актуально». Вернуть апдейты — убрать этот блок.
+        rslog("UpdateChecker: disabled in Switcher3way fork")
+        if !silent { await showUpToDateAlert() }
+        return
+
         guard let url = URL(string: versionURL) else { return }
 
         do {

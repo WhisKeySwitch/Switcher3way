@@ -148,7 +148,7 @@ enum DynamicKeyMapping {
 
     // MARK: - Private
 
-    private static func layoutDataForSource(_ source: TISInputSource) -> Data? {
+    static func layoutDataForSource(_ source: TISInputSource) -> Data? {
         guard let ptr = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else {
             return nil
         }
@@ -156,7 +156,7 @@ enum DynamicKeyMapping {
         return data
     }
 
-    private static func translateKeycode(_ keycode: UInt16, layoutData: Data, shift: Bool, caps: Bool = false) -> Character? {
+    static func translateKeycode(_ keycode: UInt16, layoutData: Data, shift: Bool, caps: Bool = false) -> Character? {
         var deadKeyState: UInt32 = 0
         var chars = [UniChar](repeating: 0, count: 4)
         var length: Int = 0
