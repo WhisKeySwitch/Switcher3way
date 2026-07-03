@@ -111,6 +111,7 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 - Feature-complete: 3-way auto + manual switching, renamed, custom icon, updater off, UI trimmed,
   stable signing. Builds clean; installed at `/Applications/Switcher3way.app` (v2.6.0).
+- All fork changes and docs are committed on `main`.
 - **Pending user action:** grant Accessibility + Input Monitoring once (persists thereafter).
 
 ## Known issues / next steps
@@ -119,12 +120,14 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   may switch to the wrong layout in pure 3-way (built around a pair). Fix: record the pre-switch
   layout ID in `AutoConverter`/conversion state and restore it on undo.
 - **Icon optical balance** — S/Э/Є are fine; could optically size-match if desired.
-- **Git:** working tree has uncommitted fork changes (10 modified, `NWayDetector.swift` added,
-  untracked `NOTES-3WAY.md` / `icon-design/` / `signing/` / `nway-3way.patch`). Repo is a shallow
-  clone of upstream. Consider committing to a `switcher3way` branch. Don't commit `Switcher3way.app`.
+- **Git:** all fork changes are committed on `main` (repo is a shallow clone of upstream; no
+  remote push). `signing/cert.p12` is git-ignored — keep it that way. Don't commit `Switcher3way.app`.
 
 ## Reference docs
 
 - `NOTES-3WAY.md` — fork rationale, rebuild/DMG commands, detection policy, icon, updates-off.
 - `signing/README.md` — the stable code-signing identity (setup, re-import, backup).
 - `nway-3way.patch` — complete diff vs upstream RuSwitcher.
+- `openspec/` — OpenSpec capability specs back-filled from the code (`CAPABILITIES.md` is the
+  overview; 10 specs under `specs/`; validate with `openspec validate --specs`). Update checking
+  is documented there as intentionally disabled — don't spec the dormant updater pipeline.
