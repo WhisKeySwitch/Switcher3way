@@ -3,7 +3,7 @@ import CoreGraphics
 import Foundation
 
 /// Маркер для симулированных событий — KeyboardMonitor их игнорирует
-let kRuSwitcherEventMarker: Int64 = 0x52555300
+let kSwitcher3wEventMarker: Int64 = 0x52555300
 
 /// Одно нажатие в буфере конверсии. Для обычного локального ввода известен keyCode
 /// (char == nil). Для ввода, проброшенного через удалённый стол, Apple Screen Sharing
@@ -19,16 +19,16 @@ struct TypedKey {
 /// Выделенная очередь для файлового I/O лога — чтобы запись на диск не блокировала
 /// поток обработки событий (event tap висит на главном run loop, а лог пишется
 /// для каждого нажатия при включённом debug).
-private let rsLogQueue = DispatchQueue(label: "com.ruswitcher.log")
+private let rsLogQueue = DispatchQueue(label: "com.switcher3w.log")
 
 func rslog(_ msg: String) {
     // Thread-safe: читаем UserDefaults напрямую (без MainActor)
-    guard UserDefaults.standard.bool(forKey: "com.ruswitcher.debugLog") else { return }
+    guard UserDefaults.standard.bool(forKey: "com.switcher3w.debugLog") else { return }
 
     let line = "\(Date()): \(msg)\n"
     rsLogQueue.async {
-        let logDir = NSHomeDirectory() + "/Library/Logs/RuSwitcher"
-        let path = logDir + "/ruswitcher.log"
+        let logDir = NSHomeDirectory() + "/Library/Logs/Switcher3w"
+        let path = logDir + "/switcher3w.log"
 
         // Создаём директорию если нет
         if !FileManager.default.fileExists(atPath: logDir) {
@@ -474,7 +474,7 @@ private func keyboardCallback(
     }
 
     // Игнорируем собственные симулированные события по маркеру
-    if event.getIntegerValueField(.eventSourceUserData) == kRuSwitcherEventMarker {
+    if event.getIntegerValueField(.eventSourceUserData) == kSwitcher3wEventMarker {
         return Unmanaged.passRetained(event)
     }
 

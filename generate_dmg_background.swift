@@ -58,12 +58,12 @@ for y in stride(from: 0, through: height, by: 30) {
 }
 ctx.strokePath()
 
-// --- Title "RuSwitcher" at top ---
+// --- Title "Switcher3way" at top ---
 let titleAttrs: [NSAttributedString.Key: Any] = [
     .font: NSFont.systemFont(ofSize: 28, weight: .bold),
     .foregroundColor: NSColor(calibratedRed: 0.85, green: 0.88, blue: 0.95, alpha: 1.0),
 ]
-let title = "RuSwitcher" as NSString
+let title = "Switcher3way" as NSString
 let titleSize = title.size(withAttributes: titleAttrs)
 title.draw(at: NSPoint(x: (width - titleSize.width) / 2, y: height - 55), withAttributes: titleAttrs)
 

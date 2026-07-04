@@ -9,35 +9,56 @@ final class SettingsManager: @unchecked Sendable {
     private let defaults = UserDefaults.standard
 
     private enum Keys {
-        static let autoSwitch = "com.ruswitcher.autoSwitch"
-        static let layout1ID = "com.ruswitcher.layout1ID"
-        static let layout2ID = "com.ruswitcher.layout2ID"
-        static let debugLog = "com.ruswitcher.debugLog"
-        static let skippedVersion = "com.ruswitcher.skippedVersion"
-        static let lastUpdateCheck = "com.ruswitcher.lastUpdateCheck"
-        static let launchAtLogin = "com.ruswitcher.launchAtLogin"
-        static let checkUpdatesEnabled = "com.ruswitcher.checkUpdatesEnabled"
-        static let interfaceLanguage = "com.ruswitcher.interfaceLanguage"
-        static let permissionsWereGranted = "com.ruswitcher.permissionsWereGranted"
-        static let launchAtLoginAsked = "com.ruswitcher.launchAtLoginAsked"
-        static let perAppLayout = "com.ruswitcher.perAppLayout"
-        static let triggerKey = "com.ruswitcher.triggerKey"
-        static let triggerRightOnly = "com.ruswitcher.triggerRightOnly"
-        static let triggerDoubleTap = "com.ruswitcher.triggerDoubleTap"
-        static let autoConvert = "com.ruswitcher.autoConvert"
-        static let remoteDesktopMode = "com.ruswitcher.remoteDesktopMode"
-        static let showRemoteDesktopBeta = "com.ruswitcher.showRemoteDesktopBeta"
-        static let autoConvertOffered = "com.ruswitcher.autoConvertOffered"
-        static let keySound = "com.ruswitcher.keySound"
-        static let caretFlag = "com.ruswitcher.caretFlag"
-        static let deniedAppsAdded = "com.ruswitcher.deniedAppsAdded"
-        static let deniedAppsRemoved = "com.ruswitcher.deniedAppsRemoved"
-        static let deniedWords = "com.ruswitcher.deniedWords"
-        static let alwaysConvertWords = "com.ruswitcher.alwaysConvertWords"
-        static let pausedUntil = "com.ruswitcher.pausedUntil"
+        static let autoSwitch = "com.switcher3w.autoSwitch"
+        static let layout1ID = "com.switcher3w.layout1ID"
+        static let layout2ID = "com.switcher3w.layout2ID"
+        static let debugLog = "com.switcher3w.debugLog"
+        static let launchAtLogin = "com.switcher3w.launchAtLogin"
+        static let interfaceLanguage = "com.switcher3w.interfaceLanguage"
+        static let permissionsWereGranted = "com.switcher3w.permissionsWereGranted"
+        static let launchAtLoginAsked = "com.switcher3w.launchAtLoginAsked"
+        static let perAppLayout = "com.switcher3w.perAppLayout"
+        static let triggerKey = "com.switcher3w.triggerKey"
+        static let triggerRightOnly = "com.switcher3w.triggerRightOnly"
+        static let triggerDoubleTap = "com.switcher3w.triggerDoubleTap"
+        static let autoConvert = "com.switcher3w.autoConvert"
+        static let remoteDesktopMode = "com.switcher3w.remoteDesktopMode"
+        static let showRemoteDesktopBeta = "com.switcher3w.showRemoteDesktopBeta"
+        static let autoConvertOffered = "com.switcher3w.autoConvertOffered"
+        static let keySound = "com.switcher3w.keySound"
+        static let caretFlag = "com.switcher3w.caretFlag"
+        static let deniedAppsAdded = "com.switcher3w.deniedAppsAdded"
+        static let deniedAppsRemoved = "com.switcher3w.deniedAppsRemoved"
+        static let deniedWords = "com.switcher3w.deniedWords"
+        static let alwaysConvertWords = "com.switcher3w.alwaysConvertWords"
+        static let pausedUntil = "com.switcher3w.pausedUntil"
     }
 
     private init() {}
+
+    // MARK: - Миграция ключей
+
+    /// Одноразовая миграция настроек со старых ключей com.ruswitcher.* (унаследованных
+    /// от апстрима) на com.switcher3w.*. Вызывается из main.swift ДО любого чтения
+    /// настроек (включая ленивую инициализацию языка в L10n). Старые значения не
+    /// удаляем — страховка на случай отката на предыдущую сборку.
+    static func migrateLegacyDefaults() {
+        let d = UserDefaults.standard
+        let marker = "com.switcher3w.migratedLegacyKeys"
+        guard !d.bool(forKey: marker) else { return }
+        let oldPrefix = "com.ruswitcher."
+        let newPrefix = "com.switcher3w."
+        var migrated = 0
+        for (key, value) in d.dictionaryRepresentation() where key.hasPrefix(oldPrefix) {
+            let newKey = newPrefix + key.dropFirst(oldPrefix.count)
+            if d.object(forKey: newKey) == nil {
+                d.set(value, forKey: newKey)
+                migrated += 1
+            }
+        }
+        d.set(true, forKey: marker)
+        rslog("Settings migration: \(migrated) legacy com.ruswitcher.* keys copied")
+    }
 
     // MARK: - Properties
 
@@ -103,16 +124,6 @@ final class SettingsManager: @unchecked Sendable {
         set { defaults.set(newValue, forKey: Keys.debugLog) }
     }
 
-    var skippedVersion: String {
-        get { defaults.string(forKey: Keys.skippedVersion) ?? "" }
-        set { defaults.set(newValue, forKey: Keys.skippedVersion) }
-    }
-
-    var lastUpdateCheck: Date? {
-        get { defaults.object(forKey: Keys.lastUpdateCheck) as? Date }
-        set { defaults.set(newValue, forKey: Keys.lastUpdateCheck) }
-    }
-
     var launchAtLogin: Bool {
         get { defaults.object(forKey: Keys.launchAtLogin) as? Bool ?? false }
         set {
@@ -122,13 +133,6 @@ final class SettingsManager: @unchecked Sendable {
                 self.doUpdateLoginItem(enabled: enabled)
             }
         }
-    }
-
-    /// Авто-проверка обновлений при запуске (дефолт: включено).
-    /// На ручную проверку через меню не влияет.
-    var checkUpdatesEnabled: Bool {
-        get { defaults.object(forKey: Keys.checkUpdatesEnabled) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: Keys.checkUpdatesEnabled) }
     }
 
     /// Язык интерфейса (пустая строка = авто-определение по системе)
@@ -203,7 +207,7 @@ final class SettingsManager: @unchecked Sendable {
     }
 
     /// Показывать ли тумблер «Режим удалённого стола» (видимая бета в 2.5). По умолчанию
-    /// ВКЛючён; спрятать можно явно: `defaults write com.ruswitcher.app com.ruswitcher.showRemoteDesktopBeta -bool NO`.
+    /// ВКЛючён; спрятать можно явно: `defaults write com.switcher3way.app com.switcher3w.showRemoteDesktopBeta -bool NO`.
     var showRemoteDesktopBeta: Bool {
         get {
             // Нет записи в defaults → считаем включённым (дефолт ON для 2.5).
@@ -259,21 +263,6 @@ final class SettingsManager: @unchecked Sendable {
         set { defaults.set(newValue, forKey: Keys.alwaysConvertWords) }
     }
     var alwaysConvertWordsSet: Set<String> { Set(alwaysConvertWords.map { $0.lowercased() }) }
-
-    var donateURL: String { "https://boosty.to/ruswitcher" }
-    var contactEmail: String { "xrashid@gmail.com" }
-
-    // MARK: - GitHub coordinates (единственный источник — чтобы при переименовании
-    // репозитория правка была в одном месте)
-    static let githubOwner = "rashn"
-    static let githubRepo = "RuSwitcher"
-    static var githubURL: String { "https://github.com/\(githubOwner)/\(githubRepo)" }
-    /// Team ID (Apple Developer), которым подписаны релизы. Используется для
-    /// пиннинга подписи при авто-обновлении.
-    static let developerTeamID = "9GEWCZ59HK"
-    static func releaseDMGURL(version: String) -> String {
-        "\(githubURL)/releases/download/v\(version)/\(githubRepo)-\(version).dmg"
-    }
 
     // MARK: - Login Item
 

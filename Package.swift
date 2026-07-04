@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "RuSwitcher",
+    name: "Switcher3w",
     platforms: [.macOS(.v13)],
     targets: [
         .executableTarget(
-            name: "RuSwitcher",
-            path: "Sources/RuSwitcher",
+            name: "Switcher3w",
+            path: "Sources/Switcher3w",
             linkerSettings: [
                 .linkedFramework("AppKit"),
                 .linkedFramework("Carbon"),

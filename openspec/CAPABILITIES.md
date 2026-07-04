@@ -33,4 +33,4 @@ The menu-bar status item whose emoji-flag icon live-tracks the active layout (in
 Opt-in rotating file log (5 MB cap) with an Advanced-tab toggle, path display, and reveal-in-Finder action.
 
 ## Explicitly out of scope (disabled in this fork)
-**Update checking** — `UpdateChecker.check()` returns immediately; the download/verify/install pipeline below it is dormant dead code. Auto-update is intentionally disabled so upstream releases cannot clobber the fork; a manual check only shows an "up to date" alert. No spec is written for it beyond this note.
+**Update checking** — removed entirely (July 2026 cleanup; `UpdateChecker.swift` deleted). Auto-update was disabled at fork time so upstream releases could not clobber the fork, then the dormant pipeline was deleted. No spec exists for it.

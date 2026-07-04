@@ -440,7 +440,7 @@ final class SettingsWindowController {
     }
 
     private func logFilePath() -> String {
-        let logDir = NSHomeDirectory() + "/Library/Logs/RuSwitcher"
-        return logDir + "/ruswitcher.log"
+        let logDir = NSHomeDirectory() + "/Library/Logs/Switcher3w"
+        return logDir + "/switcher3w.log"
     }
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-APP_NAME="RuSwitcher"
+APP_NAME="Switcher3way"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Единый источник версии — version.json в корне репозитория.
 VERSION=$(/usr/bin/python3 -c "import json;print(json.load(open('version.json'))['version'])")
@@ -19,7 +19,7 @@ DMG_SIZE="10m"
 echo "=== Creating styled DMG ==="
 
 # 0. ВСЕГДА пересобираем приложение из исходников. Без этого шага DMG берёт имя
-#    из version.json, а payload — из случайно лежащего рядом RuSwitcher.app.
+#    из version.json, а payload — из случайно лежащего рядом Switcher3way.app.
 #    Именно так в релиз 2.1.0 попал бандл 2.0.3: имя было 2.1.0, а внутри 2.0.3.
 echo "→ Rebuilding app from source (build_app.sh)..."
 "$SCRIPT_DIR/build_app.sh"
@@ -52,9 +52,9 @@ fi
 # Clean up
 rm -f "$DMG_NAME" "$DMG_TEMP"
 
-# 0c. Снимаем «застрявшие» тома с тем же именем. Если /Volumes/RuSwitcher уже занят,
-#     наш temp-образ примонтируется как «RuSwitcher 1», а AppleScript-оформление
-#     (`tell disk "RuSwitcher"`) уйдёт на чужой/несуществующий диск → .DS_Store с фоном
+# 0c. Снимаем «застрявшие» тома с тем же именем. Если /Volumes/Switcher3way уже занят,
+#     наш temp-образ примонтируется как «Switcher3way 1», а AppleScript-оформление
+#     (`tell disk "Switcher3way"`) уйдёт на чужой/несуществующий диск → .DS_Store с фоном
 #     и позициями НЕ запишется в наш образ, и DMG откроется голым. Чистим заранее.
 for v in "/Volumes/${VOL_NAME}"*; do
     if [ -d "$v" ]; then
@@ -72,7 +72,7 @@ hdiutil create -volname "$VOL_NAME" -fs HFS+ \
 echo "→ Mounting..."
 MOUNT_DIR=$(hdiutil attach -readwrite -noverify "$DMG_TEMP" | grep "/Volumes/" | sed 's/.*\(\/Volumes\/.*\)/\1/')
 echo "   Mounted at: $MOUNT_DIR"
-# Защита: если имя всё же разъехалось (том «RuSwitcher 1») — оформление уйдёт мимо. Прерываемся.
+# Защита: если имя всё же разъехалось (том «Switcher3way 1») — оформление уйдёт мимо. Прерываемся.
 if [ "$MOUNT_DIR" != "/Volumes/${VOL_NAME}" ]; then
     echo "ERROR: temp DMG mounted at '$MOUNT_DIR', expected '/Volumes/${VOL_NAME}'."
     echo "       Stale volume collision — refusing to build an unstyled DMG."
@@ -177,10 +177,11 @@ else
     spctl -a -vvv -t install "$DMG_NAME" 2>&1 || echo "WARNING: spctl install assessment did not pass"
 fi
 
-# 11. Записываем sha256 обратно в version.json и cask — хэш механически привязан
+# 11. Записываем sha256 обратно в version.json — хэш механически привязан
 #     к реально собранному DMG, а не копируется руками (раньше это расходилось).
+#     (Homebrew cask удалён в чистке июля 2026 — форк не публикует релизы.)
 DMG_SHA=$(shasum -a 256 "$DMG_NAME" | awk '{print $1}')
-echo "→ Writing sha256 into version.json and ruswitcher.rb..."
+echo "→ Writing sha256 into version.json..."
 /usr/bin/python3 - "$DMG_SHA" <<'PY'
 import json, sys
 sha = sys.argv[1]
@@ -191,11 +192,8 @@ with open("version.json", "w") as f:
     json.dump(data, f, indent=2)
     f.write("\n")
 PY
-/usr/bin/sed -i '' -E "s/^([[:space:]]*sha256 \").*(\")/\1${DMG_SHA}\2/" "$SCRIPT_DIR/ruswitcher.rb"
-/usr/bin/sed -i '' -E "s/^([[:space:]]*version \").*(\")/\1${VERSION}\2/" "$SCRIPT_DIR/ruswitcher.rb"
-
 echo ""
 echo "=== Done! ==="
 echo "DMG: $(pwd)/$DMG_NAME ($(du -h "$DMG_NAME" | cut -f1))"
 echo "SHA256: $DMG_SHA"
-echo "→ version.json and ruswitcher.rb updated with this hash."
+echo "→ version.json updated with this hash."

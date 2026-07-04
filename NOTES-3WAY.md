@@ -8,7 +8,7 @@ macOS system dictionary** — so English + Ukrainian + Russian all participate i
 
 ## What changed vs upstream
 
-See `nway-3way.patch` for the full diff. Summary:
+Summary (the `nway-3way.patch` full diff was removed in the July 2026 cleanup; use git history):
 
 - **`Sources/RuSwitcher/NWayDetector.swift`** (new) — `NWayResolver.resolve()`. Renders the typed
   keystrokes through each installed layout, checks each candidate against its own language's
@@ -61,7 +61,8 @@ Regenerate: `swift icon-design/generate_icon_3way.swift icon-design` → then
 
 ## Updates disabled
 
-`UpdateChecker.check(silent:)` is short-circuited (returns before any network call) so the fork can
+The updater was deleted outright in the July 2026 cleanup (originally `UpdateChecker.check(silent:)`
+was short-circuited — returned before any network call) so the fork can
 never auto-update itself back to upstream stock RuSwitcher. Manual "Check for updates…" just shows
 "up to date". To re-enable, remove the early-return block at the top of `check(silent:)`.
 

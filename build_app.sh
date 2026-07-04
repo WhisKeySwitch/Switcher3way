@@ -2,7 +2,7 @@
 set -e
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PRODUCT_NAME="RuSwitcher"   # SwiftPM build product / module name (can't start with a digit)
+PRODUCT_NAME="Switcher3w"   # SwiftPM build product / module name (can't start with a digit)
 APP_NAME="Switcher3way"     # user-facing app + bundle name
 APP_BUNDLE="$PROJECT_DIR/$APP_NAME.app"
 # Universal-сборка кладёт продукт сюда (а не в .build/release)

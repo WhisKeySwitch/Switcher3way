@@ -10,7 +10,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let onboardingController = OnboardingWindowController()
     private let perAppLayoutManager = PerAppLayoutManager()
     private var iconRefreshTimer: Timer?
-    private var updateCheckTimer: Timer?   // периодическая авто-проверка обновлений, пока приложение работает
     private var pauseTimer: Timer?         // авто-возобновление по истечении таймерной паузы (W4)
     private var lastPermissionsOK: Bool?   // для перестройки меню при смене состояния разрешений
     private var monitoringActive = false
@@ -27,13 +26,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         syncLoginItem()
         applyEnabledState()   // взводит таймер, если персистентная пауза ещё не истекла
         runPermissionWizard()
-        UpdateChecker.checkOnLaunch()
-        // Периодическая авто-проверка обновлений, пока приложение работает (не только на старте).
-        // Тикает каждые 6ч; сам запрос к GitHub не чаще раза в сутки (троттл в UpdateChecker) и
-        // уважает настройку «Автоматически проверять обновления» (её можно снять, чтобы отключить).
-        updateCheckTimer = Timer.scheduledTimer(withTimeInterval: 6 * 3600, repeats: true) { _ in
-            Task { @MainActor in UpdateChecker.checkPeriodic() }
-        }
     }
 
     private func setupSettingsCallbacks() {
@@ -201,7 +193,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Сбрасывает старые записи разрешений для нашего bundle ID
     private func resetPermissions() {
-        let bundleID = Bundle.main.bundleIdentifier ?? "com.ruswitcher.app"
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.switcher3way.app"
         rslog("Resetting TCC entries for \(bundleID)")
 
         for service in ["Accessibility", "ListenEvent"] {
@@ -704,22 +696,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         settingsController.showWindow()
-    }
-
-    @objc private func checkUpdates() {
-        UpdateChecker.checkNow()
-    }
-
-    @objc private func openDonate() {
-        if let url = URL(string: SettingsManager.shared.donateURL) {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    @objc private func openGitHub() {
-        if let url = URL(string: SettingsManager.githubURL) {
-            NSWorkspace.shared.open(url)
-        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

@@ -12,7 +12,7 @@ final class TextConverter {
     private var isConverting = false
     /// Очередь для инжекта нажатий буферного движка — чтобы usleep не блокировал
     /// main-поток, на котором висит event tap (иначе тап голодает → лаги/потери нажатий).
-    nonisolated private let injectQueue = DispatchQueue(label: "com.ruswitcher.inject", qos: .userInteractive)
+    nonisolated private let injectQueue = DispatchQueue(label: "com.switcher3w.inject", qos: .userInteractive)
 
     // Состояние движка перепечатки (буфер нажатий → юникод-вставка)
     private var lastOriginal = ""
@@ -22,7 +22,7 @@ final class TextConverter {
     /// Создаёт CGEventSource с маркером, чтобы KeyboardMonitor игнорировал наши события
     nonisolated private func makeSource() -> CGEventSource? {
         let source = CGEventSource(stateID: .hidSystemState)
-        source?.userData = kRuSwitcherEventMarker
+        source?.userData = kSwitcher3wEventMarker
         return source
     }
 
