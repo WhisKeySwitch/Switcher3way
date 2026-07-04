@@ -289,8 +289,13 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
         guard adapter.kind == .apps else { return id }
         if id.hasSuffix("*") { return String(id.dropLast()) + "* (все)" }
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) {
-            let name = FileManager.default.displayName(atPath: url.path)
-            return name.hasSuffix(".app") ? String(name.dropLast(4)) : name
+            // FileManager.displayName локализуется по СИСТЕМЕ; при несовпадении языка
+            // интерфейса приложения берём нейтральное имя бандла с диска («Terminal»).
+            if L10n.namesFollowSystem {
+                let name = FileManager.default.displayName(atPath: url.path)
+                return name.hasSuffix(".app") ? String(name.dropLast(4)) : name
+            }
+            return url.deletingPathExtension().lastPathComponent
         }
         return id
     }

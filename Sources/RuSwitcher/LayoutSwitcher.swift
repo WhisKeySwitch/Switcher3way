@@ -20,12 +20,23 @@ enum LayoutSwitcher {
         return languageCode(source)
     }
 
-    /// Локализованное имя ТЕКУЩЕЙ раскладки (для статусного заголовка меню, W4).
+    /// Имя ТЕКУЩЕЙ раскладки в языке интерфейса (для статусного заголовка меню, W4).
     static func currentLayoutName() -> String {
         guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue() else {
             return ""
         }
-        return sourceName(source)
+        return displayName(source)
+    }
+
+    /// Имя раскладки, согласованное с языком интерфейса приложения: системно-
+    /// локализованное, когда языки совпадают; иначе — нейтральное из ID источника
+    /// (kTISPropertyLocalizedName локализуется по СИСТЕМЕ, не по приложению,
+    /// и на «русской» macOS с английским интерфейсом давало «Русская»).
+    static func displayName(_ source: TISInputSource) -> String {
+        if L10n.namesFollowSystem { return sourceName(source) }
+        let last = sourceID(source).components(separatedBy: ".").last ?? ""
+        guard !last.isEmpty else { return sourceName(source) }
+        return last.replacingOccurrences(of: "-", with: " ")
     }
 
     /// Переключает на противоположную раскладку (из настроенной пары)

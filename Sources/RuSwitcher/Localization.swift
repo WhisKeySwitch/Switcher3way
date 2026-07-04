@@ -180,6 +180,17 @@ enum L10n {
         currentLang = detectLanguage()
     }
 
+    /// Эффективный язык интерфейса (уже разрешённый: форс из настроек или системный).
+    static var effectiveLanguage: String { currentLang }
+
+    /// Совпадает ли язык интерфейса приложения с языком СИСТЕМЫ. Когда нет —
+    /// системно-локализованные имена (kTISPropertyLocalizedName, FileManager.displayName)
+    /// выглядели бы чужеродно, и вызывающие переходят на нейтральные имена.
+    static var namesFollowSystem: Bool {
+        let sys = String((Locale.preferredLanguages.first ?? "en").prefix(2)).lowercased()
+        return currentLang.lowercased() == sys
+    }
+
     private static func s(_ key: String) -> String {
         strings[currentLang]?[key] ?? strings["en"]![key] ?? key
     }

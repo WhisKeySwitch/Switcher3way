@@ -70,12 +70,13 @@ final class SettingsWindowController {
     }
 
     /// Каркас вкладки: вертикальный стек секций с отступами, ширина фиксирована.
-    private func makeTabRoot(_ sections: [NSView]) -> NSView {
+    private func makeTabRoot(_ sections: [NSView],
+                             alignment: NSLayoutConstraint.Attribute = .leading) -> NSView {
         let root = NSView()
         root.translatesAutoresizingMaskIntoConstraints = false
         let stack = NSStackView(views: sections)
         stack.orientation = .vertical
-        stack.alignment = .leading
+        stack.alignment = alignment
         stack.spacing = 12
         stack.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(stack)
@@ -236,15 +237,17 @@ final class SettingsWindowController {
     private func buildAboutTab() -> NSView {
         let titleLabel = NSTextField(labelWithString: "Switcher3way")
         titleLabel.font = .boldSystemFont(ofSize: 20)
+        titleLabel.alignment = .center
 
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
         let devTag = Bundle.main.infoDictionary?["RSDevTag"] as? String ?? ""
         let versionLabel = NSTextField(labelWithString: "v\(version)\(devTag) — \(L10n.settingsVersion)")
         versionLabel.font = .systemFont(ofSize: 12)
         versionLabel.textColor = .secondaryLabelColor
+        versionLabel.alignment = .center
 
         // Все кнопки (Star on GitHub / Donate / Contact / Check for Updates) удалены в форке Switcher3way.
-        return makeTabRoot([titleLabel, versionLabel])
+        return makeTabRoot([titleLabel, versionLabel], alignment: .centerX)
     }
 
     // MARK: - Вкладка Advanced
@@ -304,7 +307,8 @@ final class SettingsWindowController {
         let layouts = LayoutSwitcher.installedLayouts()
         for layout in layouts {
             let id = LayoutSwitcher.sourceID(layout)
-            let name = LayoutSwitcher.sourceName(layout)
+            // displayName: имя в языке интерфейса приложения, а не системы
+            let name = LayoutSwitcher.displayName(layout)
             popup.addItem(withTitle: name)
             popup.menu?.items.last?.representedObject = id as NSString
         }
