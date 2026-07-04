@@ -7,17 +7,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let keyboardMonitor = KeyboardMonitor()
     private let textConverter = TextConverter()
     private let settingsController = SettingsWindowController()
+    private let onboardingController = OnboardingWindowController()
     private let perAppLayoutManager = PerAppLayoutManager()
-    private var permissionCheckTimer: Timer?
     private var iconRefreshTimer: Timer?
     private var updateCheckTimer: Timer?   // периодическая авто-проверка обновлений, пока приложение работает
+    private var pauseTimer: Timer?         // авто-возобновление по истечении таймерной паузы (W4)
+    private var lastPermissionsOK: Bool?   // для перестройки меню при смене состояния разрешений
     private var monitoringActive = false
     private var caretIndicator: CaretIndicator?   // issue #10: флаг у каретки (бета, по умолчанию OFF)
+
+    // Ссылки на живые метки статусного заголовка меню (обновляются опросом иконки)
+    private weak var headerBadgeLabel: NSTextField?
+    private weak var headerNameLabel: NSTextField?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
         setupSettingsCallbacks()
+        setupOnboardingCallbacks()
         syncLoginItem()
+        applyEnabledState()   // взводит таймер, если персистентная пауза ещё не истекла
         runPermissionWizard()
         UpdateChecker.checkOnLaunch()
         // Периодическая авто-проверка обновлений, пока приложение работает (не только на старте).
@@ -29,11 +37,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupSettingsCallbacks() {
-        settingsController.onAutoSwitchChanged = { [weak self] enabled in
-            guard let self else { return }
-            if let menuItem = self.statusItem.menu?.item(at: 0) {
-                menuItem.state = enabled ? .on : .off
-            }
+        settingsController.onAutoSwitchChanged = { [weak self] _ in
+            self?.applyEnabledState()   // иконка + меню (Pause/Resume) следуют за мастер-тумблером
         }
         settingsController.onPerAppLayoutChanged = { [weak self] enabled in
             guard let self else { return }
@@ -60,6 +65,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.rebuildMenu()          // синхронизировать галочку в меню
             self?.syncCaretIndicator()   // создать/снести индикатор + обновить гейт onUserInput
         }
+    }
+
+    private func setupOnboardingCallbacks() {
+        onboardingController.onAllGranted = { [weak self] in
+            guard let self else { return }
+            SettingsManager.shared.permissionsWereGranted = true
+            if !self.monitoringActive { self.startMonitoring() }
+            self.rebuildMenu()   // убрать «Проверить разрешения…» из меню
+        }
+        onboardingController.onRequestRestart = { [weak self] in
+            self?.restartApp()
+        }
+    }
+
+    // MARK: - Пауза / мастер-тумблер (W4)
+
+    /// Единая точка применения «работаем/нет»: mастер-тумблер И пауза. Сам event tap
+    /// не сносим (как и прежний Enable-чекбокс) — колбэки гейтятся effectivelyEnabled.
+    private func applyEnabledState() {
+        let settings = SettingsManager.shared
+
+        // Таймер авто-возобновления для таймерной паузы (переживает и перезапуск:
+        // pausedUntil персистентный, поэтому взводим и при старте приложения).
+        pauseTimer?.invalidate()
+        pauseTimer = nil
+        if let until = settings.pausedUntil, until > Date() {
+            pauseTimer = Timer.scheduledTimer(withTimeInterval: until.timeIntervalSinceNow + 0.5,
+                                              repeats: false) { [weak self] _ in
+                Task { @MainActor in
+                    SettingsManager.shared.clearPause()
+                    rslog("pause: expired — auto-resume")
+                    self?.applyEnabledState()
+                }
+            }
+        }
+
+        settingsController.updateAutoSwitchState(settings.autoSwitchEnabled)
+        updateStatusIcon()
+        rebuildMenu()
     }
 
     // MARK: - Learn-from-undo (предложить добавить слово в never-convert)
@@ -125,6 +169,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Permission Wizard
 
+    /// Онбординг-чеклист (W3) вместо цепочки модальных алертов: одно окно с живым
+    /// статусом обоих разрешений; закрытие ничего не теряет.
     private func runPermissionWizard(interactive: Bool = false) {
         let acc = AXIsProcessTrusted()
         let inp = CGPreflightListenEventAccess()
@@ -134,52 +180,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Запоминаем что разрешения были даны
             SettingsManager.shared.permissionsWereGranted = true
             if !monitoringActive { startMonitoring() }
-            // Ручная проверка из меню должна давать видимый отклик.
-            if interactive { showPermissionsOKAlert() }
+            // Ручная проверка из меню должна давать видимый отклик: окно в состоянии «всё выдано».
+            if interactive { onboardingController.show() }
             return
         }
 
-        // Проверяем: разрешения были раньше, а теперь сброшены (обновление)
+        // Разрешения были раньше, а теперь сброшены (обновление): чистим TCC-записи
+        // и показываем чеклист с пометкой о сбросе.
         if SettingsManager.shared.permissionsWereGranted {
             rslog("Permissions were previously granted — reset detected after update")
             SettingsManager.shared.permissionsWereGranted = false
-            showPermissionsResetAlert()
+            resetPermissions()
+            onboardingController.show(resetNotice: true)
             return
         }
 
-        // Первый запуск — обычный визард
-        if acc {
-            showStep_InputMonitoring()
-            return
-        }
-
-        showStep_Accessibility()
-    }
-
-    /// Подтверждение при ручной проверке, когда все разрешения уже выданы
-    private func showPermissionsOKAlert() {
-        let alert = NSAlert()
-        alert.alertStyle = .informational
-        alert.messageText = L10n.permissionsOkTitle
-        alert.informativeText = L10n.permissionsOkText
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
-    }
-
-    /// Уведомление о сбросе разрешений после обновления
-    private func showPermissionsResetAlert() {
-        let alert = NSAlert()
-        alert.alertStyle = .informational
-        alert.messageText = L10n.wizardPermissionsResetTitle
-        alert.informativeText = L10n.wizardPermissionsResetText
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
-
-        // Сбрасываем старые записи через tccutil
-        resetPermissions()
-
-        // Запрашиваем заново
-        showStep_Accessibility()
+        // Первый запуск — чеклист онбординга
+        onboardingController.show()
     }
 
     /// Сбрасывает старые записи разрешений для нашего bundle ID
@@ -198,57 +215,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rslog("TCC entries reset done")
     }
 
-    private func showStep_Accessibility() {
-        // AXIsProcessTrustedWithOptions с prompt=true показывает системный диалог
-        // и добавляет программу в список Accessibility автоматически
-        let options = ["AXTrustedCheckOptionPrompt" as CFString: true as CFBoolean] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(options)
-
-        permissionCheckTimer?.invalidate()
-        permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self else { return }
-                if AXIsProcessTrusted() {
-                    rslog("Accessibility granted!")
-                    self.permissionCheckTimer?.invalidate()
-                    self.permissionCheckTimer = nil
-                    self.showStep_InputMonitoring()
-                }
-            }
-        }
-    }
-
-    private func showStep_InputMonitoring() {
-        // CGRequestListenEventAccess() показывает системный диалог и добавляет
-        // программу в список Input Monitoring автоматически
-        let preflightOK = CGPreflightListenEventAccess()
-        rslog("Preflight check = \(preflightOK)")
-
-        if preflightOK {
-            // Уже есть — сразу запускаем
-            SettingsManager.shared.permissionsWereGranted = true
-            startMonitoring()
-            return
-        }
-
-        rslog("Requesting access...")
-        CGRequestListenEventAccess()
-
-        permissionCheckTimer?.invalidate()
-        permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self else { return }
-                if CGPreflightListenEventAccess() {
-                    rslog("Input Monitoring granted! Restarting...")
-                    SettingsManager.shared.permissionsWereGranted = true
-                    self.permissionCheckTimer?.invalidate()
-                    self.permissionCheckTimer = nil
-                    self.restartApp()
-                }
-            }
-        }
-    }
-
     private func restartApp() {
         rslog("Restarting from: \(Bundle.main.bundlePath)")
         AppRelauncher.relaunch()
@@ -257,13 +223,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Start Monitoring
 
     private func startMonitoring() {
-        permissionCheckTimer?.invalidate()
-        permissionCheckTimer = nil
-
         if !keyboardMonitor.start(
             onAltTap: { [weak self] in
                 guard let self else { return }
-                guard SettingsManager.shared.autoSwitchEnabled else { return }
+                guard SettingsManager.shared.effectivelyEnabled else { return }
                 if AutoSwitchPolicy.shouldDeferToRemoteClient {
                     // Удалёнка: текст конвертит офисный инстанс по реальным проброшенным символам
                     // (Fix №6). А здесь меняем СВОЮ раскладку — чтобы дальнейший ввод пошёл уже
@@ -298,7 +261,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             onAltReconvert: { [weak self] in
                 guard let self else { return }
-                guard SettingsManager.shared.autoSwitchEnabled else { return }
+                guard SettingsManager.shared.effectivelyEnabled else { return }
                 if AutoSwitchPolicy.shouldDeferToRemoteClient {
                     // Удалёнка: текст конвертит офисный инстанс по реальным проброшенным символам
                     // (Fix №6). А здесь меняем СВОЮ раскладку — чтобы дальнейший ввод пошёл уже
@@ -333,9 +296,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Страховка к issue #9: системное уведомление о смене раскладки ненадёжно
         // (особенно через удалённый стол — на той машине оно часто не доходит), поэтому
         // флаг «застревает». Постоянный лёгкий опрос держит иконку в синхроне с системой.
+        // Тот же опрос следит за состоянием разрешений (W4: пункт меню — только когда сломано).
         iconRefreshTimer?.invalidate()
         iconRefreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.updateStatusIcon() }
+            Task { @MainActor in
+                self?.updateStatusIcon()
+                self?.watchPermissions()
+            }
         }
         rslog("Monitoring started successfully")
 
@@ -343,16 +310,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             startPerAppLayout()
         }
 
-        // Предлагаем автозагрузку и автозамену при первом запуске (по разу)
-        offerLaunchAtLoginIfNeeded()
+        // Предлагаем автозамену при первом запуске (один раз). Автозагрузка теперь
+        // предлагается тумблером в окне онбординга (W3), отдельного алерта больше нет.
         offerAutoConvertIfNeeded()
+    }
+
+    /// Перестраивает меню при смене состояния разрешений (потеря/возврат) — чтобы
+    /// «Проверить разрешения…» появлялся только когда действительно сломано.
+    private func watchPermissions() {
+        let ok = AXIsProcessTrusted() && CGPreflightListenEventAccess()
+        if ok != lastPermissionsOK {
+            lastPermissionsOK = ok
+            rebuildMenu()
+        }
     }
 
     /// Авто-конвертация на границе слова: детект неправильной раскладки → конверт + смена.
     /// Точность-first: при любой неуверенности ничего не делаем. Ручной триггер не трогаем.
     private func handleAutoConvert() {
         rslog("auto: fired")
-        guard SettingsManager.shared.autoSwitchEnabled else { rslog("auto: bail master-off"); return }
+        guard SettingsManager.shared.effectivelyEnabled else { rslog("auto: bail master-off"); return }
         guard SettingsManager.shared.autoConvert else { rslog("auto: bail flag-off"); return }
         guard !AutoSwitchPolicy.secureInputActive else { rslog("auto: bail secure-input"); return }
         let frontID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
@@ -414,28 +391,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Предлагает включить автозагрузку при первом запуске (один раз)
-    private func offerLaunchAtLoginIfNeeded() {
-        let settings = SettingsManager.shared
-        guard !settings.launchAtLoginAsked else { return }
-        settings.launchAtLoginAsked = true
-
-        let alert = NSAlert()
-        alert.alertStyle = .informational
-        alert.messageText = L10n.wizardLaunchAtLoginTitle
-        alert.informativeText = L10n.wizardLaunchAtLoginText
-        alert.addButton(withTitle: L10n.wizardYes)
-        alert.addButton(withTitle: L10n.wizardNo)
-
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            settings.launchAtLogin = true
-            rslog("User enabled launch at login")
-        } else {
-            rslog("User declined launch at login")
-        }
-    }
-
     /// Предлагает включить автозамену при первом запуске (один раз). Фича OFF по умолчанию,
     /// поэтому без явного предложения пользователь о ней не узнает.
     private func offerAutoConvertIfNeeded() {
@@ -480,35 +435,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         keyboardMonitor.soundArmed = true  // issue #7: следующая буква даст звук раскладки
     }
 
-    /// Собирает меню статус-бара. Вызывается заново при смене языка интерфейса,
-    /// иначе пункты меню остаются на старом языке.
+    /// Собирает меню статус-бара (W4: статус первым, тумблеры сгруппированы).
+    /// Вызывается заново при смене языка интерфейса, состояния паузы и разрешений.
     private func rebuildMenu() {
         let menu = NSMenu()
 
-        // Строка версии (с dev-меткой для непубликуемых сборок) — чтобы было видно, какой билд.
-        let ver = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
-        let devTag = Bundle.main.infoDictionary?["RSDevTag"] as? String ?? ""
-        let verItem = NSMenuItem(title: "Switcher3way \(ver)\(devTag)", action: nil, keyEquivalent: "")
-        verItem.isEnabled = false
-        menu.addItem(verItem)
+        // Статусный заголовок: текущая раскладка + подсказка триггера + версия.
+        // Версия переехала сюда из отдельной отключённой строки.
+        let headerItem = NSMenuItem()
+        headerItem.view = makeMenuHeaderView()
+        menu.addItem(headerItem)
         menu.addItem(NSMenuItem.separator())
 
-        let autoItem = NSMenuItem(title: L10n.menuAutoSwitch, action: #selector(toggleAutoSwitch), keyEquivalent: "")
-        autoItem.target = self
-        autoItem.state = SettingsManager.shared.autoSwitchEnabled ? .on : .off
-        menu.addItem(autoItem)
+        // «Быстрые переключатели» — без «(beta)»: бейджи остаются в настройках.
+        if #available(macOS 14.0, *) {
+            menu.addItem(NSMenuItem.sectionHeader(title: L10n.menuQuickToggles))
+        } else {
+            let header = NSMenuItem(title: L10n.menuQuickToggles, action: nil, keyEquivalent: "")
+            header.isEnabled = false
+            menu.addItem(header)
+        }
 
-        let autoConvertItem = NSMenuItem(title: L10n.menuAutoConvert, action: #selector(toggleAutoConvert), keyEquivalent: "")
+        let autoConvertItem = NSMenuItem(title: L10n.menuAutofix, action: #selector(toggleAutoConvert), keyEquivalent: "")
         autoConvertItem.target = self
         autoConvertItem.state = SettingsManager.shared.autoConvert ? .on : .off
         menu.addItem(autoConvertItem)
 
-        let keySoundItem = NSMenuItem(title: L10n.menuKeySound, action: #selector(toggleKeySound), keyEquivalent: "")
+        let keySoundItem = NSMenuItem(title: L10n.menuSound, action: #selector(toggleKeySound), keyEquivalent: "")
         keySoundItem.target = self
         keySoundItem.state = SettingsManager.shared.keySound ? .on : .off
         menu.addItem(keySoundItem)
 
-        let caretFlagItem = NSMenuItem(title: L10n.menuCaretFlag, action: #selector(toggleCaretFlag), keyEquivalent: "")
+        let caretFlagItem = NSMenuItem(title: L10n.menuFlag, action: #selector(toggleCaretFlag), keyEquivalent: "")
         caretFlagItem.target = self
         caretFlagItem.state = SettingsManager.shared.caretFlag ? .on : .off
         menu.addItem(caretFlagItem)
@@ -523,9 +481,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        let permItem = NSMenuItem(title: L10n.menuCheckPermissions, action: #selector(recheckPermissions), keyEquivalent: "")
-        permItem.target = self
-        menu.addItem(permItem)
+        // Пауза с длительностями вместо чекбокса «Включить» (W4): выключенный
+        // свитчер не должен выглядеть включённым — иконка показывает паузу.
+        if SettingsManager.shared.effectivelyEnabled {
+            let pauseItem = NSMenuItem(title: L10n.menuPause, action: nil, keyEquivalent: "")
+            let sub = NSMenu()
+            let p30 = NSMenuItem(title: L10n.menuPause30m, action: #selector(pause30m), keyEquivalent: "")
+            p30.target = self
+            sub.addItem(p30)
+            let p1h = NSMenuItem(title: L10n.menuPause1h, action: #selector(pause1h), keyEquivalent: "")
+            p1h.target = self
+            sub.addItem(p1h)
+            let pRestart = NSMenuItem(title: L10n.menuPauseUntilRestart, action: #selector(pauseUntilRestartTapped), keyEquivalent: "")
+            pRestart.target = self
+            sub.addItem(pRestart)
+            pauseItem.submenu = sub
+            menu.addItem(pauseItem)
+        } else {
+            let resumeItem = NSMenuItem(title: L10n.menuResume, action: #selector(resumeTapped), keyEquivalent: "")
+            resumeItem.target = self
+            menu.addItem(resumeItem)
+        }
+
+        // «Проверить разрешения…» — только когда разрешения сломаны (W4);
+        // в здоровом состоянии пункт не нужен в ежедневном меню.
+        if !(AXIsProcessTrusted() && CGPreflightListenEventAccess()) {
+            let permItem = NSMenuItem(title: L10n.menuCheckPermissions, action: #selector(recheckPermissions), keyEquivalent: "")
+            permItem.target = self
+            menu.addItem(permItem)
+        }
 
         let settingsItem = NSMenuItem(title: L10n.menuSettings, action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
@@ -542,14 +526,83 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rslog("Menu (re)built with \(menu.items.count) items")
     }
 
+    /// Статусный заголовок меню (W4): бейдж с кодом языка, имя раскладки,
+    /// строка «триггер конвертирует последнее слово · версия».
+    private func makeMenuHeaderView() -> NSView {
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 260, height: 48))
+
+        let badge = NSView(frame: NSRect(x: 14, y: 10, width: 28, height: 28))
+        badge.wantsLayer = true
+        badge.layer?.cornerRadius = 6
+        badge.layer?.borderWidth = 1.5
+        badge.layer?.borderColor = NSColor.tertiaryLabelColor.cgColor
+        let badgeLabel = NSTextField(labelWithString: currentLayoutBadge())
+        badgeLabel.font = .boldSystemFont(ofSize: 11)
+        badgeLabel.alignment = .center
+        badgeLabel.frame = NSRect(x: 0, y: 7, width: 28, height: 14)
+        badge.addSubview(badgeLabel)
+        container.addSubview(badge)
+        headerBadgeLabel = badgeLabel
+
+        let nameLabel = NSTextField(labelWithString: LayoutSwitcher.currentLayoutName())
+        nameLabel.font = .boldSystemFont(ofSize: 13)
+        nameLabel.lineBreakMode = .byTruncatingTail
+        nameLabel.frame = NSRect(x: 52, y: 25, width: 196, height: 17)
+        container.addSubview(nameLabel)
+        headerNameLabel = nameLabel
+
+        let ver = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let devTag = Bundle.main.infoDictionary?["RSDevTag"] as? String ?? ""
+        let hintLabel = NSTextField(labelWithString: "\(L10n.menuHeaderHint(triggerSymbol())) · v\(ver)\(devTag)")
+        hintLabel.font = .systemFont(ofSize: 11)
+        hintLabel.textColor = .secondaryLabelColor
+        hintLabel.lineBreakMode = .byTruncatingTail
+        hintLabel.frame = NSRect(x: 52, y: 8, width: 196, height: 14)
+        container.addSubview(hintLabel)
+
+        return container
+    }
+
+    /// Двухбуквенный код языка текущей раскладки для бейджа заголовка (W4: чип «EN»).
+    private func currentLayoutBadge() -> String {
+        guard let lang = LayoutSwitcher.currentLanguageCode()?.lowercased(), !lang.isEmpty else {
+            return "?"
+        }
+        return String(lang.prefix(2)).uppercased()
+    }
+
+    /// Символ клавиши-триггера для подсказки в заголовке меню.
+    private func triggerSymbol() -> String {
+        switch SettingsManager.shared.triggerKey {
+        case "command": return "⌘"
+        case "control": return "⌃"
+        case "shift": return "⇧"
+        case "command+shift": return "⌘⇧"
+        case "control+shift": return "⌃⇧"
+        case "command+option": return "⌘⌥"
+        case "control+option": return "⌃⌥"
+        default: return "⌥"
+        }
+    }
+
     func updateStatusIcon() {
         let flag = flagForCurrentLayout()
-        // Каретку дёргаем ТОЛЬКО при реальной смене флага: updateStatusIcon зовётся ещё и
-        // 2-секундным опросом-страховкой, иначе флаг у каретки выскакивал бы каждые 2с.
-        let changed = statusItem.button?.title != flag
-        statusItem.button?.title = flag
+        // W4: на паузе (или при выключенном мастер-тумблере) иконка явно отличается —
+        // выключенный свитчер не должен выглядеть включённым.
+        let title = SettingsManager.shared.effectivelyEnabled ? flag : "⏸" + flag
+        // Каретку дёргаем ТОЛЬКО при реальной смене флага раскладки: updateStatusIcon
+        // зовётся ещё и 2-секундным опросом-страховкой, иначе флаг у каретки выскакивал
+        // бы каждые 2с (а смена паузы — не смена раскладки).
+        let changed = lastFlagShown != flag
+        lastFlagShown = flag
+        statusItem.button?.title = title
         if changed { caretIndicator?.layoutChanged() }
+        // Живой заголовок меню: раскладка могла смениться после последней пересборки меню.
+        headerBadgeLabel?.stringValue = currentLayoutBadge()
+        headerNameLabel?.stringValue = LayoutSwitcher.currentLayoutName()
     }
+
+    private var lastFlagShown = ""
 
     /// Флаг текущей раскладки по коду языка (BCP-47), а не по подстроке в ID — иначе
     /// "Belarusian" ложно матчил "ru", а любая не-RU/EN пара показывалась как 🇺🇸.
@@ -586,11 +639,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Actions
 
-    @objc private func toggleAutoSwitch(_ sender: NSMenuItem) {
-        SettingsManager.shared.autoSwitchEnabled.toggle()
-        let enabled = SettingsManager.shared.autoSwitchEnabled
-        sender.state = enabled ? .on : .off
-        settingsController.updateAutoSwitchState(enabled)
+    @objc private func pause30m() {
+        SettingsManager.shared.pause(for: 30 * 60)
+        rslog("pause: 30m")
+        applyEnabledState()
+    }
+
+    @objc private func pause1h() {
+        SettingsManager.shared.pause(for: 3600)
+        rslog("pause: 1h")
+        applyEnabledState()
+    }
+
+    @objc private func pauseUntilRestartTapped() {
+        SettingsManager.shared.pause(for: nil)
+        rslog("pause: until restart")
+        applyEnabledState()
+    }
+
+    /// Resume снимает и паузу, и выключенный мастер-тумблер — «включи обратно» одним пунктом.
+    @objc private func resumeTapped() {
+        SettingsManager.shared.clearPause()
+        SettingsManager.shared.autoSwitchEnabled = true
+        rslog("pause: resumed manually")
+        applyEnabledState()
     }
 
     @objc private func toggleAutoConvert(_ sender: NSMenuItem) {

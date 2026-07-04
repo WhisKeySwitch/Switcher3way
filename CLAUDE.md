@@ -60,13 +60,23 @@ Full diff: `nway-3way.patch`. Rationale + detail: `NOTES-3WAY.md`. Summary:
 5. **UI trims** — About tab buttons removed; Advanced tab "Send log" removed; General tab
    "check for updates" checkbox removed; note added explaining auto = all layouts.
 6. **Stable signing** — `build_app.sh` signs with the self-signed identity instead of ad-hoc.
+7. **UI modernization** (`openspec/changes/modernize-ui`, from the W1–W4 design-review
+   wireframes): Settings became toolbar-tab preferences (General / Auto-fix / Advanced / About)
+   with grouped forms and switches; the three exception tables merged into one
+   filtered/searchable list; the chained permission alerts became a live onboarding checklist
+   window; the menu got a status header, quick-toggles group, and Pause-with-durations
+   (new `com.ruswitcher.pausedUntil` key; "until restart" is session-only by design).
 
 ## Architecture map (`Sources/RuSwitcher/`)
 
-- **`AppDelegate.swift`** — lifecycle, menu-bar item + menu (`rebuildMenu`), permission checks,
-  status icon. **`handleAutoConvert()`** is the auto-switch orchestrator (word boundary →
+- **`AppDelegate.swift`** — lifecycle, menu-bar item + menu (`rebuildMenu`: status header with
+  layout badge/trigger hint/version, quick toggles, Pause submenu; "Check Permissions…" appears
+  only when permissions are broken), permission checks, status icon (`⏸`-prefixed while
+  paused/disabled). **`handleAutoConvert()`** is the auto-switch orchestrator (word boundary →
   `NWayResolver.resolve` → `TextConverter.convertBuffer` + `LayoutSwitcher.switchTo`). Manual
-  ⌥-trigger callbacks (`onAltTap`/`onAltReconvert`) also route through N-way.
+  ⌥-trigger callbacks (`onAltTap`/`onAltReconvert`) also route through N-way; all three gate on
+  `SettingsManager.effectivelyEnabled` (master toggle AND not paused); pause timers live in
+  `applyEnabledState()`.
 - **`NWayDetector.swift`** — the N-way decision (fork's core).
 - **`AutoSwitch.swift`** — `Dict` (NSSpellChecker), `LayoutDetector.decide` + shared
   `passesSoftGates`, `AutoSwitchPolicy` (exception lists, denied apps, secure-input, remote).
@@ -80,9 +90,18 @@ Full diff: `nway-3way.patch`. Rationale + detail: `NOTES-3WAY.md`. Summary:
 - **`TextConverter.swift`** — retype engine (backspace + Unicode insert, clipboard fallback):
   `convert`, **`convertBuffer`** (N-way targeted retype), `reconvert`.
 - **`SettingsManager.swift`** — UserDefaults (`layout1ID`/`layout2ID` = manual-trigger pair only;
-  exception lists; feature flags). Keys are literal `com.ruswitcher.*` strings (leave them).
-- **`SettingsWindowController.swift`** — Settings tabs: General / Auto-conversion (exceptions) /
-  About / Advanced. Manual AppKit layout (hand-placed `y` coordinates — adjust carefully).
+  exception lists; feature flags; pause state: persisted `pausedUntil` + session-only
+  `pausedUntilRestart`, computed `isPaused`/`effectivelyEnabled`). Keys are literal
+  `com.ruswitcher.*` strings (leave them).
+- **`SettingsWindowController.swift`** — Settings as `NSTabViewController` toolbar tabs
+  (System-Settings style): General / Auto-fix / Advanced / About, grouped forms with
+  `NSSwitch`es, Auto Layout throughout (no more hand-placed frames).
+- **`FormUI.swift`** — `FormBox` (grouped box with hairline row separators) + row/header/
+  footnote/badge factories shared by Settings tabs and the onboarding checklist.
+- **`ExceptionsPane.swift`** — unified exceptions list (one table + segmented filter with live
+  counts + search + add/remove; protected password-manager rows show an "always off" badge).
+- **`OnboardingWindowController.swift`** — permission checklist window: 1 s live polling of
+  both grants, inline launch-at-login switch; replaced the chained NSAlert wizard.
 - **`Localization.swift`** — `L10n` strings, 16 languages; `s()` falls back to English.
 - Others: `CaretIndicator` (flag at cursor), `PerAppLayoutManager`, `KeyMapping`/`KeyCodes`
   (static fallback tables), `UpdateChecker` (disabled), `AppRelauncher`.
@@ -109,10 +128,11 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Current state
 
-- Feature-complete: 3-way auto + manual switching, renamed, custom icon, updater off, UI trimmed,
+- Feature-complete: 3-way auto + manual switching, renamed, custom icon, updater off,
+  modernized UI (toolbar-tab Settings, onboarding checklist, status-first menu with Pause),
   stable signing. Builds clean; installed at `/Applications/Switcher3way.app` (v2.6.0).
-- All fork changes and docs are committed on `main`.
-- **Pending user action:** grant Accessibility + Input Monitoring once (persists thereafter).
+- **Pending user action:** visual pass of the new UI against the W1–W4 wireframes
+  (`openspec/changes/modernize-ui/`) — behavior is verified via debug log, pixels are not.
 
 ## Known issues / next steps
 

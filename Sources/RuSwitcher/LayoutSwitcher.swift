@@ -20,6 +20,14 @@ enum LayoutSwitcher {
         return languageCode(source)
     }
 
+    /// Локализованное имя ТЕКУЩЕЙ раскладки (для статусного заголовка меню, W4).
+    static func currentLayoutName() -> String {
+        guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue() else {
+            return ""
+        }
+        return sourceName(source)
+    }
+
     /// Переключает на противоположную раскладку (из настроенной пары)
     static func switchToOpposite() {
         let current = currentLayoutID()

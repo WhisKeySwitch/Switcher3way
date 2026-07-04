@@ -34,6 +34,7 @@ final class SettingsManager: @unchecked Sendable {
         static let deniedAppsRemoved = "com.ruswitcher.deniedAppsRemoved"
         static let deniedWords = "com.ruswitcher.deniedWords"
         static let alwaysConvertWords = "com.ruswitcher.alwaysConvertWords"
+        static let pausedUntil = "com.ruswitcher.pausedUntil"
     }
 
     private init() {}
@@ -44,6 +45,46 @@ final class SettingsManager: @unchecked Sendable {
         get { defaults.object(forKey: Keys.autoSwitch) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Keys.autoSwitch) }
     }
+
+    // MARK: - Пауза (W4)
+
+    /// Пауза «до перезапуска» — только на сессию, НЕ персистится: после релонча
+    /// приложение всегда возобновляется (в этом смысл этого варианта паузы).
+    private var pausedUntilRestart = false
+
+    /// Таймерная пауза. Отдельный ключ от autoSwitch: пауза не должна затирать
+    /// сохранённое предпочтение пользователя (та галочка переживает перезапуск, пауза — нет).
+    var pausedUntil: Date? {
+        get { defaults.object(forKey: Keys.pausedUntil) as? Date }
+        set { defaults.set(newValue, forKey: Keys.pausedUntil) }
+    }
+
+    /// Единый источник истины для «на паузе» (таймерная или до перезапуска).
+    var isPaused: Bool {
+        if pausedUntilRestart { return true }
+        if let until = pausedUntil, until > Date() { return true }
+        return false
+    }
+
+    /// Ставит паузу: interval в секундах, nil = до перезапуска.
+    func pause(for interval: TimeInterval?) {
+        if let interval {
+            pausedUntil = Date().addingTimeInterval(interval)
+            pausedUntilRestart = false
+        } else {
+            pausedUntilRestart = true
+            pausedUntil = nil
+        }
+    }
+
+    /// Снимает паузу (ручной Resume или истёкший таймер).
+    func clearPause() {
+        pausedUntilRestart = false
+        pausedUntil = nil
+    }
+
+    /// Эффективное «работаем»: мастер-тумблер И не на паузе. Гейтит триггер и автозамену.
+    var effectivelyEnabled: Bool { autoSwitchEnabled && !isPaused }
 
     /// ID первой раскладки (пустая строка = авто-определение)
     var layout1ID: String {

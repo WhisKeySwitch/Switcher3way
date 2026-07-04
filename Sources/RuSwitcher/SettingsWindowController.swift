@@ -1,19 +1,15 @@
 import AppKit
 import Carbon
 
-/// Окно настроек с вкладками
+/// Окно настроек: тулбарные вкладки в стиле Системных настроек (W1/W2),
+/// сгруппированные формы с переключателями вместо голых чекбоксов.
 @MainActor
 final class SettingsWindowController {
     private var window: NSWindow?
-    private var autoSwitchCheckbox: NSButton?
-    private var launchAtLoginCheckbox: NSButton?
-    private var checkUpdatesCheckbox: NSButton?
-    private var debugLogCheckbox: NSButton?
-    private var caretFlagCheckbox: NSButton?
-    private var layout1Popup: NSPopUpButton?
-    private var layout2Popup: NSPopUpButton?
-    private var languagePopup: NSPopUpButton?
-    private var exceptionEditors: [ExceptionListEditor] = []
+    private var statusSwitch: NSSwitch?
+    private var statusTitleLabel: NSTextField?
+    private var caretFlagSwitch: NSSwitch?
+    private var exceptionsPane: ExceptionsPane?
 
     /// Callback для обновления меню
     var onAutoSwitchChanged: ((Bool) -> Void)?
@@ -24,6 +20,8 @@ final class SettingsWindowController {
     var onRemoteDesktopChanged: ((Bool) -> Void)?
     var onCaretFlagChanged: ((Bool) -> Void)?
 
+    private let tabWidth: CGFloat = 500
+
     func showWindow() {
         if let window {
             window.makeKeyAndOrderFront(nil)
@@ -31,318 +29,239 @@ final class SettingsWindowController {
             return
         }
 
-        let win = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 660),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
+        let tabVC = NSTabViewController()
+        tabVC.tabStyle = .toolbar
+        // Порядок вкладок по W1: General / Auto-fix / Advanced / About.
+        tabVC.addTabViewItem(makeTab(title: L10n.settingsTabGeneral, symbol: "gearshape",
+                                     view: buildGeneralTab()))
+        tabVC.addTabViewItem(makeTab(title: L10n.settingsTabAutofix, symbol: "wand.and.stars",
+                                     view: buildAutofixTab()))
+        tabVC.addTabViewItem(makeTab(title: L10n.settingsTabAdvanced, symbol: "slider.horizontal.3",
+                                     view: buildAdvancedTab()))
+        tabVC.addTabViewItem(makeTab(title: L10n.settingsTabAbout, symbol: "info.circle",
+                                     view: buildAboutTab()))
+
+        let win = NSWindow(contentViewController: tabVC)
+        win.styleMask = [.titled, .closable]
+        win.toolbarStyle = .preference
         win.title = L10n.settingsTitle
         win.center()
         win.isReleasedWhenClosed = false
-
-        let tabView = NSTabView(frame: win.contentView!.bounds)
-        tabView.autoresizingMask = [.width, .height]
-
-        tabView.addTabViewItem(createGeneralTab())
-        tabView.addTabViewItem(createExceptionsTab())
-        tabView.addTabViewItem(createAboutTab())
-        tabView.addTabViewItem(createAdvancedTab())
-
-        win.contentView = tabView
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
         window = win
     }
 
-    /// Обновить состояние чекбокса автопереключения извне
+    /// Обёртка вкладки: view-контроллер с иконкой SF Symbol и вычисленным
+    /// preferredContentSize (тулбарный стиль ресайзит окно по нему).
+    private func makeTab(title: String, symbol: String, view: NSView) -> NSTabViewItem {
+        let vc = NSViewController()
+        vc.view = view
+        // NSTabViewController в тулбарном стиле берёт заголовок окна из title
+        // выбранного контроллера — без него окно называется «Без названия».
+        vc.title = L10n.settingsTitle
+        view.layoutSubtreeIfNeeded()
+        vc.preferredContentSize = NSSize(width: tabWidth, height: view.fittingSize.height)
+        let item = NSTabViewItem(viewController: vc)
+        item.label = title
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
+        return item
+    }
+
+    /// Каркас вкладки: вертикальный стек секций с отступами, ширина фиксирована.
+    private func makeTabRoot(_ sections: [NSView]) -> NSView {
+        let root = NSView()
+        root.translatesAutoresizingMaskIntoConstraints = false
+        let stack = NSStackView(views: sections)
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 12
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        root.addSubview(stack)
+        NSLayoutConstraint.activate([
+            root.widthAnchor.constraint(equalToConstant: tabWidth),
+            stack.topAnchor.constraint(equalTo: root.topAnchor, constant: 16),
+            stack.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -18),
+            stack.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
+        ])
+        for s in sections {
+            s.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        }
+        return root
+    }
+
+    /// Обновить состояние мастер-переключателя извне (меню / пауза)
     func updateAutoSwitchState(_ enabled: Bool) {
-        autoSwitchCheckbox?.state = enabled ? .on : .off
+        statusSwitch?.state = enabled ? .on : .off
+        statusTitleLabel?.stringValue = enabled ? L10n.settingsStatusOn : L10n.settingsStatusOff
     }
 
-    /// Обновить чекбокс «флаг у курсора» извне (когда переключили из меню)
+    /// Обновить переключатель «флаг у курсора» извне (когда переключили из меню)
     func updateCaretFlagState(_ enabled: Bool) {
-        caretFlagCheckbox?.state = enabled ? .on : .off
+        caretFlagSwitch?.state = enabled ? .on : .off
     }
 
-    // MARK: - General Tab
+    // MARK: - Вкладка General (W1)
 
-    private func createGeneralTab() -> NSTabViewItem {
-        let item = NSTabViewItem()
-        item.label = L10n.settingsTabGeneral
+    private func buildGeneralTab() -> NSView {
+        let settings = SettingsManager.shared
 
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: 600))
-        var y: CGFloat = 560
+        // Статус-карточка: мастер-тумблер, повышенный из голого чекбокса.
+        let statusBox = FormBox()
+        let sw = FormUI.makeSwitch(isOn: settings.autoSwitchEnabled,
+                                   target: self, action: #selector(autoSwitchChanged))
+        statusSwitch = sw
+        let statusRow = FormUI.row(title: settings.autoSwitchEnabled ? L10n.settingsStatusOn : L10n.settingsStatusOff,
+                                   subtitle: L10n.settingsHotkey, titleBold: true, control: sw)
+        statusTitleLabel = findTitleLabel(in: statusRow)
+        statusBox.addRow(statusRow)
 
-        // Автопереключение
-        let autoSwitch = NSButton(checkboxWithTitle: L10n.settingsAutoSwitch, target: self, action: #selector(autoSwitchChanged))
-        autoSwitch.frame = NSRect(x: 20, y: y, width: 420, height: 22)
-        autoSwitch.state = SettingsManager.shared.autoSwitchEnabled ? .on : .off
-        view.addSubview(autoSwitch)
-        autoSwitchCheckbox = autoSwitch
-        y -= 30
-
-        // Триггер конвертации
-        let triggerLabel = NSTextField(labelWithString: L10n.settingsTrigger)
-        triggerLabel.frame = NSRect(x: 20, y: y, width: 150, height: 22)
-        view.addSubview(triggerLabel)
-
-        let triggerPopup = NSPopUpButton(frame: NSRect(x: 175, y: y - 2, width: 255, height: 26))
+        // Секция «Триггер»
+        let triggerBox = FormBox()
+        let triggerPopup = NSPopUpButton()
         populateTriggerPopup(triggerPopup)
         triggerPopup.target = self
         triggerPopup.action = #selector(triggerChanged)
-        view.addSubview(triggerPopup)
-        y -= 34
+        triggerBox.addRow(FormUI.row(title: L10n.settingsConvertWith, control: triggerPopup))
+        triggerBox.addRow(FormUI.row(title: L10n.settingsTriggerRightOnly,
+                                     control: FormUI.makeSwitch(isOn: settings.triggerRightOnly,
+                                                                target: self, action: #selector(triggerRightOnlyChanged))))
+        triggerBox.addRow(FormUI.row(title: L10n.settingsTriggerDoubleTap,
+                                     control: FormUI.makeSwitch(isOn: settings.triggerDoubleTap,
+                                                                target: self, action: #selector(triggerDoubleTapChanged))))
 
-        let rightOnlyCheckbox = NSButton(checkboxWithTitle: L10n.settingsTriggerRightOnly, target: self, action: #selector(triggerRightOnlyChanged))
-        rightOnlyCheckbox.frame = NSRect(x: 40, y: y, width: 390, height: 22)
-        rightOnlyCheckbox.state = SettingsManager.shared.triggerRightOnly ? .on : .off
-        view.addSubview(rightOnlyCheckbox)
-        y -= 26
+        // Секция «Ручная пара»: две раскладки в ОДНОЙ строке (два попапа через ⇄),
+        // вместо прежних Layout 1/2 — раздельные строки намекали на «третью раскладку».
+        let pairBox = FormBox()
+        let popup1 = NSPopUpButton()
+        populateLayoutPopup(popup1, selectedID: settings.layout1ID)
+        popup1.target = self
+        popup1.action = #selector(layout1Changed)
+        let popup2 = NSPopUpButton()
+        populateLayoutPopup(popup2, selectedID: settings.layout2ID)
+        popup2.target = self
+        popup2.action = #selector(layout2Changed)
+        let arrow = NSTextField(labelWithString: "⇄")
+        arrow.font = .systemFont(ofSize: 13)
+        let pairControl = NSStackView(views: [popup1, arrow, popup2])
+        pairControl.orientation = .horizontal
+        pairControl.spacing = 4
+        popup1.widthAnchor.constraint(equalToConstant: 125).isActive = true
+        popup2.widthAnchor.constraint(equalToConstant: 125).isActive = true
+        pairBox.addRow(FormUI.row(title: L10n.settingsPairToggles, control: pairControl))
 
-        let doubleTapCheckbox = NSButton(checkboxWithTitle: L10n.settingsTriggerDoubleTap, target: self, action: #selector(triggerDoubleTapChanged))
-        doubleTapCheckbox.frame = NSRect(x: 40, y: y, width: 390, height: 22)
-        doubleTapCheckbox.state = SettingsManager.shared.triggerDoubleTap ? .on : .off
-        view.addSubview(doubleTapCheckbox)
-        y -= 26
-
-        let triggerHint = NSTextField(wrappingLabelWithString: L10n.settingsTriggerHint)
-        triggerHint.frame = NSRect(x: 40, y: y - 22, width: 400, height: 36)
-        triggerHint.font = .systemFont(ofSize: 11)
-        triggerHint.textColor = .secondaryLabelColor
-        view.addSubview(triggerHint)
-        y -= 48
-
-        // Запуск при логине
-        let loginCheckbox = NSButton(checkboxWithTitle: L10n.settingsLaunchAtLogin, target: self, action: #selector(launchAtLoginChanged))
-        loginCheckbox.frame = NSRect(x: 20, y: y, width: 420, height: 22)
-        loginCheckbox.state = SettingsManager.shared.launchAtLogin ? .on : .off
-        view.addSubview(loginCheckbox)
-        launchAtLoginCheckbox = loginCheckbox
-        y -= 30
-
-        // Запоминание раскладки по приложению
-        let perAppCheckbox = NSButton(checkboxWithTitle: L10n.settingsPerAppLayout, target: self, action: #selector(perAppLayoutChanged))
-        perAppCheckbox.frame = NSRect(x: 20, y: y, width: 420, height: 22)
-        perAppCheckbox.state = SettingsManager.shared.perAppLayout ? .on : .off
-        view.addSubview(perAppCheckbox)
-        y -= 30
-
-        // «Авто-проверка обновлений» удалена — обновления отключены в форке Switcher3way.
-
-        // Язык интерфейса
-        let langLabel = NSTextField(labelWithString: L10n.settingsLanguage)
-        langLabel.frame = NSRect(x: 20, y: y, width: 130, height: 22)
-        view.addSubview(langLabel)
-
-        let langPopup = NSPopUpButton(frame: NSRect(x: 155, y: y - 2, width: 275, height: 26))
+        // Секция «Система»
+        let systemBox = FormBox()
+        systemBox.addRow(FormUI.row(title: L10n.settingsLaunchAtLogin,
+                                    control: FormUI.makeSwitch(isOn: settings.launchAtLogin,
+                                                               target: self, action: #selector(launchAtLoginChanged))))
+        systemBox.addRow(FormUI.row(title: L10n.settingsPerAppLayout,
+                                    control: FormUI.makeSwitch(isOn: settings.perAppLayout,
+                                                               target: self, action: #selector(perAppLayoutChanged))))
+        let langPopup = NSPopUpButton()
         populateLanguagePopup(langPopup)
         langPopup.target = self
         langPopup.action = #selector(languageChanged)
-        view.addSubview(langPopup)
-        languagePopup = langPopup
-        y -= 40
+        systemBox.addRow(FormUI.row(title: L10n.settingsLanguage, control: langPopup))
 
-        // Раскладка 1
-        let label1 = NSTextField(labelWithString: L10n.settingsLayout1)
-        label1.frame = NSRect(x: 20, y: y, width: 100, height: 22)
-        view.addSubview(label1)
-
-        let popup1 = NSPopUpButton(frame: NSRect(x: 130, y: y - 2, width: 300, height: 26))
-        populateLayoutPopup(popup1, selectedID: SettingsManager.shared.layout1ID)
-        popup1.target = self
-        popup1.action = #selector(layout1Changed)
-        view.addSubview(popup1)
-        layout1Popup = popup1
-        y -= 35
-
-        // Раскладка 2
-        let label2 = NSTextField(labelWithString: L10n.settingsLayout2)
-        label2.frame = NSRect(x: 20, y: y, width: 100, height: 22)
-        view.addSubview(label2)
-
-        let popup2 = NSPopUpButton(frame: NSRect(x: 130, y: y - 2, width: 300, height: 26))
-        populateLayoutPopup(popup2, selectedID: SettingsManager.shared.layout2ID)
-        popup2.target = self
-        popup2.action = #selector(layout2Changed)
-        view.addSubview(popup2)
-        layout2Popup = popup2
-        y -= 44
-
-        // Пояснение: авто-конвертация покрывает ВСЕ установленные раскладки; пара выше —
-        // только для ручного триггера (поэтому «третьей» раскладки в настройках нет).
-        let autoNote = NSTextField(wrappingLabelWithString: L10n.settingsAutoLayoutsNote)
-        autoNote.frame = NSRect(x: 20, y: y - 44, width: 420, height: 48)
-        autoNote.font = .systemFont(ofSize: 11)
-        autoNote.textColor = .secondaryLabelColor
-        view.addSubview(autoNote)
-        y -= 56
-
-        // Описание хоткея
-        let hotkeyLabel = NSTextField(wrappingLabelWithString: L10n.settingsHotkey)
-        hotkeyLabel.frame = NSRect(x: 20, y: y - 36, width: 420, height: 40)
-        hotkeyLabel.font = .systemFont(ofSize: 12)
-        hotkeyLabel.textColor = .secondaryLabelColor
-        view.addSubview(hotkeyLabel)
-
-        item.view = view
-        return item
+        return makeTabRoot([
+            statusBox,
+            FormUI.sectionHeader(L10n.settingsGroupTrigger),
+            triggerBox,
+            FormUI.footnote(L10n.settingsTriggerHint),
+            FormUI.sectionHeader(L10n.settingsGroupManualPair),
+            pairBox,
+            FormUI.footnote(L10n.settingsAutoLayoutsNote),
+            FormUI.sectionHeader(L10n.settingsGroupSystem),
+            systemBox,
+        ])
     }
 
-    // MARK: - Exceptions Tab
+    /// Достаёт жирный заголовок из строки FormUI.row (для статус-карточки).
+    private func findTitleLabel(in row: NSView) -> NSTextField? {
+        func walk(_ v: NSView) -> NSTextField? {
+            if let tf = v as? NSTextField, tf.font == NSFont.boldSystemFont(ofSize: 13) { return tf }
+            for sub in v.subviews { if let hit = walk(sub) { return hit } }
+            return nil
+        }
+        return walk(row)
+    }
 
-    private func createExceptionsTab() -> NSTabViewItem {
-        let item = NSTabViewItem()
-        item.label = L10n.settingsTabExceptions
+    // MARK: - Вкладка Auto-fix (W2)
 
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: 600))
-        var y: CGFloat = 586          // y — верх следующего элемента, идём сверху вниз
-        exceptionEditors.removeAll()
+    private func buildAutofixTab() -> NSView {
+        let settings = SettingsManager.shared
 
-        // Авто-конвертация
-        let autoConvert = NSButton(checkboxWithTitle: L10n.settingsAutoConvert, target: self, action: #selector(autoConvertChanged))
-        autoConvert.frame = NSRect(x: 20, y: y - 22, width: 420, height: 22)
-        autoConvert.state = SettingsManager.shared.autoConvert ? .on : .off
-        view.addSubview(autoConvert)
-        y -= 24
-        let acHint = NSTextField(wrappingLabelWithString: L10n.settingsAutoConvertHint)
-        acHint.frame = NSRect(x: 40, y: y - 32, width: 400, height: 32)
-        acHint.font = .systemFont(ofSize: 11); acHint.textColor = .secondaryLabelColor
-        view.addSubview(acHint)
-        y -= 38
+        // Мастер-карточка автозамены
+        let masterBox = FormBox()
+        masterBox.addRow(FormUI.row(title: L10n.settingsAutofixTitle,
+                                    subtitle: L10n.settingsAutofixSubtitle,
+                                    titleBold: true, badge: L10n.commonBeta,
+                                    control: FormUI.makeSwitch(isOn: settings.autoConvert,
+                                                               target: self, action: #selector(autoConvertChanged))))
 
         // Флаг у курсора (issue #10)
-        let caretFlag = NSButton(checkboxWithTitle: L10n.settingsCaretFlag, target: self, action: #selector(caretFlagChanged))
-        caretFlag.frame = NSRect(x: 20, y: y - 22, width: 420, height: 22)
-        caretFlag.state = SettingsManager.shared.caretFlag ? .on : .off
-        view.addSubview(caretFlag)
-        caretFlagCheckbox = caretFlag
-        y -= 24
-        let cfHint = NSTextField(wrappingLabelWithString: L10n.settingsCaretFlagHint)
-        cfHint.frame = NSRect(x: 40, y: y - 44, width: 400, height: 44)
-        cfHint.font = .systemFont(ofSize: 11); cfHint.textColor = .secondaryLabelColor
-        view.addSubview(cfHint)
-        y -= 52
+        let caretBox = FormBox()
+        let cfSwitch = FormUI.makeSwitch(isOn: settings.caretFlag,
+                                         target: self, action: #selector(caretFlagChanged))
+        caretFlagSwitch = cfSwitch
+        caretBox.addRow(FormUI.row(title: L10n.settingsAutofixCaretFlag,
+                                   badge: L10n.commonBeta, control: cfSwitch))
+
+        var sections: [NSView] = [masterBox, caretBox]
 
         // Режим удалённого стола отложен в 2.5 — блок скрыт за флагом (для тестирования).
-        if SettingsManager.shared.showRemoteDesktopBeta {
-            let remote = NSButton(checkboxWithTitle: L10n.menuRemoteDesktop, target: self, action: #selector(remoteDesktopChanged))
-            remote.frame = NSRect(x: 20, y: y - 22, width: 420, height: 22)
-            remote.state = SettingsManager.shared.remoteDesktopMode ? .on : .off
-            view.addSubview(remote)
-            y -= 24
-            let rHint = NSTextField(wrappingLabelWithString: L10n.settingsRemoteDesktopHint)
-            rHint.frame = NSRect(x: 40, y: y - 44, width: 400, height: 44)
-            rHint.font = .systemFont(ofSize: 11); rHint.textColor = .secondaryLabelColor
-            view.addSubview(rHint)
-            y -= 52
+        if settings.showRemoteDesktopBeta {
+            let remoteBox = FormBox()
+            remoteBox.addRow(FormUI.row(title: L10n.menuRemoteDesktop,
+                                        subtitle: L10n.settingsRemoteDesktopHint,
+                                        control: FormUI.makeSwitch(isOn: settings.remoteDesktopMode,
+                                                                   target: self, action: #selector(remoteDesktopChanged))))
+            sections.append(remoteBox)
         }
 
-        // Секция: заголовок сверху, ниже — таблица с кнопками. Зазоры фиксированные,
-        // поэтому раскладка одинаково корректна на всех языках (заголовки не переносятся).
-        func addSection(_ title: String, _ editor: ExceptionListEditor) {
-            let header = NSTextField(labelWithString: title)
-            header.frame = NSRect(x: 20, y: y - 18, width: 420, height: 18)
-            header.font = .boldSystemFont(ofSize: 11)
-            header.lineBreakMode = .byTruncatingTail
-            view.addSubview(header)
-            let contH: CGFloat = 96
-            let cont = editor.makeContainer(frame: NSRect(x: 20, y: y - 22 - contH, width: 420, height: contH))
-            view.addSubview(cont)
-            exceptionEditors.append(editor)
-            y -= (22 + contH + 14)   // заголовок+зазор + таблица + зазор до следующей секции
-        }
+        // Единый список исключений с сегментным фильтром
+        let pane = ExceptionsPane()
+        exceptionsPane = pane
+        sections.append(FormUI.sectionHeader(L10n.settingsGroupExceptions))
+        sections.append(pane.makeView())
 
-        addSection(L10n.settingsExceptionsApps, ExceptionListEditor(
-            kind: .apps,
-            get: { SettingsManager.shared.deniedApps },
-            set: { SettingsManager.shared.deniedApps = $0 },
-            isProtected: { AutoSwitchPolicy.protectedApps.contains($0) }))
-
-        addSection(L10n.settingsExceptionsNever, ExceptionListEditor(
-            kind: .words,
-            get: { SettingsManager.shared.deniedWords },
-            set: { SettingsManager.shared.deniedWords = $0 },
-            addWordPrompt: L10n.settingsAddWordPrompt))
-
-        addSection(L10n.settingsExceptionsAlways, ExceptionListEditor(
-            kind: .words,
-            get: { SettingsManager.shared.alwaysConvertWords },
-            set: { SettingsManager.shared.alwaysConvertWords = $0 },
-            addWordPrompt: L10n.settingsAddWordPrompt))
-
-        item.view = view
-        return item
+        return makeTabRoot(sections)
     }
 
-    // MARK: - About Tab
+    // MARK: - Вкладка About
 
-    private func createAboutTab() -> NSTabViewItem {
-        let item = NSTabViewItem()
-        item.label = L10n.settingsTabAbout
-
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: 360))
-        var y: CGFloat = 310
-
-        // Название и версия
+    private func buildAboutTab() -> NSView {
         let titleLabel = NSTextField(labelWithString: "Switcher3way")
         titleLabel.font = .boldSystemFont(ofSize: 20)
-        titleLabel.frame = NSRect(x: 20, y: y, width: 420, height: 28)
-        view.addSubview(titleLabel)
-        y -= 25
 
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
         let devTag = Bundle.main.infoDictionary?["RSDevTag"] as? String ?? ""
         let versionLabel = NSTextField(labelWithString: "v\(version)\(devTag) — \(L10n.settingsVersion)")
-        versionLabel.frame = NSRect(x: 20, y: y, width: 420, height: 20)
         versionLabel.font = .systemFont(ofSize: 12)
         versionLabel.textColor = .secondaryLabelColor
-        view.addSubview(versionLabel)
-        y -= 40
 
         // Все кнопки (Star on GitHub / Donate / Contact / Check for Updates) удалены в форке Switcher3way.
-        item.view = view
-        return item
+        return makeTabRoot([titleLabel, versionLabel])
     }
 
-    // MARK: - Advanced Tab
+    // MARK: - Вкладка Advanced
 
-    private func createAdvancedTab() -> NSTabViewItem {
-        let item = NSTabViewItem()
-        item.label = L10n.settingsTabAdvanced
+    private func buildAdvancedTab() -> NSView {
+        let debugBox = FormBox()
+        debugBox.addRow(FormUI.row(title: L10n.settingsDebugLog,
+                                   control: FormUI.makeSwitch(isOn: SettingsManager.shared.debugLogEnabled,
+                                                              target: self, action: #selector(debugLogChanged))))
 
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: 360))
-        var y: CGFloat = 310
-
-        // Debug log
-        let debugCheckbox = NSButton(checkboxWithTitle: L10n.settingsDebugLog, target: self, action: #selector(debugLogChanged))
-        debugCheckbox.frame = NSRect(x: 20, y: y, width: 420, height: 22)
-        debugCheckbox.state = SettingsManager.shared.debugLogEnabled ? .on : .off
-        view.addSubview(debugCheckbox)
-        debugLogCheckbox = debugCheckbox
-        y -= 35
-
-        // Показать лог
         let showLogBtn = NSButton(title: L10n.settingsShowLog, target: self, action: #selector(showLogFile))
-        showLogBtn.frame = NSRect(x: 20, y: y, width: 180, height: 32)
         showLogBtn.bezelStyle = .rounded
-        view.addSubview(showLogBtn)
 
-        // «Отправить лог» удалён в форке Switcher3way — остаётся только «Показать лог».
-        y -= 50
-
-        // Путь к логу
-        let logPath = logFilePath()
-        let pathLabel = NSTextField(wrappingLabelWithString: logPath)
-        pathLabel.frame = NSRect(x: 20, y: y - 20, width: 420, height: 40)
-        pathLabel.font = .systemFont(ofSize: 10)
-        pathLabel.textColor = .tertiaryLabelColor
+        let pathLabel = FormUI.footnote(logFilePath())
         pathLabel.isSelectable = true
-        view.addSubview(pathLabel)
 
-        item.view = view
-        return item
+        return makeTabRoot([debugBox, showLogBtn, pathLabel])
     }
 
     // MARK: - Language Popup
@@ -386,7 +305,7 @@ final class SettingsWindowController {
         for layout in layouts {
             let id = LayoutSwitcher.sourceID(layout)
             let name = LayoutSwitcher.sourceName(layout)
-            popup.addItem(withTitle: "\(name) (\(id.components(separatedBy: ".").last ?? id))")
+            popup.addItem(withTitle: name)
             popup.menu?.items.last?.representedObject = id as NSString
         }
 
@@ -430,18 +349,15 @@ final class SettingsWindowController {
 
     // MARK: - Actions
 
-    @objc private func autoSwitchChanged(_ sender: NSButton) {
+    @objc private func autoSwitchChanged(_ sender: NSSwitch) {
         let enabled = sender.state == .on
         SettingsManager.shared.autoSwitchEnabled = enabled
+        statusTitleLabel?.stringValue = enabled ? L10n.settingsStatusOn : L10n.settingsStatusOff
         onAutoSwitchChanged?(enabled)
     }
 
-    @objc private func launchAtLoginChanged(_ sender: NSButton) {
+    @objc private func launchAtLoginChanged(_ sender: NSSwitch) {
         SettingsManager.shared.launchAtLogin = sender.state == .on
-    }
-
-    @objc private func checkUpdatesEnabledChanged(_ sender: NSButton) {
-        SettingsManager.shared.checkUpdatesEnabled = sender.state == .on
     }
 
     @objc private func languageChanged(_ sender: NSPopUpButton) {
@@ -464,7 +380,7 @@ final class SettingsWindowController {
         DynamicKeyMapping.clearCache()
     }
 
-    @objc private func perAppLayoutChanged(_ sender: NSButton) {
+    @objc private func perAppLayoutChanged(_ sender: NSSwitch) {
         let enabled = sender.state == .on
         SettingsManager.shared.perAppLayout = enabled
         onPerAppLayoutChanged?(enabled)
@@ -475,60 +391,36 @@ final class SettingsWindowController {
         onTriggerChanged?()
     }
 
-    @objc private func triggerRightOnlyChanged(_ sender: NSButton) {
+    @objc private func triggerRightOnlyChanged(_ sender: NSSwitch) {
         SettingsManager.shared.triggerRightOnly = sender.state == .on
         onTriggerChanged?()
     }
 
-    @objc private func triggerDoubleTapChanged(_ sender: NSButton) {
+    @objc private func triggerDoubleTapChanged(_ sender: NSSwitch) {
         SettingsManager.shared.triggerDoubleTap = sender.state == .on
         onTriggerChanged?()
     }
 
-    @objc private func autoConvertChanged(_ sender: NSButton) {
+    @objc private func autoConvertChanged(_ sender: NSSwitch) {
         let enabled = sender.state == .on
         SettingsManager.shared.autoConvert = enabled
         onAutoConvertChanged?(enabled)
     }
 
-    @objc private func remoteDesktopChanged(_ sender: NSButton) {
+    @objc private func remoteDesktopChanged(_ sender: NSSwitch) {
         let enabled = sender.state == .on
         SettingsManager.shared.remoteDesktopMode = enabled
         onRemoteDesktopChanged?(enabled)
     }
 
-    @objc private func caretFlagChanged(_ sender: NSButton) {
+    @objc private func caretFlagChanged(_ sender: NSSwitch) {
         let enabled = sender.state == .on
         SettingsManager.shared.caretFlag = enabled
         onCaretFlagChanged?(enabled)
     }
 
-    @objc private func debugLogChanged(_ sender: NSButton) {
+    @objc private func debugLogChanged(_ sender: NSSwitch) {
         SettingsManager.shared.debugLogEnabled = sender.state == .on
-    }
-
-    @objc private func openGitHub() {
-        if let url = URL(string: SettingsManager.githubURL) {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    @objc private func openDonate() {
-        if let url = URL(string: SettingsManager.shared.donateURL) {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    @objc private func openContact() {
-        let email = SettingsManager.shared.contactEmail
-        let subject = "Switcher3way Feedback"
-        if let url = URL(string: "mailto:\(email)?subject=\(subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? subject)") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    @objc private func checkUpdates() {
-        UpdateChecker.checkNow()
     }
 
     @objc private func showLogFile() {
@@ -540,25 +432,6 @@ final class SettingsWindowController {
             alert.messageText = "Log file not found"
             alert.informativeText = "Enable debug logging first."
             alert.runModal()
-        }
-    }
-
-    @objc private func sendLogFile() {
-        let path = logFilePath()
-        guard FileManager.default.fileExists(atPath: path) else {
-            showLogFile() // покажет алерт
-            return
-        }
-
-        let url = URL(fileURLWithPath: path)
-        if let service = NSSharingService(named: .composeEmail) {
-            service.perform(withItems: [
-                "RuSwitcher debug log" as NSString,
-                url
-            ])
-        } else {
-            // Fallback: показать в Finder
-            NSWorkspace.shared.selectFile(path, inFileViewerRootedAtPath: "")
         }
     }
 
