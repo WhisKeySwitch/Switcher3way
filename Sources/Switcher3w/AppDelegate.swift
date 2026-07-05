@@ -224,7 +224,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     // Удалёнка: текст конвертит офисный инстанс по реальным проброшенным символам
                     // (Fix №6). А здесь меняем СВОЮ раскладку — чтобы дальнейший ввод пошёл уже
                     // в правильной раскладке и не пришлось конвертить каждое слово.
-                    LayoutSwitcher.switchToOpposite()
+                    LayoutSwitcher.switchToNextInstalled()
                     self.updateStatusIcon()
                     rslog("trigger: local layout switched, conversion handled by controlled instance")
                     return
@@ -232,22 +232,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let keys = self.keyboardMonitor.currentWordKeys
                 let prevKeys = self.keyboardMonitor.prevWordKeys
                 let bc = self.keyboardMonitor.boundaryCount
-                // N-way: если детект однозначно указывает целевую раскладку из 3+, конвертим
-                // туда. Иначе (слово валидно/неоднозначно) — прежний 2-way toggle по паре.
                 let mkeys = keys.isEmpty ? prevKeys : keys
                 let mtrailing = keys.isEmpty ? bc : 0
                 let mcaps = mkeys.contains { $0.caps }
-                if !mkeys.isEmpty,
-                   let d = NWayResolver.resolve(keys: mkeys, capsLock: mcaps),
-                   self.textConverter.convertBuffer(original: d.original, converted: d.converted,
-                                                    keyCount: mkeys.count, trailingSpaces: mtrailing) {
+                // N-way ручной цикл: перебираем все раскладки, дающие иной рендер набранного.
+                // Явное действие пользователя ⇒ конвертим даже при неоднозначности; повторный
+                // триггер (RECONVERT) листает кандидатов и по кругу возвращает исходник.
+                if !mkeys.isEmpty, let plan = NWayResolver.manualPlan(keys: mkeys, capsLock: mcaps) {
+                    let spaces = String(repeating: " ", count: mtrailing)
+                    let steps = plan.candidates.map { (text: $0.converted + spaces, layoutID: $0.targetLayoutID) }
+                    if let target = self.textConverter.beginCycle(home: plan.original + spaces, steps: steps,
+                                                                  eraseCount: mkeys.count + mtrailing,
+                                                                  previousLayoutID: plan.originalLayoutID) {
+                        self.keyboardMonitor.markConverted()
+                        LayoutSwitcher.switchTo(layoutID: target)
+                        self.updateStatusIcon()
+                        self.lastAutoConverted = nil
+                    }
+                } else if self.textConverter.convertViaClipboard(wordLength: keys.count,
+                                                                 prevWordLength: prevKeys.count,
+                                                                 boundaryCount: bc) {
+                    // Нет буфера нажатий (текст выделен мышью) или удалёнка: рендер по раскладкам
+                    // невозможен — конвертим по скрипту через clipboard и просто листаем раскладку.
                     self.keyboardMonitor.markConverted()
-                    LayoutSwitcher.switchTo(layoutID: d.targetLayoutID)
-                    self.updateStatusIcon()
-                    self.lastAutoConverted = nil
-                } else if self.textConverter.convert(wordKeys: keys, prevWordKeys: prevKeys, boundaryCount: bc) {
-                    self.keyboardMonitor.markConverted()
-                    LayoutSwitcher.switchToOpposite()
+                    LayoutSwitcher.switchToNextInstalled()
                     self.updateStatusIcon()
                     self.lastAutoConverted = nil
                 }
@@ -256,17 +264,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self else { return }
                 guard SettingsManager.shared.effectivelyEnabled else { return }
                 if AutoSwitchPolicy.shouldDeferToRemoteClient {
-                    // Удалёнка: текст конвертит офисный инстанс по реальным проброшенным символам
-                    // (Fix №6). А здесь меняем СВОЮ раскладку — чтобы дальнейший ввод пошёл уже
-                    // в правильной раскладке и не пришлось конвертить каждое слово.
-                    LayoutSwitcher.switchToOpposite()
+                    LayoutSwitcher.switchToNextInstalled()
                     self.updateStatusIcon()
                     rslog("trigger: local layout switched, conversion handled by controlled instance")
                     return
                 }
-                if self.textConverter.reconvert() {
+                // Буферный цикл: следующий кандидат, либо возврат к исходному тексту И точной
+                // раскладке, активной до конверсии (фикс 3-way undo). Выделение — через clipboard.
+                if let step = self.textConverter.cycleStep() {
                     self.keyboardMonitor.markConverted()
-                    LayoutSwitcher.switchToOpposite()
+                    LayoutSwitcher.switchTo(layoutID: step.layoutID)
+                    self.updateStatusIcon()
+                    if step.restored { self.offerExceptionAfterUndo() }
+                } else if self.textConverter.reconvert() {
+                    self.keyboardMonitor.markConverted()
+                    LayoutSwitcher.switchToNextInstalled()
                     self.updateStatusIcon()
                     self.offerExceptionAfterUndo()
                 }
@@ -352,7 +364,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                 capsLock: capsLock)
             guard verdict == .switchToConverted else { return }
             // Удалёнка: конверсию делает инстанс на той стороне, здесь только своя раскладка.
-            LayoutSwitcher.switchToOpposite()
+            LayoutSwitcher.switchToNextInstalled()
             updateStatusIcon()
             rslog("auto: remote — local layout switched")
             return
@@ -375,10 +387,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         rslog("auto: convert \(keys.count) keys (+\(bc) sp) → \(decision.targetLayoutID)")
-        if textConverter.convertBuffer(original: decision.original, converted: decision.converted,
-                                       keyCount: keys.count, trailingSpaces: bc) {
+        // Цикл из одного шага: записываем раскладку ДО переключения, чтобы ⌥-undo вернул
+        // именно её (а не «противоположную из пары» — прежний баг 3-way undo).
+        let prevLayout = LayoutSwitcher.currentLayoutID()
+        let spaces = String(repeating: " ", count: bc)
+        let steps = [(text: decision.converted + spaces, layoutID: decision.targetLayoutID)]
+        if let target = textConverter.beginCycle(home: decision.original + spaces, steps: steps,
+                                                 eraseCount: keys.count + bc, previousLayoutID: prevLayout) {
             keyboardMonitor.markConverted()
-            LayoutSwitcher.switchTo(layoutID: decision.targetLayoutID)
+            LayoutSwitcher.switchTo(layoutID: target)
             updateStatusIcon()
             lastAutoConverted = (decision.original, Date())
         }

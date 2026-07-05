@@ -133,25 +133,8 @@ final class SettingsWindowController {
                                      control: FormUI.makeSwitch(isOn: settings.triggerDoubleTap,
                                                                 target: self, action: #selector(triggerDoubleTapChanged))))
 
-        // Секция «Ручная пара»: две раскладки в ОДНОЙ строке (два попапа через ⇄),
-        // вместо прежних Layout 1/2 — раздельные строки намекали на «третью раскладку».
-        let pairBox = FormBox()
-        let popup1 = NSPopUpButton()
-        populateLayoutPopup(popup1, selectedID: settings.layout1ID)
-        popup1.target = self
-        popup1.action = #selector(layout1Changed)
-        let popup2 = NSPopUpButton()
-        populateLayoutPopup(popup2, selectedID: settings.layout2ID)
-        popup2.target = self
-        popup2.action = #selector(layout2Changed)
-        let arrow = NSTextField(labelWithString: "⇄")
-        arrow.font = .systemFont(ofSize: 13)
-        let pairControl = NSStackView(views: [popup1, arrow, popup2])
-        pairControl.orientation = .horizontal
-        pairControl.spacing = 4
-        popup1.widthAnchor.constraint(equalToConstant: 125).isActive = true
-        popup2.widthAnchor.constraint(equalToConstant: 125).isActive = true
-        pairBox.addRow(FormUI.row(title: L10n.settingsPairToggles, control: pairControl))
+        // Ручной триггер теперь полностью N-way (перебирает кандидатов по всем установленным
+        // раскладкам), фиксированной пары Layout 1/2 больше нет — соответствующий ряд удалён.
 
         // Секция «Система»
         let systemBox = FormBox()
@@ -172,9 +155,6 @@ final class SettingsWindowController {
             FormUI.sectionHeader(L10n.settingsGroupTrigger),
             triggerBox,
             FormUI.footnote(L10n.settingsTriggerHint),
-            FormUI.sectionHeader(L10n.settingsGroupManualPair),
-            pairBox,
-            FormUI.footnote(L10n.settingsAutoLayoutsNote),
             FormUI.sectionHeader(L10n.settingsGroupSystem),
             systemBox,
         ])
@@ -303,29 +283,6 @@ final class SettingsWindowController {
         popup.selectItem(at: 0)
     }
 
-    // MARK: - Layout Popup
-
-    private func populateLayoutPopup(_ popup: NSPopUpButton, selectedID: String) {
-        popup.removeAllItems()
-        popup.addItem(withTitle: L10n.settingsAutoDetect)
-        popup.menu?.items.last?.representedObject = "" as NSString
-
-        let layouts = LayoutSwitcher.installedLayouts()
-        for layout in layouts {
-            let id = LayoutSwitcher.sourceID(layout)
-            // displayName: имя в языке интерфейса приложения, а не системы
-            let name = LayoutSwitcher.displayName(layout)
-            popup.addItem(withTitle: name)
-            popup.menu?.items.last?.representedObject = id as NSString
-        }
-
-        selectItem(in: popup, matching: selectedID)
-    }
-
-    private func selectedLayoutID(from popup: NSPopUpButton) -> String {
-        (popup.selectedItem?.representedObject as? String) ?? ""
-    }
-
     // MARK: - Trigger Popup
 
     private func populateTriggerPopup(_ popup: NSPopUpButton) {
@@ -378,16 +335,6 @@ final class SettingsWindowController {
         window?.close()
         window = nil
         showWindow()
-    }
-
-    @objc private func layout1Changed(_ sender: NSPopUpButton) {
-        SettingsManager.shared.layout1ID = selectedLayoutID(from: sender)
-        DynamicKeyMapping.clearCache()
-    }
-
-    @objc private func layout2Changed(_ sender: NSPopUpButton) {
-        SettingsManager.shared.layout2ID = selectedLayoutID(from: sender)
-        DynamicKeyMapping.clearCache()
     }
 
     @objc private func perAppLayoutChanged(_ sender: NSSwitch) {

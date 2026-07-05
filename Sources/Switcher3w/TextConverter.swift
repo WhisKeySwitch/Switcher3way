@@ -14,9 +14,14 @@ final class TextConverter {
     /// main-поток, на котором висит event tap (иначе тап голодает → лаги/потери нажатий).
     nonisolated private let injectQueue = DispatchQueue(label: "com.switcher3w.inject", qos: .userInteractive)
 
-    // Состояние движка перепечатки (буфер нажатий → юникод-вставка)
-    private var lastOriginal = ""
-    private var lastConverted = ""
+    // Состояние цикла перепечатки (буфер нажатий → юникод-вставка). Ручной триггер
+    // перебирает кандидатов из N-way; авто-конверсия — цикл из одного шага. Цикл по кругу
+    // возвращается к исходному тексту И к раскладке, активной до первой конверсии.
+    private var cycleHome = ""                                        // исходный текст (+ хвостовые пробелы)
+    private var cycleSteps: [(text: String, layoutID: String)] = []  // кандидаты (текст уже с пробелами)
+    private var cycleIndex = -1                                       // -1 = показан home; 0..n-1 = кандидат i
+    private var cycleShownCount = 0                                   // символов сейчас на экране (для стирания)
+    private var cyclePreviousLayoutID = ""                           // раскладка, активная ДО первой конверсии
     private var lastWasBuffer = false
 
     /// Создаёт CGEventSource с маркером, чтобы KeyboardMonitor игнорировал наши события
@@ -66,95 +71,67 @@ final class TextConverter {
 
     // MARK: - Public API
 
-    /// Движок перепечатки: стираем набранное и впечатываем конвертированное через
-    /// юникод-вставку — без буфера обмена и без выделения (работает в Atom/Electron).
-    /// Падает на clipboard-движок, если буфера нет (текст выделен мышью) или
-    /// раскладки не определились.
-    func convert(wordKeys: [TypedKey], prevWordKeys: [TypedKey], boundaryCount: Int) -> Bool {
-        let keys: [TypedKey]
-        let trailingSpaces: Int
-        if !wordKeys.isEmpty {
-            keys = wordKeys; trailingSpaces = 0
-        } else if !prevWordKeys.isEmpty && boundaryCount > 0 {
-            keys = prevWordKeys; trailingSpaces = boundaryCount
+    /// Запускает цикл перепечатки: стирает `eraseCount` набранных символов и впечатывает
+    /// первый кандидат. `home` — исходный текст (с хвостовыми пробелами), к которому по кругу
+    /// вернётся цикл; `previousLayoutID` — раскладка ДО переключения (для точного undo).
+    /// Возвращает ID целевой раскладки первого кандидата, либо nil. Общий движок для авто-
+    /// конверсии (цикл из одного шага) и ручного триггера (перебор всех кандидатов N-way).
+    func beginCycle(home: String, steps: [(text: String, layoutID: String)],
+                    eraseCount: Int, previousLayoutID: String) -> String? {
+        guard !isConverting, !steps.isEmpty, eraseCount > 0 else { return nil }
+        isConverting = true
+        cycleHome = home
+        cycleSteps = steps
+        cycleIndex = 0
+        cycleShownCount = steps[0].text.count
+        cyclePreviousLayoutID = previousLayoutID
+        lastWasBuffer = true
+        rslog("cycle begin: \(steps.count) step(s), erase \(eraseCount) → \(steps[0].layoutID)")
+        retype(erase: eraseCount, insert: steps[0].text)
+        return steps[0].layoutID
+    }
+
+    /// Следующий шаг цикла (второй+ триггер без ввода между ними). Перебирает кандидатов,
+    /// по кругу возвращаясь к исходному тексту. Возвращает целевую раскладку и флаг
+    /// `restored` (true — вернулись к исходному тексту → переключиться на previousLayoutID).
+    /// nil — если активной буферной конверсии нет (тогда вызывающий пробует clipboard).
+    func cycleStep() -> (layoutID: String, restored: Bool)? {
+        guard !isConverting, lastWasBuffer, !cycleSteps.isEmpty else { return nil }
+        isConverting = true
+        let next = cycleIndex + 1
+        if next < cycleSteps.count {
+            let step = cycleSteps[next]
+            rslog("cycle step \(next) → \(step.layoutID)")
+            retype(erase: cycleShownCount, insert: step.text)
+            cycleIndex = next
+            cycleShownCount = step.text.count
+            return (step.layoutID, false)
         } else {
-            // нет буфера — возможно, выделен мышью старый текст: пусть решает clipboard
-            return convertViaClipboard(wordLength: 0, prevWordLength: 0, boundaryCount: 0)
+            rslog("cycle restore → \(cyclePreviousLayoutID)")
+            retype(erase: cycleShownCount, insert: cycleHome)
+            cycleIndex = -1
+            cycleShownCount = cycleHome.count
+            return (cyclePreviousLayoutID, true)
         }
-
-        guard let pair = DynamicKeyMapping.convertKeys(keys) else {
-            rslog("buffer convert: layouts not resolved — fallback to clipboard")
-            return convertViaClipboard(wordLength: wordKeys.count, prevWordLength: prevWordKeys.count, boundaryCount: boundaryCount)
-        }
-
-        guard !isConverting else { return false }
-        isConverting = true
-
-        let spaces = String(repeating: " ", count: trailingSpaces)
-        let bsCount = keys.count + trailingSpaces
-        let insert = pair.converted + spaces
-        lastOriginal = pair.original + spaces
-        lastConverted = pair.converted + spaces
-        lastWasBuffer = true
-        rslog("buffer convert: \(keys.count) keys (+\(trailingSpaces) sp)")
-
-        // Инжект — вне main, чтобы usleep не голодал event tap.
-        injectQueue.async { [weak self] in
-            guard let self else { return }
-            self.backspace(bsCount)
-            usleep(20_000)
-            self.insertText(insert)
-            Task { @MainActor in self.isConverting = false }
-        }
-        return true
     }
 
-    /// N-way перепечатка: `converted` уже вычислен вызывающим (детектор выбрал целевую
-    /// раскладку из 3+), поэтому здесь только стираем набранное и впечатываем результат.
-    /// Тот же буферный движок, что и `convert`, но цель задаётся снаружи, а не парой.
-    func convertBuffer(original: String, converted: String, keyCount: Int, trailingSpaces: Int) -> Bool {
-        guard !isConverting else { return false }
-        guard !converted.isEmpty, keyCount > 0 else { return false }
-        isConverting = true
-
-        let spaces = String(repeating: " ", count: trailingSpaces)
-        let bsCount = keyCount + trailingSpaces
-        let insert = converted + spaces
-        lastOriginal = original + spaces
-        lastConverted = converted + spaces
-        lastWasBuffer = true
-        rslog("nway convert: \(keyCount) keys (+\(trailingSpaces) sp)")
-
-        injectQueue.async { [weak self] in
-            guard let self else { return }
-            self.backspace(bsCount)
-            usleep(20_000)
-            self.insertText(insert)
-            Task { @MainActor in self.isConverting = false }
-        }
-        return true
-    }
-
-    /// Повторная конвертация (второй триггер) — на тот движок, которым делали последнюю.
+    /// Повторная конвертация выделения через буфер обмена. Буферный (пословный) путь идёт
+    /// через `cycleStep`; сюда попадает только выделенный мышью текст (clipboard-движок).
     func reconvert() -> Bool {
-        guard !isConverting else { return false }
-        if lastWasBuffer {
-            guard !lastConverted.isEmpty else { return false }
-            isConverting = true
-            rslog("buffer reconvert")
-            let bsCount = lastConverted.count
-            let insert = lastOriginal
-            let tmp = lastOriginal; lastOriginal = lastConverted; lastConverted = tmp
-            injectQueue.async { [weak self] in
-                guard let self else { return }
-                self.backspace(bsCount)
-                usleep(20_000)
-                self.insertText(insert)
-                Task { @MainActor in self.isConverting = false }
-            }
-            return true
-        }
+        guard !isConverting, !lastWasBuffer else { return false }
         return reconvertViaClipboard()
+    }
+
+    /// Стереть `erase` символов и впечатать `insert` — вне main-потока, чтобы usleep не
+    /// голодал event tap (тот висит на главном run loop).
+    private func retype(erase: Int, insert: String) {
+        injectQueue.async { [weak self] in
+            guard let self else { return }
+            self.backspace(erase)
+            usleep(20_000)
+            self.insertText(insert)
+            Task { @MainActor in self.isConverting = false }
+        }
     }
 
     /// Конвертация через буфер обмена (фолбэк: выделенный мышью текст и т.п.).
@@ -280,8 +257,11 @@ final class TextConverter {
     func clearState() {
         lastConvertedCount = 0
         lastBoundaryCount = 0
-        lastOriginal = ""
-        lastConverted = ""
+        cycleHome = ""
+        cycleSteps = []
+        cycleIndex = -1
+        cycleShownCount = 0
+        cyclePreviousLayoutID = ""
         lastWasBuffer = false
     }
 
