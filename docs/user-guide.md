@@ -150,10 +150,14 @@ Open with **⌘,** from the menu. Four tabs:
 
 ### Auto-fix
 
-The automatic-conversion master switch, the caret-flag toggle, and the exception lists.
+The automatic-conversion master switch and the exception lists.
 
 ### Advanced
 
+- **Show layout flag at the cursor** (beta) — briefly shows the layout flag next to the text
+  caret after a switch (the same *Flag at cursor* feature described above).
+- **Remote Desktop mode** (beta) — for Apple Screen Sharing: run Switcher3way on the remote Mac
+  too and enable this on both.
 - **Debug logging** — off by default; when enabled the app writes
   `~/Library/Logs/Switcher3w/switcher3w.log` (rotated at 5 MB). **Show Log File** reveals it in
   Finder. Useful for bug reports.
