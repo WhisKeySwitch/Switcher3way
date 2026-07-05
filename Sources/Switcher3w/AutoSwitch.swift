@@ -1,8 +1,8 @@
 import AppKit
 import Carbon
 
-/// Проверка слов по системному словарю (NSSpellChecker) — локально, без зависимостей,
-/// без сети и без бандла данных. ~0.1мс на проверку, 40+ языков.
+/// Word checking against the system dictionary (NSSpellChecker) — locally, without dependencies,
+/// without network and without a data bundle. ~0.1ms per check, 40+ languages.
 enum Dict {
     @MainActor private static let checker = NSSpellChecker.shared
 
@@ -11,7 +11,7 @@ enum Dict {
         return checker.availableLanguages.contains { String($0.prefix(2)) == two }
     }
 
-    /// true — слово есть в словаре языка (орфография корректна).
+    /// true — the word is in the language's dictionary (spelling is correct).
     @MainActor static func isValidWord(_ word: String, lang: String) -> Bool {
         let range = checker.checkSpelling(of: word, startingAt: 0, language: lang,
                                           wrap: false, inSpellDocumentWithTag: 0, wordCount: nil)
@@ -21,23 +21,23 @@ enum Dict {
 
 enum LayoutVerdict { case switchToConverted, keep, undecided }
 
-/// Решает, набрано ли слово в неправильной раскладке. Точность важнее полноты:
-/// при любой неуверенности → .undecided (ничего не делаем). Ручной триггер остаётся.
+/// Decides whether a word was typed in the wrong layout. Precision matters more than recall:
+/// on any uncertainty → .undecided (we do nothing). The manual trigger remains.
 enum LayoutDetector {
     @MainActor
     static func decide(typed: String, converted: String, currentLang: String, otherLang: String, capsLock: Bool) -> LayoutVerdict {
-        // always-convert — ЯВНЫЙ override: матчим по СКОНВЕРТИРОВАННОЙ (целевой) форме.
-        // В список кладётся целевое слово (напр. «жоппа»); так правильно набранное слово
-        // не даёт пинг-понг. Жёсткие гейты (secure/denied-app/never) проверены ДО decide.
+        // always-convert — an EXPLICIT override: we match against the CONVERTED (target) form.
+        // The target word is put in the list (the intended result, not the mistyped form); this way a correctly typed word
+        // doesn't cause ping-pong. Hard gates (secure/denied-app/never) are checked BEFORE decide.
         if AutoSwitchPolicy.isAlwaysConvert(converted) { return .switchToConverted }
 
-        // --- мягкие вето (дёшево, до словаря) ---
+        // --- soft vetoes (cheap, before the dictionary) ---
         guard passesSoftGates(typed, capsLock: capsLock) else { return .undecided }
 
         let cur = String(currentLang.prefix(2))
         let oth = String(otherLang.prefix(2))
 
-        // Словарь — без учёта регистра (Caps Lock не должен мешать определению слова).
+        // Dictionary — case-insensitive (Caps Lock must not interfere with word detection).
         guard Dict.isAvailable(oth) else { return .undecided }
         guard Dict.isValidWord(converted.lowercased(), lang: oth) else { return .keep }
         if Dict.isAvailable(cur), Dict.isValidWord(typed.lowercased(), lang: cur) {
@@ -46,17 +46,17 @@ enum LayoutDetector {
         return .switchToConverted
     }
 
-    /// Мягкие вето, общие для 2-way (`decide`) и N-way (`NWayResolver`): пропускаем
-    /// слово в детектор только если это «настоящее» слово, а не 1–2 буквы, акроним,
-    /// код или токен с цифрами/пунктуацией. Точность-first — при сомнении false.
+    /// Soft vetoes, shared by 2-way (`decide`) and N-way (`NWayResolver`): we let
+    /// a word into the detector only if it's a "real" word, and not 1–2 letters, an acronym,
+    /// code, or a token with digits/punctuation. Precision-first — on doubt, false.
     static func passesSoftGates(_ typed: String, capsLock: Bool) -> Bool {
-        guard typed.count >= 3 else { return false }                  // 1–2 буквы: слишком много коллизий между раскладками
-        guard typed.allSatisfy({ $0.isLetter }) else { return false } // цифры/пунктуация/URL/код/почта
-        // Под Caps Lock весь текст в ВЕРХНЕМ регистре — это НЕ акроним и НЕ camelCase,
-        // поэтому эти два вето применяем только когда Caps Lock выключен.
+        guard typed.count >= 3 else { return false }                  // 1–2 letters: too many collisions between layouts
+        guard typed.allSatisfy({ $0.isLetter }) else { return false } // digits/punctuation/URL/code/email
+        // Under Caps Lock all text is UPPERCASE — this is NOT an acronym and NOT camelCase,
+        // so these two vetoes are applied only when Caps Lock is off.
         if !capsLock {
-            if isAllCaps(typed) { return false }                      // акронимы
-            if looksLikeCodeIdentifier(typed) { return false }        // camelCase / смешанные алфавиты
+            if isAllCaps(typed) { return false }                      // acronyms
+            if looksLikeCodeIdentifier(typed) { return false }        // camelCase / mixed alphabets
         }
         return true
     }
@@ -65,8 +65,8 @@ enum LayoutDetector {
         s == s.uppercased() && s != s.lowercased()
     }
 
-    /// Похоже на программный идентификатор: внутренняя заглавная (camelCase/PascalCase)
-    /// или смешение латиницы и кириллицы в одном токене → почти всегда код, не слово.
+    /// Looks like a code identifier: an internal capital (camelCase/PascalCase)
+    /// or a mix of Latin and Cyrillic in one token → almost always code, not a word.
     private static func looksLikeCodeIdentifier(_ s: String) -> Bool {
         for (i, c) in s.enumerated() where i > 0 && c.isUppercase { return true }
         var hasLatin = false, hasCyrillic = false
@@ -81,15 +81,15 @@ enum LayoutDetector {
     }
 }
 
-/// Политика безопасности авто-конвертации.
+/// Security policy for auto-conversion.
 enum AutoSwitchPolicy {
-    /// Активен ли защищённый ввод (поле пароля, Secure Keyboard Entry в терминале) —
-    /// тогда авто-конвертацию НЕ делаем (приватность; пароль не трогаем).
+    /// Whether secure input is active (a password field, Secure Keyboard Entry in a terminal) —
+    /// then we do NOT do auto-conversion (privacy; we don't touch the password).
     static var secureInputActive: Bool { IsSecureEventInputEnabled() }
 
-    /// Дефолтный список приложений, где авто выключено: терминалы, IDE, менеджеры
-    /// паролей. Возвращается, пока пользователь не отредактировал список
-    /// (см. SettingsManager.deniedApps). Запись с суффиксом "*" — префикс (весь вендор).
+    /// Default list of apps where auto is disabled: terminals, IDEs, password
+    /// managers. Returned until the user has edited the list
+    /// (see SettingsManager.deniedApps). An entry with a "*" suffix is a prefix (the whole vendor).
     static let defaultDeniedApps: [String] = [
         "com.apple.Terminal", "com.googlecode.iterm2", "net.kovidgoyal.kitty",
         "io.alacritty", "com.github.wez.wezterm", "dev.warp.Warp-Stable", "co.zeit.hyper",
@@ -100,7 +100,7 @@ enum AutoSwitchPolicy {
         "com.bitwarden.desktop", "org.keepassxc.keepassxc",
     ]
 
-    /// Менеджеры паролей — несъёмные из списка в UI (безопасность).
+    /// Password managers — non-removable from the list in the UI (security).
     static let protectedApps: Set<String> = [
         "com.1password.1password", "com.agilebits.onepassword7",
         "com.bitwarden.desktop", "org.keepassxc.keepassxc",
@@ -108,8 +108,8 @@ enum AutoSwitchPolicy {
 
     static func isDeniedApp(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        // Менеджеры паролей — жёсткий, не зависящий от пользовательского списка гейт:
-        // их нельзя разблокировать ни через UI, ни через рассинхрон дефолтов.
+        // Password managers — a hard gate independent of the user's list:
+        // they can't be unlocked either through the UI or through a defaults desync.
         if protectedApps.contains(id) { return true }
         for entry in SettingsManager.shared.deniedApps {
             if entry.hasSuffix("*") {
@@ -121,26 +121,26 @@ enum AutoSwitchPolicy {
         return false
     }
 
-    /// Слово в списке never-convert (обе стороны пары, без регистра).
+    /// A word in the never-convert list (both sides of the pair, case-insensitive).
     static func isDeniedWord(_ typed: String, _ converted: String) -> Bool {
         let set = SettingsManager.shared.deniedWordsSet
         guard !set.isEmpty else { return false }
         return set.contains(typed.lowercased()) || set.contains(converted.lowercased())
     }
 
-    /// Слово в списке always-convert — матчим по СКОНВЕРТИРОВАННОЙ (целевой) форме.
-    /// В список кладётся «целевое» слово (что должно получиться), а не мусор раскладки —
-    /// иначе правильно набранное слово конвертилось бы обратно (пинг-понг).
+    /// A word in the always-convert list — we match against the CONVERTED (target) form.
+    /// The "target" word is put in the list (what should result), not layout garbage —
+    /// otherwise a correctly typed word would be converted back (ping-pong).
     static func isAlwaysConvert(_ converted: String) -> Bool {
         let set = SettingsManager.shared.alwaysConvertWordsSet
         guard !set.isEmpty else { return false }
         return set.contains(converted.lowercased())
     }
 
-    /// Клиенты удалённого рабочего стола: когда такое окно в фокусе, текст живёт
-    /// на ДРУГОЙ машине — наш инстанс должен молчать и уступить удалённому Switcher3way.
+    /// Remote desktop clients: when such a window is focused, the text lives
+    /// on ANOTHER machine — our instance must stay silent and defer to the remote Switcher3way.
     static let remoteClients: Set<String> = [
-        "com.apple.ScreenSharing",   // Apple «Общий экран» / Screen Sharing.app
+        "com.apple.ScreenSharing",   // Apple "Screen Sharing" / Screen Sharing.app
         "com.apple.RemoteDesktop",   // Apple Remote Desktop
     ]
 
@@ -149,9 +149,9 @@ enum AutoSwitchPolicy {
         return remoteClients.contains(id)
     }
 
-    /// Правило «уступи удалёнке»: режим удалённого стола включён И в фокусе клиент
-    /// удалёнки → этот инстанс ничего не делает (ни триггер, ни авто), чтобы не
-    /// дублировать работу инстанса на контролируемой машине.
+    /// The "defer to the remote desktop" rule: remote desktop mode is enabled AND a remote desktop
+    /// client is focused → this instance does nothing (neither trigger nor auto), so as not to
+    /// duplicate the work of the instance on the controlled machine.
     static var shouldDeferToRemoteClient: Bool {
         guard SettingsManager.shared.remoteDesktopMode else { return false }
         return isRemoteDesktopClient(NSWorkspace.shared.frontmostApplication?.bundleIdentifier)

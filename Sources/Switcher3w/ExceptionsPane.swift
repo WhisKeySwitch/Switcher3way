@@ -1,12 +1,12 @@
 import AppKit
 import UniformTypeIdentifiers
 
-/// Единый список исключений (W2): один NSTableView, сегментный фильтр с живыми
-/// счётчиками (Приложения / Никогда / Всегда), поиск и явные кнопки добавления/удаления.
-/// Заменяет три отдельных ExceptionListEditor из прежней вкладки.
+/// Unified exceptions list (W2): one NSTableView, a segmented filter with live
+/// counts (Apps / Never / Always), search, and explicit add/remove buttons.
+/// Replaces the three separate ExceptionListEditors from the former tab.
 @MainActor
 final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate {
-    /// Адаптер одного списка: привязка к данным через замыкания, как у старого редактора.
+    /// Adapter for a single list: data binding via closures, like the old editor.
     private struct Adapter {
         enum Kind { case apps, words }
         let kind: Kind
@@ -18,7 +18,7 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
 
     private var adapters: [Adapter] = []
     private var activeIndex = 0
-    private var items: [String] = []          // отфильтрованный видимый список
+    private var items: [String] = []          // filtered visible list
     private var query = ""
 
     private let segments = NSSegmentedControl()
@@ -26,7 +26,7 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
     private let addButton = NSButton()
     private let removeButton = NSButton()
     private let table = NSTableView()
-    /// Кэш имени/иконки по bundle id, чтобы не дёргать NSWorkspace на каждый vend ячейки.
+    /// Name/icon cache keyed by bundle id, to avoid hitting NSWorkspace on every cell vend.
     private var infoCache: [String: (text: String, icon: NSImage?)] = [:]
 
     override init() {
@@ -50,7 +50,7 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
         ]
     }
 
-    /// Собирает вью секции: сегменты → строка поиска/добавления → таблица → сноска.
+    /// Builds the section view: segments → search/add row → table → footnote.
     func makeView() -> NSView {
         segments.segmentCount = adapters.count
         segments.segmentStyle = .texturedRounded
@@ -116,11 +116,11 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
         return root
     }
 
-    // MARK: - Данные
+    // MARK: - Data
 
     private var adapter: Adapter { adapters[activeIndex] }
 
-    /// Перечитывает активный список, применяет фильтр и обновляет счётчики сегментов.
+    /// Re-reads the active list, applies the filter, and updates the segment counts.
     private func reload() {
         let all = adapter.get()
         if query.isEmpty {
@@ -139,7 +139,7 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
         updateRemoveButton()
     }
 
-    // MARK: - Таблица
+    // MARK: - Table
 
     func numberOfRows(in tableView: NSTableView) -> Int { items.count }
 
@@ -168,8 +168,8 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
             leading = 24
         }
 
-        // Справа: у защищённых — явный бейдж «always off» вместо непонятного серого текста;
-        // у обычных приложений — bundle id мелким серым.
+        // On the right: for protected entries — an explicit "always off" badge instead of
+        // unclear gray text; for regular apps — the bundle id in small gray.
         var trailingView: NSView?
         if adapter.isProtected(id) {
             trailingView = FormUI.betaBadge("🔒 \(L10n.settingsAlwaysOff)")
@@ -209,13 +209,13 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
         removeButton.isEnabled = row >= 0 && row < items.count && !adapter.isProtected(items[row])
     }
 
-    // MARK: - Действия
+    // MARK: - Actions
 
     @objc private func segmentChanged() {
         activeIndex = segments.selectedSegment
         query = ""
         searchField.stringValue = ""
-        infoCache.removeAll()   // отображение зависит от типа списка (apps/words)
+        infoCache.removeAll()   // display depends on the list type (apps/words)
         reload()
     }
 
@@ -236,8 +236,8 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
         guard row >= 0, row < items.count else { return }
         let value = items[row]
         guard !adapter.isProtected(value) else { return }
-        var all = adapter.get()                 // пере-синхрон с живым стором (learn-from-undo и т.п.)
-        all.removeAll { $0 == value }           // удаляем по значению, не по устаревшему индексу
+        var all = adapter.get()                 // re-sync with the live store (learn-from-undo etc.)
+        all.removeAll { $0 == value }           // remove by value, not by a stale index
         adapter.set(all)
         reload()
     }
@@ -276,7 +276,7 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
         reload()
     }
 
-    // MARK: - Отображение
+    // MARK: - Display
 
     private func cellInfo(_ id: String) -> (text: String, icon: NSImage?) {
         if let cached = infoCache[id] { return cached }
@@ -289,8 +289,8 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
         guard adapter.kind == .apps else { return id }
         if id.hasSuffix("*") { return String(id.dropLast()) + "* (все)" }
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) {
-            // FileManager.displayName локализуется по СИСТЕМЕ; при несовпадении языка
-            // интерфейса приложения берём нейтральное имя бандла с диска («Terminal»).
+            // FileManager.displayName is localized by the SYSTEM; when the app's interface
+            // language differs, we take the neutral bundle name from disk ("Terminal").
             if L10n.namesFollowSystem {
                 let name = FileManager.default.displayName(atPath: url.path)
                 return name.hasSuffix(".app") ? String(name.dropLast(4)) : name

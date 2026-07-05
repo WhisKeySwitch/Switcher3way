@@ -1,10 +1,10 @@
 import AppKit
 import WebKit
 
-/// Окно встроенной справки: показывает руководство пользователя, собранное на этапе
-/// сборки из docs/user-guide*.md в Resources/help/ (см. scripts/md2html.py).
-/// Язык выбирается по языку интерфейса приложения при каждом открытии;
-/// офлайн по построению — приложение вообще не ходит в сеть.
+/// Built-in help window: shows the user guide, compiled at build time
+/// from docs/user-guide*.md into Resources/help/ (see scripts/md2html.py).
+/// The language is chosen by the app's interface language on every open;
+/// offline by construction — the app never touches the network.
 @MainActor
 final class HelpWindowController: NSObject, WKNavigationDelegate {
     private var window: NSWindow?
@@ -13,7 +13,7 @@ final class HelpWindowController: NSObject, WKNavigationDelegate {
     func show() {
         if window == nil { buildWindow() }
         window?.title = L10n.menuHelp
-        loadCurrentGuide()   // язык мог смениться с прошлого открытия
+        loadCurrentGuide()   // the language may have changed since the last open
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -46,11 +46,11 @@ final class HelpWindowController: NSObject, WKNavigationDelegate {
             rslog("help: bundled guide missing at \(file.path)")
             return
         }
-        // Доступ на чтение ко всей папке help/ — чтобы работали перекрёстные ссылки между языками
+        // Read access to the whole help/ folder — so cross-language links work
         webView?.loadFileURL(file, allowingReadAccessTo: helpDir)
     }
 
-    /// Руководство есть на en/uk/ru; остальные 13 языков интерфейса читают английское.
+    /// The guide exists in en/uk/ru; the other 13 interface languages read the English one.
     static func guideFileName(for lang: String) -> String {
         switch lang {
         case "uk": return "user-guide.uk.html"
@@ -61,8 +61,8 @@ final class HelpWindowController: NSObject, WKNavigationDelegate {
 
     // MARK: - WKNavigationDelegate
 
-    /// Внешние ссылки — в браузер по умолчанию; внутри окна остаются только
-    /// file-URL из бандла (само руководство, его якоря и переводы).
+    /// External links — to the default browser; only file URLs from the bundle
+    /// (the guide itself, its anchors, and translations) stay inside the window.
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = navigationAction.request.url else {

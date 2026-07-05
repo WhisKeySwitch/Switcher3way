@@ -1,21 +1,21 @@
 import Foundation
 
-/// Локализация интерфейса на 16 языков (вкомпилированные строки)
+/// Interface localization in 16 languages (compiled-in strings)
 enum L10n {
-    // MARK: - Меню
+    // MARK: - Menu
     static var menuAutoSwitch: String { s("menu.autoSwitch") }
     static var menuCheckPermissions: String { s("menu.checkPermissions") }
     static var menuSettings: String { s("menu.settings") }
     static var menuQuit: String { s("menu.quit") }
 
-    // MARK: - Визард разрешений
+    // MARK: - Permissions wizard
     static var wizardPermissionsResetTitle: String { s("wizard.permissionsReset.title") }
     static var wizardPermissionsResetText: String { s("wizard.permissionsReset.text") }
     static var permissionsOkText: String { s("wizard.permissionsOk.text") }
     static var wizardYes: String { s("wizard.yes") }
     static var wizardNo: String { s("wizard.no") }
 
-    // MARK: - Настройки
+    // MARK: - Settings
     static var settingsTitle: String { s("settings.title") }
     static var settingsTabGeneral: String { s("settings.tab.general") }
     static var settingsTabAbout: String { s("settings.tab.about") }
@@ -60,7 +60,7 @@ enum L10n {
     static var onboardAutoConvertTitle: String { s("onboard.autoConvert.title") }
     static var onboardAutoConvertText: String { s("onboard.autoConvert.text") }
 
-    // MARK: - modernize-ui: настройки (W1/W2)
+    // MARK: - modernize-ui: settings (W1/W2)
     static var settingsTabAutofix: String { s("settings.tab.autofix") }
     static var settingsStatusOn: String { s("settings.status.on") }
     static var settingsStatusOff: String { s("settings.status.off") }
@@ -83,7 +83,7 @@ enum L10n {
     static var settingsExceptionsFooter: String { s("settings.exceptions.footer") }
     static var commonBeta: String { s("common.beta") }
 
-    // MARK: - modernize-ui: онбординг (W3)
+    // MARK: - modernize-ui: onboarding (W3)
     static var onboardingTitle: String { s("onboarding.title") }
     static var onboardingSubtitle: String { s("onboarding.subtitle") }
     static var onboardingAccessibilityTitle: String { s("onboarding.accessibility.title") }
@@ -96,7 +96,7 @@ enum L10n {
     static var onboardingResetNotice: String { s("onboarding.resetNotice") }
     static var wizardOpenSettings: String { s("wizard.openSettings") }
 
-    // MARK: - modernize-ui: меню (W4)
+    // MARK: - modernize-ui: menu (W4)
     static var menuQuickToggles: String { s("menu.quickToggles") }
     static var menuAutofix: String { s("menu.autofix") }
     static var menuSound: String { s("menu.sound") }
@@ -110,9 +110,9 @@ enum L10n {
     static var menuHelp: String { s("menu.help") }
 
 
-    // MARK: - Language names (для выпадающего списка)
+    // MARK: - Language names (for the dropdown)
 
-    /// Названия языков на их родном языке
+    /// Language names in their native language
     static let languageNames: [(code: String, name: String)] = [
         ("en", "English"),
         ("ru", "Русский"),
@@ -139,28 +139,28 @@ enum L10n {
     static let supportedLanguages = Set(["en", "ru", "de", "fr", "es", "pt", "zh", "ja", "ko", "uk", "pl", "be", "el", "bg", "hy", "ka"])
 
     private static func detectLanguage() -> String {
-        // Проверяем принудительный язык из настроек
+        // Check the forced language from settings
         let forced = UserDefaults.standard.string(forKey: "com.switcher3w.interfaceLanguage") ?? ""
         if !forced.isEmpty && supportedLanguages.contains(forced) {
             return forced
         }
-        // Авто-определение по системе
+        // Auto-detect from the system
         let preferred = Locale.preferredLanguages.first ?? "en"
         let code = String(preferred.prefix(2))
         return supportedLanguages.contains(code) ? code : "en"
     }
 
-    /// Перезагрузить язык (вызывается при смене в настройках)
+    /// Reload the language (called when changed in settings)
     static func reloadLanguage() {
         currentLang = detectLanguage()
     }
 
-    /// Эффективный язык интерфейса (уже разрешённый: форс из настроек или системный).
+    /// Effective interface language (already resolved: forced from settings or system).
     static var effectiveLanguage: String { currentLang }
 
-    /// Совпадает ли язык интерфейса приложения с языком СИСТЕМЫ. Когда нет —
-    /// системно-локализованные имена (kTISPropertyLocalizedName, FileManager.displayName)
-    /// выглядели бы чужеродно, и вызывающие переходят на нейтральные имена.
+    /// Whether the app's interface language matches the SYSTEM language. When not —
+    /// system-localized names (kTISPropertyLocalizedName, FileManager.displayName)
+    /// would look out of place, and callers switch to neutral names.
     static var namesFollowSystem: Bool {
         let sys = String((Locale.preferredLanguages.first ?? "en").prefix(2)).lowercased()
         return currentLang.lowercased() == sys
@@ -170,7 +170,7 @@ enum L10n {
         strings[currentLang]?[key] ?? strings["en"]![key] ?? key
     }
 
-    // MARK: - Все строки
+    // MARK: - All strings
 
     private static let strings: [String: [String: String]] = [
         // ========== ENGLISH ==========
@@ -226,7 +226,7 @@ enum L10n {
             "settings.showLog": "Show Log File",
             "settings.hotkey": "Tap the trigger key alone — converts the last word (or selected text). Double tap — reverse.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "Auto-fix",
             "settings.status.on": "Switcher3way is On",
             "settings.status.off": "Switcher3way is Off",
@@ -276,7 +276,7 @@ enum L10n {
 
         ],
 
-        // ========== РУССКИЙ ==========
+        // ========== RUSSIAN ==========
         "ru": [
             "menu.autoSwitch": "Включить Switcher3way",
             "menu.checkPermissions": "Проверить разрешения…",
@@ -329,7 +329,7 @@ enum L10n {
             "settings.showLog": "Показать файл лога",
             "settings.hotkey": "Тап клавиши-триггера — конвертирует последнее слово (или выделенный текст). Двойной тап — обратно.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "Автозамена",
             "settings.status.on": "Switcher3way включён",
             "settings.status.off": "Switcher3way выключен",
@@ -427,7 +427,7 @@ enum L10n {
             "settings.showLog": "Protokolldatei anzeigen",
             "settings.hotkey": "Auslösertaste allein tippen — wandelt das letzte Wort (oder markierten Text) um. Doppeltipp — zurück.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "Auto-Fix",
             "settings.status.on": "Switcher3way ist aktiviert",
             "settings.status.off": "Switcher3way ist deaktiviert",
@@ -526,7 +526,7 @@ enum L10n {
             "settings.showLog": "Afficher le journal",
             "settings.hotkey": "Appuyez seul sur la touche déclencheur — convertit le dernier mot (ou le texte sélectionné). Double appui — inverse.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "Auto-correction",
             "settings.status.on": "Switcher3way est activé",
             "settings.status.off": "Switcher3way est désactivé",
@@ -625,7 +625,7 @@ enum L10n {
             "settings.showLog": "Mostrar archivo de registro",
             "settings.hotkey": "Pulsa sola la tecla disparador — convierte la última palabra (o el texto seleccionado). Doble toque — revertir.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "Autocorrección",
             "settings.status.on": "Switcher3way está activado",
             "settings.status.off": "Switcher3way está desactivado",
@@ -730,7 +730,7 @@ enum L10n {
             "settings.showLog": "Mostrar arquivo de log",
             "settings.hotkey": "Toque sozinho na tecla de gatilho — converte a última palavra (ou o texto selecionado). Toque duplo — reverter.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "Autocorreção",
             "settings.status.on": "Switcher3way está ativado",
             "settings.status.off": "Switcher3way está desativado",
@@ -829,7 +829,7 @@ enum L10n {
             "settings.showLog": "显示日志文件",
             "settings.hotkey": "单独点按触发键 — 转换最后一个词（或选中的文本）。双击 — 撤销转换。",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "自动纠正",
             "settings.status.on": "Switcher3way 已开启",
             "settings.status.off": "Switcher3way 已关闭",
@@ -928,7 +928,7 @@ enum L10n {
             "settings.showLog": "ログファイルを表示",
             "settings.hotkey": "トリガーキーを単独で押す — 直前の単語（または選択テキスト）を変換。ダブルタップ — 元に戻す。",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "自動修正",
             "settings.status.on": "Switcher3way はオン",
             "settings.status.off": "Switcher3way はオフ",
@@ -1027,7 +1027,7 @@ enum L10n {
             "settings.showLog": "로그 파일 보기",
             "settings.hotkey": "트리거 키를 단독으로 탭 — 마지막 단어(또는 선택한 텍스트)를 변환. 두 번 탭 — 되돌리기.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "자동 수정",
             "settings.status.on": "Switcher3way 켜짐",
             "settings.status.off": "Switcher3way 꺼짐",
@@ -1072,7 +1072,7 @@ enum L10n {
             "menu.help": "도움말",
         ],
 
-        // ========== УКРАЇНСЬКА ==========
+        // ========== UKRAINIAN ==========
         "uk": [
             "menu.autoSwitch": "Увімкнути Switcher3way",
             "menu.checkPermissions": "Перевірити дозволи…",
@@ -1124,7 +1124,7 @@ enum L10n {
             "settings.showLog": "Показати файл логу",
             "settings.hotkey": "Тап клавіші-тригера — конвертує останнє слово (або виділений текст). Подвійний тап — назад.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "Автозаміна",
             "settings.status.on": "Switcher3way увімкнено",
             "settings.status.off": "Switcher3way вимкнено",
@@ -1175,7 +1175,7 @@ enum L10n {
             "wizard.permissionsOk.text": "«Доступність» та «Моніторинг вводу» увімкнено. Switcher3way працює.",
         ],
 
-        // ========== БЕЛАРУСКАЯ ==========
+        // ========== BELARUSIAN ==========
         "be": [
             "menu.autoSwitch": "Уключыць Switcher3way",
             "menu.checkPermissions": "Праверыць дазволы…",
@@ -1227,7 +1227,7 @@ enum L10n {
             "settings.showLog": "Паказаць файл лога",
             "settings.hotkey": "Тап клавішы-трыгера — канвертуе апошняе слова (або вылучаны тэкст). Падвойны тап — назад.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "Аўтазамена",
             "settings.status.on": "Switcher3way уключаны",
             "settings.status.off": "Switcher3way выключаны",
@@ -1331,7 +1331,7 @@ enum L10n {
             "settings.showLog": "Pokaż plik dziennika",
             "settings.hotkey": "Naciśnij sam klawisz wyzwalacza — konwertuje ostatnie słowo (lub zaznaczony tekst). Podwójne naciśnięcie — cofnij.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "Autokorekta",
             "settings.status.on": "Switcher3way jest włączony",
             "settings.status.off": "Switcher3way jest wyłączony",
@@ -1425,7 +1425,7 @@ enum L10n {
             "settings.showLog": "Εμφάνιση αρχείου καταγραφής",
             "settings.hotkey": "Πατήστε μόνο το πλήκτρο ενεργοποίησης — μετατρέπει την τελευταία λέξη (ή το επιλεγμένο κείμενο). Διπλό πάτημα — αναίρεση.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "Αυτόματη διόρθωση",
             "settings.status.on": "Το Switcher3way είναι ενεργό",
             "settings.status.off": "Το Switcher3way είναι ανενεργό",
@@ -1522,7 +1522,7 @@ enum L10n {
             "settings.showLog": "Показване на регистъра",
             "settings.hotkey": "Натиснете самостоятелно клавиша-спусък — преобразува последната дума (или избрания текст). Двойно натискане — обратно.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "Автокорекция",
             "settings.status.on": "Switcher3way е включен",
             "settings.status.off": "Switcher3way е изключен",
@@ -1619,7 +1619,7 @@ enum L10n {
             "settings.showLog": "Ցույց տալ մատյանի ֆայլը",
             "settings.hotkey": "Հպեք գործարկիչ ստեղնն առանձին — փոխարկում է վերջին բառը (կամ ընտրված տեքստը): Կրկնակի հպում — հետ.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "Ավտոուղղում",
             "settings.status.on": "Switcher3way-ը միացված է",
             "settings.status.off": "Switcher3way-ն անջատված է",
@@ -1716,7 +1716,7 @@ enum L10n {
             "settings.showLog": "ჟურნალის ფაილის ჩვენება",
             "settings.hotkey": "დააჭირეთ ტრიგერ ღილაკს ცალკე — გარდაქმნის ბოლო სიტყვას (ან მონიშნულ ტექსტს). ორმაგი შეხება — უკან.",
 
-            // — modernize-ui: новые строки W1–W4 —
+            // — modernize-ui: new strings W1–W4 —
             "settings.tab.autofix": "ავტოშესწორება",
             "settings.status.on": "Switcher3way ჩართულია",
             "settings.status.off": "Switcher3way გამორთულია",

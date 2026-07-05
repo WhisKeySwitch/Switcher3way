@@ -1,6 +1,6 @@
 import AppKit
 
-/// Запоминает раскладку клавиатуры для каждого приложения и восстанавливает при переключении.
+/// Remembers the keyboard layout for each app and restores it on switching.
 @MainActor
 final class PerAppLayoutManager {
     private var layoutByApp: [String: String] = [:]
@@ -39,21 +39,21 @@ final class PerAppLayoutManager {
 
         let currentLayout = LayoutSwitcher.currentLayoutID()
 
-        // Сохраняем раскладку для предыдущего приложения
+        // Save the layout for the previous app
         if let prevID = previousBundleID {
             layoutByApp[prevID] = currentLayout
         }
 
-        // Удалёнка: в окне клиента удалённого стола раскладкой управляет конверсия и сам
-        // пользователь, а не пер-приложенческая память. Иначе при входе в окно мы вернём
-        // раскладку на запомненную (например, всегда русский) и сломаем продолжение ввода.
+        // Remote desktop: in a remote desktop client window the layout is driven by conversion
+        // and the user, not by per-app memory. Otherwise, on entering the window we'd revert the
+        // layout to the remembered one (e.g. always Russian) and break continued typing.
         if SettingsManager.shared.remoteDesktopMode,
            AutoSwitchPolicy.isRemoteDesktopClient(newBundleID) {
             previousBundleID = newBundleID
             return
         }
 
-        // Восстанавливаем раскладку для нового приложения
+        // Restore the layout for the new app
         if let savedLayout = layoutByApp[newBundleID], savedLayout != currentLayout {
             rslog("PerAppLayout: \(newBundleID) → restore \(savedLayout)")
             LayoutSwitcher.switchTo(layoutID: savedLayout)

@@ -1,16 +1,16 @@
 import AppKit
 
-/// Примитивы сгруппированной формы в стиле Системных настроек (W1–W3):
-/// белая «коробка» со скруглением и волосяными разделителями между строками.
-/// Используется вкладками настроек и чек-листом онбординга.
+/// Grouped-form primitives in the System Settings style (W1–W3):
+/// a white rounded "box" with hairline separators between rows.
+/// Used by the Settings tabs and the onboarding checklist.
 @MainActor
 final class FormBox: NSView {
     private let stack = NSStackView()
 
-    // NSBox не годится: его contentView позиционируется авторесайзингом, и высота
-    // коробки не выводится из констрейнтов содержимого (строки схлопываются в кашу).
-    // Поэтому рисуем фон/рамку слоем на обычном NSView, а стек пиннится к краям —
-    // высота коробки честно равна сумме строк.
+    // NSBox won't do: its contentView is positioned via autoresizing, and the box's
+    // height isn't derived from the content constraints (rows collapse into a mess).
+    // So we draw the background/border with a layer on a plain NSView, and the stack is
+    // pinned to the edges — the box's height honestly equals the sum of the rows.
     init() {
         super.init(frame: .zero)
         wantsLayer = true
@@ -31,7 +31,7 @@ final class FormBox: NSView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
-    // Цвета через updateLayer — корректно перекрашивается при смене светлой/тёмной темы.
+    // Colors via updateLayer — repaints correctly when switching light/dark theme.
     override var wantsUpdateLayer: Bool { true }
 
     override func updateLayer() {
@@ -41,7 +41,7 @@ final class FormBox: NSView {
         layer?.borderColor = NSColor.separatorColor.cgColor
     }
 
-    /// Добавляет строку; перед каждой строкой кроме первой — волосяной разделитель.
+    /// Adds a row; before every row except the first — a hairline separator.
     func addRow(_ row: NSView) {
         if !stack.arrangedSubviews.isEmpty {
             let sep = NSBox()
@@ -55,10 +55,10 @@ final class FormBox: NSView {
     }
 }
 
-/// Фабрики типовых элементов формы (строки, заголовки секций, сноски, бейджи).
+/// Factories for common form elements (rows, section headers, footnotes, badges).
 @MainActor
 enum FormUI {
-    /// Строка «текст слева — контрол справа». subtitle — вторая серым мельче (опционально).
+    /// Row "text on the left — control on the right". subtitle — a smaller gray second line (optional).
     static func row(title: String, subtitle: String? = nil, titleBold: Bool = false,
                     badge: String? = nil, control: NSView?) -> NSView {
         let row = NSView()
@@ -69,7 +69,7 @@ enum FormUI {
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        // Заголовок (+ опциональный бейдж BETA) в горизонтальном стеке
+        // Title (+ optional BETA badge) in a horizontal stack
         let titleStack = NSStackView()
         titleStack.orientation = .horizontal
         titleStack.spacing = 6
@@ -105,7 +105,7 @@ enum FormUI {
             constraints += [
                 control.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -12),
                 control.centerYAnchor.constraint(equalTo: row.centerYAnchor),
-                // Контрол выше текста (попапы) не должен вылезать за строку
+                // A control taller than the text (popups) must not overflow the row
                 control.topAnchor.constraint(greaterThanOrEqualTo: row.topAnchor, constant: 6),
                 control.bottomAnchor.constraint(lessThanOrEqualTo: row.bottomAnchor, constant: -6),
                 textStack.trailingAnchor.constraint(lessThanOrEqualTo: control.leadingAnchor, constant: -12),
@@ -117,7 +117,7 @@ enum FormUI {
         return row
     }
 
-    /// Заголовок секции: капс мелким жирным серым, как в Системных настройках.
+    /// Section header: uppercase in small bold gray, as in System Settings.
     static func sectionHeader(_ title: String) -> NSTextField {
         let label = NSTextField(labelWithString: title.uppercased())
         label.font = .boldSystemFont(ofSize: 11)
@@ -125,7 +125,7 @@ enum FormUI {
         return label
     }
 
-    /// Сноска под секцией — мелкая серая, с переносом.
+    /// Footnote below a section — small gray, wrapping.
     static func footnote(_ text: String) -> NSTextField {
         let label = NSTextField(wrappingLabelWithString: text)
         label.font = .systemFont(ofSize: 11)
@@ -133,7 +133,7 @@ enum FormUI {
         return label
     }
 
-    /// Рамка-«пилюля» с перекраской при смене темы (для бейджей).
+    /// A "pill" frame that repaints on theme change (for badges).
     private final class PillView: NSView {
         override var wantsUpdateLayer: Bool { true }
         override func updateLayer() {
@@ -143,7 +143,7 @@ enum FormUI {
         }
     }
 
-    /// Бейдж-«пилюля» (BETA / always off): рамка, капс, мелкий шрифт.
+    /// A "pill" badge (BETA / always off): frame, uppercase, small font.
     static func betaBadge(_ text: String) -> NSView {
         let label = NSTextField(labelWithString: text)
         label.font = .boldSystemFont(ofSize: 9)
@@ -162,7 +162,7 @@ enum FormUI {
         return pill
     }
 
-    /// NSSwitch, привязанный к action; начальное состояние — из isOn.
+    /// NSSwitch bound to an action; initial state — from isOn.
     static func makeSwitch(isOn: Bool, target: AnyObject?, action: Selector) -> NSSwitch {
         let sw = NSSwitch()
         sw.state = isOn ? .on : .off

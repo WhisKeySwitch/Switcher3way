@@ -2,11 +2,11 @@ import AppKit
 import ApplicationServices
 import CoreGraphics
 
-/// issue #10: показывает флаг текущей раскладки рядом с текстовой кареткой — кратко после
-/// переключения, прячется при печати/клике. Позицию каретки берём через Accessibility
-/// (kAXBoundsForRangeParameterizedAttribute). Если приложение её не отдаёт (Electron/веб,
-/// часть терминалов) — просто не показываем; флаг в меню-баре остаётся. Click-through,
-/// не крадёт фокус (LSUIElement + .nonactivatingPanel + orderFrontRegardless).
+/// issue #10: shows the current layout flag next to the text caret — briefly after
+/// a switch, hides on typing/click. The caret position is obtained via Accessibility
+/// (kAXBoundsForRangeParameterizedAttribute). If the app doesn't provide it (Electron/web,
+/// some terminals) — we simply don't show it; the menu-bar flag remains. Click-through,
+/// doesn't steal focus (LSUIElement + .nonactivatingPanel + orderFrontRegardless).
 @MainActor
 final class CaretIndicator {
     private let panel: NSPanel
@@ -15,10 +15,10 @@ final class CaretIndicator {
     private var hideTimer: Timer?
     private var visible = false
 
-    /// Поставщик флага текущей раскладки — обычно AppDelegate.flagForCurrentLayout.
+    /// Provider of the current layout flag — usually AppDelegate.flagForCurrentLayout.
     var flagProvider: () -> String = { "" }
 
-    /// Сколько держим флаг после переключения, прежде чем спрятать сам (если не печатают).
+    /// How long we keep the flag after a switch before hiding it ourselves (if nothing is typed).
     private let showDuration: TimeInterval = 1.6
 
     init() {
@@ -33,12 +33,12 @@ final class CaretIndicator {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = false
-        panel.ignoresMouseEvents = true                 // click-through — обязательно
+        panel.ignoresMouseEvents = true                 // click-through — mandatory
         panel.alphaValue = 0
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
         panel.isExcludedFromWindowsMenu = true
 
-        // Полупрозрачная скруглённая подложка — читаемость флага на любом фоне.
+        // Semi-transparent rounded backdrop — flag readability on any background.
         let backdrop = NSView(frame: NSRect(x: 0, y: 0, width: 30, height: 24))
         backdrop.wantsLayer = true
         backdrop.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.28).cgColor
@@ -59,18 +59,18 @@ final class CaretIndicator {
         ])
     }
 
-    // MARK: - Entry points (вызываются из AppDelegate)
+    // MARK: - Entry points (called from AppDelegate)
 
-    /// Реальная смена раскладки → показать флаг у каретки (на showDuration).
+    /// A real layout change → show the flag at the caret (for showDuration).
     func layoutChanged() {
         guard SettingsManager.shared.caretFlag else { return }
         showAtCaret()
     }
 
-    /// Любой ввод/клик пользователя → прячем (issue #10: «скрывать при печати»).
+    /// Any user input/click → hide (issue #10: "hide on typing").
     func userTyped() { if visible { hide() } }
 
-    /// Фича выключена / выход — снять окно и таймер.
+    /// Feature disabled / exit — remove the window and timer.
     func teardown() {
         hideTimer?.invalidate(); hideTimer = nil
         panel.orderOut(nil)
@@ -81,12 +81,12 @@ final class CaretIndicator {
     // MARK: - Internals
 
     private func showAtCaret() {
-        guard let rect = axCaretRectAppKit() else { hide(); return }   // нет каретки → не показываем
+        guard let rect = axCaretRectAppKit() else { hide(); return }   // no caret → don't show
         let flag = flagProvider()
         guard !flag.isEmpty else { hide(); return }
         if flag != lastFlag { label.stringValue = flag; lastFlag = flag }
         position(forCaret: rect)
-        if !panel.isVisible { panel.orderFrontRegardless() }            // показ БЕЗ кражи фокуса
+        if !panel.isVisible { panel.orderFrontRegardless() }            // show WITHOUT stealing focus
         fade(to: 1, duration: 0.12)
         visible = true
         hideTimer?.invalidate()
@@ -99,7 +99,7 @@ final class CaretIndicator {
         hideTimer?.invalidate(); hideTimer = nil
         guard visible else { return }
         visible = false
-        // Остаётся ordered-in на alpha 0 — невидимо и click-through; полный orderOut в teardown().
+        // Stays ordered-in at alpha 0 — invisible and click-through; full orderOut in teardown().
         fade(to: 0, duration: 0.18)
     }
 
@@ -110,7 +110,7 @@ final class CaretIndicator {
         }
     }
 
-    /// Кладём флаг справа от каретки (по центру по вертикали), прижимая к видимой области экрана.
+    /// Place the flag to the right of the caret (vertically centered), clamped to the screen's visible area.
     private func position(forCaret caret: NSRect) {
         let gap: CGFloat = 6
         let size = panel.frame.size
@@ -119,40 +119,40 @@ final class CaretIndicator {
         let screen = NSScreen.screens.first(where: { $0.frame.contains(NSPoint(x: caret.midX, y: caret.midY)) })
             ?? NSScreen.main ?? NSScreen.screens.first
         if let vf = screen?.visibleFrame {
-            if x + size.width > vf.maxX { x = caret.minX - gap - size.width }  // не влез справа → слева
+            if x + size.width > vf.maxX { x = caret.minX - gap - size.width }  // doesn't fit on the right → left
             x = min(max(x, vf.minX), vf.maxX - size.width)
             y = min(max(y, vf.minY), vf.maxY - size.height)
         }
         panel.setFrameOrigin(NSPoint(x: x.rounded(), y: y.rounded()))
     }
 
-    /// Каретка в координатах AppKit (низ-лево), или nil если недоступна / гвард не пустил.
+    /// The caret in AppKit coordinates (bottom-left), or nil if unavailable / a guard rejected it.
     private func axCaretRectAppKit() -> NSRect? {
         guard SettingsManager.shared.caretFlag else { return nil }
         guard AXIsProcessTrusted() else { return nil }
-        guard !AutoSwitchPolicy.secureInputActive else { return nil }          // не над полем пароля
+        guard !AutoSwitchPolicy.secureInputActive else { return nil }          // not over a password field
         let frontID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-        // denylist авто-конверсии НЕ применяем: он про «не менять текст», а флаг ничего не меняет —
-        // в IDE/терминалах индикатор раскладки как раз полезен. Пароли закрыты secure-input выше.
-        guard !AutoSwitchPolicy.shouldDeferToRemoteClient else { return nil }  // удалёнка: каретка на той стороне
-        guard frontID != Bundle.main.bundleIdentifier else { return nil }      // не над своим окном
+        // We do NOT apply the auto-conversion denylist: it's about "don't change text", and the flag changes nothing —
+        // in IDEs/terminals the layout indicator is actually useful. Passwords are guarded by secure-input above.
+        guard !AutoSwitchPolicy.shouldDeferToRemoteClient else { return nil }  // remote desktop: the caret is on the other side
+        guard frontID != Bundle.main.bundleIdentifier else { return nil }      // not over our own window
 
         guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
         let axApp = AXUIElementCreateApplication(app.processIdentifier)
-        // Ограничиваем AX round-trip: с зависшим/занятым таргетом (или Chromium, чьё дерево
-        // только строится после AXManualAccessibility) дефолтный таймаут ~6с завесил бы главный
-        // поток. 0.25с — не успел, значит nil → hide(), без залипания UI на смене раскладки.
+        // Limit the AX round-trip: with a hung/busy target (or Chromium, whose tree
+        // is only being built after AXManualAccessibility) the default ~6s timeout would hang the main
+        // thread. 0.25s — didn't make it, so nil → hide(), without a UI stall on a layout change.
         AXUIElementSetMessagingTimeout(axApp, 0.25)
-        enableChromiumA11y(axApp)   // поднять ленивое дерево Electron/Chromium (идемпотентно)
+        enableChromiumA11y(axApp)   // raise the lazy Electron/Chromium tree (idempotent)
         var focusedRaw: AnyObject?
         guard AXUIElementCopyAttributeValue(axApp, kAXFocusedUIElementAttribute as CFString, &focusedRaw) == .success,
               let focused = focusedRaw else { return nil }
         let element = focused as! AXUIElement
-        // Нативные Cocoa → range-путь; веб/Electron → text-marker (приватные AX-атрибуты).
+        // Native Cocoa → range path; web/Electron → text-marker (private AX attributes).
         guard let topLeft = axCaretRectTopLeft(of: element) ?? axCaretRectViaTextMarker(of: element) else { return nil }
 
-        // AX отдаёт глобальные координаты с началом сверху-слева ОСНОВНОГО экрана; AppKit — снизу-слева.
-        // Отражаем по полной высоте основного экрана (screens.first), не по visibleFrame, не по целевому.
+        // AX returns global coordinates with the origin at the top-left of the PRIMARY screen; AppKit — bottom-left.
+        // We flip over the primary screen's full height (screens.first), not visibleFrame, not the target's.
         guard let primary = NSScreen.screens.first else { return nil }
         var r = topLeft
         r.origin.y = primary.frame.height - topLeft.origin.y - topLeft.height
@@ -166,8 +166,8 @@ final class CaretIndicator {
         var range = CFRange(location: 0, length: 0)
         guard AXValueGetValue(rv as! AXValue, .cfRange, &range) else { return nil }
 
-        // Часть Cocoa-контролов отдаёт пустой прямоугольник на нулевой длине → просим 1 символ,
-        // с откатом на исходный нулевой диапазон (пустое поле, где следующего глифа нет).
+        // Some Cocoa controls return an empty rectangle for zero length → we request 1 character,
+        // with a fallback to the original zero-length range (an empty field where there's no next glyph).
         var q = range; q.length = 1
         guard let arg = AXValueCreate(.cfRange, &q) else { return nil }
         var boundsValue: AnyObject?
@@ -181,22 +181,22 @@ final class CaretIndicator {
         guard err == .success, let bv = boundsValue, CFGetTypeID(bv) == AXValueGetTypeID() else { return nil }
         var rect = CGRect.zero
         guard AXValueGetValue(bv as! AXValue, .cgRect, &rect) else { return nil }
-        // Каретка: width = 0 (тонкая черта), но height = высота строки. VS Code-canvas отдаёт
-        // (0,N,0x0) — height 0 = реальной геометрии нет, не показываем (иначе плашка в углу экрана).
+        // Caret: width = 0 (a thin line), but height = line height. VS Code canvas returns
+        // (0,N,0x0) — height 0 = no real geometry, don't show (otherwise a badge in the screen corner).
         guard rect.height >= 1, rect.width.isFinite, rect.height.isFinite else { return nil }
         return rect
     }
 
-    /// Electron/Chromium строят дерево a11y лениво — поднимаем его приватным атрибутом
-    /// AXManualAccessibility (так делают TextSniper/PopClip). Идемпотентно (на уже включённом
-    /// Chromium и на нативных приложениях — no-op). Без кэша по pid: pid переиспользуются при
-    /// перезапуске приложений, а кэш «навсегда» ломал бы флаг для перезапущенного Electron.
+    /// Electron/Chromium build the a11y tree lazily — we raise it with the private
+    /// AXManualAccessibility attribute (as TextSniper/PopClip do). Idempotent (on an already-enabled
+    /// Chromium and on native apps — a no-op). No caching by pid: pids are reused when
+    /// apps restart, and a "forever" cache would break the flag for a restarted Electron.
     private func enableChromiumA11y(_ axApp: AXUIElement) {
         AXUIElementSetAttributeValue(axApp, "AXManualAccessibility" as CFString, kCFBooleanTrue)
     }
 
-    /// Веб/Electron: каретка приходит через AXTextMarker, а не CFRange. Приватные,
-    /// недокументированные атрибуты (стабильны на практике годами).
+    /// Web/Electron: the caret comes via AXTextMarker, not CFRange. Private,
+    /// undocumented attributes (stable in practice for years).
     private func axCaretRectViaTextMarker(of element: AXUIElement) -> CGRect? {
         var markerRange: AnyObject?
         guard AXUIElementCopyAttributeValue(element, "AXSelectedTextMarkerRange" as CFString, &markerRange) == .success,
@@ -207,9 +207,9 @@ final class CaretIndicator {
               let bv = boundsValue, CFGetTypeID(bv) == AXValueGetTypeID() else { return nil }
         var rect = CGRect.zero
         guard AXValueGetValue(bv as! AXValue, .cgRect, &rect) else { return nil }
-        // Тот же гвард, что в range-пути: отвергаем вырожденную геометрию (веб/Electron
-        // порой отдаёт (x,y,0x0) с ненулевым origin — height>=1 это ловит, включая .zero).
+        // The same guard as in the range path: reject degenerate geometry (web/Electron
+        // sometimes returns (x,y,0x0) with a nonzero origin — height>=1 catches this, including .zero).
         guard rect.height >= 1, rect.width.isFinite, rect.height.isFinite else { return nil }
-        return rect   // экранные координаты, верх-лево
+        return rect   // screen coordinates, top-left
     }
 }

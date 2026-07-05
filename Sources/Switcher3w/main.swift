@@ -1,7 +1,7 @@
 import AppKit
 
-// Миграция настроек со старых com.ruswitcher.* ключей — строго до первого чтения
-// настроек (L10n лениво читает язык интерфейса при первом обращении).
+// Migration of settings from the old com.ruswitcher.* keys — strictly before the first
+// settings read (L10n lazily reads the interface language on first access).
 SettingsManager.migrateLegacyDefaults()
 
 let app = NSApplication.shared

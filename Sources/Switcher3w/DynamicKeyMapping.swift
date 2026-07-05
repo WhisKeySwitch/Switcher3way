@@ -1,28 +1,28 @@
 import Carbon
 import Foundation
 
-/// Динамический маппинг keycode↔символ для любой пары раскладок через UCKeyTranslate
+/// Dynamic keycode↔character mapping for any pair of layouts via UCKeyTranslate
 enum DynamicKeyMapping {
-    /// Кэш маппинга: ключ = "layoutID1→layoutID2"
+    /// Mapping cache: key = "layoutID1→layoutID2"
     nonisolated(unsafe) private static var mapCache: [String: [Character: Character]] = [:]
 
-    /// Все keycodes для букв/знаков (0-50 покрывает основную клавиатуру)
+    /// All keycodes for letters/signs (0-50 covers the main keyboard)
     private static let allKeycodes: [UInt16] = Array(0...50)
 
     // MARK: - Public API
 
-    /// Получить символ для keycode в конкретной раскладке
+    /// Get the character for a keycode in a specific layout
     static func characterForKeycode(_ keycode: UInt16, layout: TISInputSource) -> Character? {
         guard let layoutData = layoutDataForSource(layout) else { return nil }
         return translateKeycode(keycode, layoutData: layoutData, shift: false)
     }
 
-    /// Проверяет, является ли keycode "буквой" в любой из двух раскладок
+    /// Checks whether a keycode is a "letter" in either of the two layouts
     static func isLetterKeycode(_ keycode: UInt16) -> Bool {
         let settings = SettingsManager.shared
         let layouts = LayoutSwitcher.installedLayouts()
 
-        // Пробуем с настроенными раскладками
+        // Try with the configured layouts
         for layout in layouts {
             let id = LayoutSwitcher.sourceID(layout)
             if id == settings.layout1ID || id == settings.layout2ID || settings.layout1ID.isEmpty {
@@ -32,11 +32,11 @@ enum DynamicKeyMapping {
             }
         }
 
-        // Fallback на статическую таблицу
+        // Fallback to the static table
         return KeyMapping.keycodeToEN[keycode] != nil
     }
 
-    /// Построить маппинг между двумя раскладками
+    /// Build a mapping between two layouts
     static func buildMap(from source: TISInputSource, to target: TISInputSource) -> [Character: Character] {
         let sourceID = LayoutSwitcher.sourceID(source)
         let targetID = LayoutSwitcher.sourceID(target)
@@ -54,13 +54,13 @@ enum DynamicKeyMapping {
         var map: [Character: Character] = [:]
 
         for keycode in allKeycodes {
-            // Без shift
+            // Without shift
             if let sourceChar = translateKeycode(keycode, layoutData: sourceData, shift: false),
                let targetChar = translateKeycode(keycode, layoutData: targetData, shift: false),
                sourceChar != targetChar {
                 map[sourceChar] = targetChar
             }
-            // С shift
+            // With shift
             if let sourceChar = translateKeycode(keycode, layoutData: sourceData, shift: true),
                let targetChar = translateKeycode(keycode, layoutData: targetData, shift: true),
                sourceChar != targetChar {
@@ -72,20 +72,20 @@ enum DynamicKeyMapping {
         return map
     }
 
-    /// Конвертирует текст из текущей раскладки в целевую
+    /// Converts text from the current layout to the target layout
     static func convert(_ text: String) -> String {
         let settings = SettingsManager.shared
         let layouts = LayoutSwitcher.installedLayouts()
         let currentID = LayoutSwitcher.currentLayoutID()
 
-        // Определяем source и target раскладки (авто-детект — общий с LayoutSwitcher)
+        // Determine source and target layouts (auto-detect — shared with LayoutSwitcher)
         let layout1ID = settings.layout1ID.isEmpty ? LayoutSwitcher.autoDetectID1(from: layouts) : settings.layout1ID
         let layout2ID = settings.layout2ID.isEmpty ? LayoutSwitcher.autoDetectID2(from: layouts) : settings.layout2ID
 
         guard let source = layouts.first(where: { LayoutSwitcher.sourceID($0) == currentID }),
               let targetID = (currentID == layout1ID) ? layout2ID : layout1ID as String?,
               let target = layouts.first(where: { LayoutSwitcher.sourceID($0) == targetID }) else {
-            // Fallback на статический маппинг
+            // Fallback to static mapping
             rslog("DynamicKeyMapping: fallback to static mapping")
             return KeyMapping.convert(text)
         }
@@ -100,20 +100,21 @@ enum DynamicKeyMapping {
         return String(text.map { map[$0] ?? $0 })
     }
 
-    /// Очистить кэш (при смене раскладок в настройках)
+    /// Clear the cache (when layouts change in settings)
     static func clearCache() {
         mapCache.removeAll()
     }
 
-    /// Конвертирует набранные keycodes в строки исходной и целевой раскладок —
-    /// для движка перепечатки (не читаем поле, не трогаем буфер обмена).
-    /// nil — если раскладки не определились (тогда вызывающий падает на clipboard).
+    /// Converts the typed keycodes into source- and target-layout strings —
+    /// for the retype engine (we don't read the field, don't touch the clipboard).
+    /// nil — if the layouts couldn't be determined (then the caller falls back to clipboard).
     static func convertKeys(_ keys: [TypedKey]) -> (original: String, converted: String)? {
         guard !keys.isEmpty else { return nil }
-        // Удалёнка: символы проброшены через Screen Sharing (keyCode 0 + char). Конвертируем
-        // по самому символу — направление RU↔EN определяет KeyMapping.convert по скрипту
-        // (Cyrillic↔Latin), а не по раскладке локальной машины. Так офисный инстанс правильно
-        // конвертит «руддщ»→«hello» независимо от того, какая раскладка активна на нём.
+        // Remote desktop: characters are relayed through Screen Sharing (keyCode 0 + char). We
+        // convert by the character itself — KeyMapping.convert decides the RU↔EN direction by
+        // script (Cyrillic↔Latin), not by the local machine's layout. That way the office
+        // instance correctly converts text typed on the Russian layout back to "hello"
+        // regardless of which layout is active on it.
         if keys.allSatisfy({ $0.char != nil }) {
             let original = String(keys.compactMap { $0.char })
             return (original, KeyMapping.convert(original))
@@ -144,7 +145,7 @@ enum DynamicKeyMapping {
         return (original, converted)
     }
 
-    // Авто-детект раскладок живёт в LayoutSwitcher (autoDetectID1/ID2).
+    // Layout auto-detect lives in LayoutSwitcher (autoDetectID1/ID2).
 
     // MARK: - Private
 
@@ -187,7 +188,7 @@ enum DynamicKeyMapping {
         guard let scalar = UnicodeScalar(chars[0]) else { return nil }
         let char = Character(scalar)
 
-        // Фильтруем контрольные символы
+        // Filter out control characters
         if char.isNewline || char.asciiValue == 0 || chars[0] < 32 {
             return nil
         }

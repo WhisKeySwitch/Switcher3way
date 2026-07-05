@@ -2,7 +2,7 @@ import AppKit
 import ApplicationServices
 import CoreGraphics
 
-/// Конвертация текста между раскладками
+/// Text conversion between layouts
 @MainActor
 final class TextConverter {
     private var lastConvertedCount = 0
@@ -10,28 +10,28 @@ final class TextConverter {
     private var savedClipboardItems: [NSPasteboardItem]?
     private var clipboardRestoreWork: DispatchWorkItem?
     private var isConverting = false
-    /// Очередь для инжекта нажатий буферного движка — чтобы usleep не блокировал
-    /// main-поток, на котором висит event tap (иначе тап голодает → лаги/потери нажатий).
+    /// Queue for injecting the buffer engine's keystrokes — so usleep doesn't block
+    /// the main thread where the event tap sits (otherwise the tap starves → lag/lost keystrokes).
     nonisolated private let injectQueue = DispatchQueue(label: "com.switcher3w.inject", qos: .userInteractive)
 
-    // Состояние цикла перепечатки (буфер нажатий → юникод-вставка). Ручной триггер
-    // перебирает кандидатов из N-way; авто-конверсия — цикл из одного шага. Цикл по кругу
-    // возвращается к исходному тексту И к раскладке, активной до первой конверсии.
-    private var cycleHome = ""                                        // исходный текст (+ хвостовые пробелы)
-    private var cycleSteps: [(text: String, layoutID: String)] = []  // кандидаты (текст уже с пробелами)
-    private var cycleIndex = -1                                       // -1 = показан home; 0..n-1 = кандидат i
-    private var cycleShownCount = 0                                   // символов сейчас на экране (для стирания)
-    private var cyclePreviousLayoutID = ""                           // раскладка, активная ДО первой конверсии
+    // State of the retype cycle (keystroke buffer → unicode insert). The manual trigger
+    // cycles through the N-way candidates; auto-conversion is a single-step cycle. The cycle wraps
+    // back to the original text AND to the layout active before the first conversion.
+    private var cycleHome = ""                                        // original text (+ trailing spaces)
+    private var cycleSteps: [(text: String, layoutID: String)] = []  // candidates (text already with spaces)
+    private var cycleIndex = -1                                       // -1 = home shown; 0..n-1 = candidate i
+    private var cycleShownCount = 0                                   // characters currently on screen (for erasing)
+    private var cyclePreviousLayoutID = ""                           // the layout active BEFORE the first conversion
     private var lastWasBuffer = false
 
-    /// Создаёт CGEventSource с маркером, чтобы KeyboardMonitor игнорировал наши события
+    /// Creates a CGEventSource with a marker so KeyboardMonitor ignores our events
     nonisolated private func makeSource() -> CGEventSource? {
         let source = CGEventSource(stateID: .hidSystemState)
         source?.userData = kSwitcher3wEventMarker
         return source
     }
 
-    /// Проверяет, что текущий фокусированный элемент — редактируемое текстовое поле
+    /// Checks that the currently focused element is an editable text field
     private func isFocusedElementEditable() -> Bool {
         guard let app = NSWorkspace.shared.frontmostApplication else { return false }
         let axApp = AXUIElementCreateApplication(app.processIdentifier)
@@ -45,18 +45,18 @@ final class TextConverter {
 
         let element = focused as! AXUIElement
 
-        // Проверяем роль
+        // Check the role
         var roleRaw: AnyObject?
         AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRaw)
         let role = (roleRaw as? String) ?? ""
 
-        // Текстовые роли
+        // Text roles
         let textRoles = ["AXTextField", "AXTextArea", "AXComboBox", "AXSearchField", "AXWebArea"]
         if textRoles.contains(role) {
-            // Дополнительно: не read-only?
+            // Additionally: not read-only?
             var editableRaw: AnyObject?
             let editErr = AXUIElementCopyAttributeValue(element, "AXEditable" as CFString, &editableRaw)
-            // Если атрибут отсутствует — считаем editable (у AXWebArea его может не быть)
+            // If the attribute is missing — assume editable (AXWebArea may not have it)
             if editErr == .success, let editable = editableRaw as? Bool {
                 rslog("editable: role=\(role) editable=\(editable)")
                 return editable
@@ -71,11 +71,11 @@ final class TextConverter {
 
     // MARK: - Public API
 
-    /// Запускает цикл перепечатки: стирает `eraseCount` набранных символов и впечатывает
-    /// первый кандидат. `home` — исходный текст (с хвостовыми пробелами), к которому по кругу
-    /// вернётся цикл; `previousLayoutID` — раскладка ДО переключения (для точного undo).
-    /// Возвращает ID целевой раскладки первого кандидата, либо nil. Общий движок для авто-
-    /// конверсии (цикл из одного шага) и ручного триггера (перебор всех кандидатов N-way).
+    /// Starts the retype cycle: erases `eraseCount` typed characters and types
+    /// the first candidate. `home` — original text (with trailing spaces) the cycle
+    /// wraps back to; `previousLayoutID` — the layout BEFORE switching (for exact undo).
+    /// Returns the target layout ID of the first candidate, or nil. Shared engine for auto-
+    /// conversion (single-step cycle) and the manual trigger (cycling through all N-way candidates).
     func beginCycle(home: String, steps: [(text: String, layoutID: String)],
                     eraseCount: Int, previousLayoutID: String) -> String? {
         guard !isConverting, !steps.isEmpty, eraseCount > 0 else { return nil }
@@ -91,10 +91,10 @@ final class TextConverter {
         return steps[0].layoutID
     }
 
-    /// Следующий шаг цикла (второй+ триггер без ввода между ними). Перебирает кандидатов,
-    /// по кругу возвращаясь к исходному тексту. Возвращает целевую раскладку и флаг
-    /// `restored` (true — вернулись к исходному тексту → переключиться на previousLayoutID).
-    /// nil — если активной буферной конверсии нет (тогда вызывающий пробует clipboard).
+    /// Next step of the cycle (second+ trigger with no input between them). Cycles through candidates,
+    /// wrapping back to the original text. Returns the target layout and the
+    /// `restored` flag (true — returned to the original text → switch to previousLayoutID).
+    /// nil — if there's no active buffer conversion (then the caller tries the clipboard).
     func cycleStep() -> (layoutID: String, restored: Bool)? {
         guard !isConverting, lastWasBuffer, !cycleSteps.isEmpty else { return nil }
         isConverting = true
@@ -115,15 +115,15 @@ final class TextConverter {
         }
     }
 
-    /// Повторная конвертация выделения через буфер обмена. Буферный (пословный) путь идёт
-    /// через `cycleStep`; сюда попадает только выделенный мышью текст (clipboard-движок).
+    /// Re-conversion of the selection via the clipboard. The buffer (word-by-word) path goes
+    /// through `cycleStep`; only mouse-selected text reaches here (clipboard engine).
     func reconvert() -> Bool {
         guard !isConverting, !lastWasBuffer else { return false }
         return reconvertViaClipboard()
     }
 
-    /// Стереть `erase` символов и впечатать `insert` — вне main-потока, чтобы usleep не
-    /// голодал event tap (тот висит на главном run loop).
+    /// Erase `erase` characters and type `insert` — off the main thread, so usleep doesn't
+    /// starve the event tap (which sits on the main run loop).
     private func retype(erase: Int, insert: String) {
         injectQueue.async { [weak self] in
             guard let self else { return }
@@ -134,8 +134,8 @@ final class TextConverter {
         }
     }
 
-    /// Конвертация через буфер обмена (фолбэк: выделенный мышью текст и т.п.).
-    /// Сначала проверяет выделение, потом пробует слово по счётчику.
+    /// Conversion via the clipboard (fallback: mouse-selected text etc.).
+    /// First checks the selection, then tries the word by counter.
     func convertViaClipboard(wordLength: Int, prevWordLength: Int, boundaryCount: Int) -> Bool {
         guard !isConverting else {
             rslog("convert: skipped — already converting")
@@ -154,19 +154,19 @@ final class TextConverter {
 
         var conversionSucceeded = false
         defer {
-            // Любой ранний выход без успеха обязан вернуть буфер пользователю —
-            // иначе clipboard остаётся пустым или с конвертированным текстом.
+            // Any early exit without success must return the clipboard to the user —
+            // otherwise the clipboard stays empty or holds the converted text.
             if !conversionSucceeded { restoreClipboardNow() }
         }
 
-        // --- Попытка 1: уже есть выделенный текст? ---
+        // --- Attempt 1: is there already selected text? ---
         if let text = tryCopy(pasteboard) {
             rslog("convert: selection len=\(text.count)")
             let converted = DynamicKeyMapping.convert(text).precomposedStringWithCanonicalMapping
             pasteText(converted, pasteboard: pasteboard)
-            // Курсор остаётся в конце вставленного текста — не пере-выделяем,
-            // чтобы следующий ввод не затёр результат. Для reconvert используется
-            // унифицированный путь через selectBack(lastConvertedCount).
+            // The cursor stays at the end of the inserted text — don't re-select,
+            // so the next input doesn't overwrite the result. For reconvert the
+            // unified path via selectBack(lastConvertedCount) is used.
             lastConvertedCount = converted.count
             lastBoundaryCount = 0
             conversionSucceeded = true
@@ -174,7 +174,7 @@ final class TextConverter {
             return true
         }
 
-        // --- Попытка 2: выделяем слово по счётчику ---
+        // --- Attempt 2: select the word by counter ---
         let charCount: Int
         let usedBoundary: Int
 
@@ -196,7 +196,7 @@ final class TextConverter {
 
         guard let text = tryCopy(pasteboard) else {
             rslog("convert: copy failed")
-            simKey(keyCode: KC.right, flags: []) // снять выделение
+            simKey(keyCode: KC.right, flags: []) // clear the selection
             moveRight(usedBoundary)
             return false
         }
@@ -214,7 +214,7 @@ final class TextConverter {
         return true
     }
 
-    /// Повторная конвертация через буфер обмена (фолбэк).
+    /// Re-conversion via the clipboard (fallback).
     private func reconvertViaClipboard() -> Bool {
         guard !isConverting else {
             rslog("reconvert: skipped — already converting")
@@ -227,13 +227,13 @@ final class TextConverter {
         guard lastConvertedCount > 0 else { return false }
 
         let pasteboard = NSPasteboard.general
-        // Отменяем отложенное восстановление clipboard — мы ещё работаем
+        // Cancel the deferred clipboard restore — we're still working
         cancelClipboardRestore()
 
         moveLeft(lastBoundaryCount)
 
         selectBack(lastConvertedCount)
-        usleep(80_000)  // дать приложению обработать выделение
+        usleep(80_000)  // give the app time to process the selection
 
         guard let text = tryCopy(pasteboard) else {
             rslog("reconvert: copy failed, count=\(lastConvertedCount)")
@@ -267,7 +267,7 @@ final class TextConverter {
 
     // MARK: - Private
 
-    /// Стирает n символов (Backspace × n) — для движка перепечатки.
+    /// Erases n characters (Backspace × n) — for the retype engine.
     nonisolated private func backspace(_ n: Int) {
         for _ in 0..<n {
             simKey(keyCode: KC.backspace, flags: [])
@@ -275,7 +275,7 @@ final class TextConverter {
         }
     }
 
-    /// Впечатывает строку напрямую (юникод-вставка), без буфера обмена.
+    /// Types the string directly (unicode insert), without the clipboard.
     nonisolated private func insertText(_ text: String) {
         guard !text.isEmpty, let source = makeSource() else { return }
         let utf16 = Array(text.utf16)
@@ -289,21 +289,21 @@ final class TextConverter {
         up.post(tap: .cghidEventTap)
     }
 
-    /// Вставляет текст через Cmd+V и ждёт завершения
+    /// Pastes text via Cmd+V and waits for completion
     private func pasteText(_ text: String, pasteboard: NSPasteboard) {
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
         simKey(keyCode: KC.letterV, flags: .maskCommand) // Cmd+V
-        usleep(150_000) // 150мс — дать приложению вставить текст и обновить курсор
+        usleep(150_000) // 150ms — give the app time to paste the text and update the cursor
     }
 
-    /// Отменяет отложенное восстановление clipboard
+    /// Cancels the deferred clipboard restore
     private func cancelClipboardRestore() {
         clipboardRestoreWork?.cancel()
         clipboardRestoreWork = nil
     }
 
-    /// Немедленно возвращает буфер обмена пользователю (для путей-неудач).
+    /// Immediately returns the clipboard to the user (for failure paths).
     private func restoreClipboardNow() {
         cancelClipboardRestore()
         guard let saved = savedClipboardItems else { return }
@@ -313,15 +313,15 @@ final class TextConverter {
         savedClipboardItems = nil
     }
 
-    /// Сбрасывает отложенное восстановление немедленно — вызывается перед
-    /// завершением приложения, чтобы не потерять буфер в 2-секундном окне.
+    /// Flushes the deferred restore immediately — called before
+    /// app termination, so the clipboard isn't lost in the 2-second window.
     func flushPendingClipboardRestore() {
         guard clipboardRestoreWork != nil else { return }
         restoreClipboardNow()
     }
 
-    /// Планирует восстановление clipboard через 2 секунды
-    /// (если за это время придёт reconvert — отменится и перепланируется)
+    /// Schedules clipboard restore in 2 seconds
+    /// (if a reconvert arrives in that time — it's canceled and rescheduled)
     private func scheduleClipboardRestore() {
         cancelClipboardRestore()
         let saved = self.savedClipboardItems
@@ -338,10 +338,10 @@ final class TextConverter {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: work)
     }
 
-    /// Делает глубокую копию всех pasteboard items (со всеми типами данных).
-    /// Это нужно потому, что NSPasteboardItem становится невалидным после
-    /// pasteboard.clearContents() — поэтому копируем data по каждому типу
-    /// в новые NSPasteboardItem.
+    /// Makes a deep copy of all pasteboard items (with all data types).
+    /// This is needed because NSPasteboardItem becomes invalid after
+    /// pasteboard.clearContents() — so we copy the data for each type
+    /// into new NSPasteboardItem objects.
     private func snapshotPasteboard(_ pb: NSPasteboard) -> [NSPasteboardItem] {
         guard let items = pb.pasteboardItems else { return [] }
         return items.map { oldItem in
@@ -355,10 +355,10 @@ final class TextConverter {
         }
     }
 
-    /// Копирует выделенный текст. Делает до 3 попыток (Cmd+C не всегда срабатывает с первого раза)
+    /// Copies the selected text. Makes up to 3 attempts (Cmd+C doesn't always work the first time)
     private func tryCopy(_ pasteboard: NSPasteboard) -> String? {
         for attempt in 0..<3 {
-            // Очищаем буфер перед копированием — гарантирует что changeCount изменится
+            // Clear the buffer before copying — guarantees changeCount will change
             pasteboard.clearContents()
             let oldCount = pasteboard.changeCount
 
@@ -370,12 +370,12 @@ final class TextConverter {
                !text.isEmpty {
                 return text
             }
-            usleep(50_000) // пауза перед retry
+            usleep(50_000) // pause before retry
         }
         return nil
     }
 
-    /// Выделяет N символов влево (Shift+Left × N)
+    /// Selects N characters to the left (Shift+Left × N)
     nonisolated private func selectBack(_ count: Int) {
         for _ in 0..<count {
             simKey(keyCode: KC.left, flags: .maskShift)
@@ -383,7 +383,7 @@ final class TextConverter {
         }
     }
 
-    /// Сдвигает курсор влево на N символов
+    /// Moves the cursor left by N characters
     nonisolated private func moveLeft(_ count: Int) {
         for _ in 0..<count {
             simKey(keyCode: KC.left, flags: [])
@@ -391,7 +391,7 @@ final class TextConverter {
         }
     }
 
-    /// Сдвигает курсор вправо на N символов (восстановление границ-пробелов)
+    /// Moves the cursor right by N characters (restoring space boundaries)
     nonisolated private func moveRight(_ count: Int) {
         for _ in 0..<count {
             simKey(keyCode: KC.right, flags: [])
@@ -399,7 +399,7 @@ final class TextConverter {
         }
     }
 
-    /// Симулирует нажатие клавиши с маркером (чтобы наш monitor игнорировал)
+    /// Simulates a keystroke with a marker (so our monitor ignores it)
     nonisolated private func simKey(keyCode: UInt16, flags: CGEventFlags) {
         guard let source = makeSource() else { return }
 
