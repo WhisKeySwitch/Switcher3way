@@ -83,7 +83,11 @@ final class SettingsWindowController {
         NSLayoutConstraint.activate([
             root.widthAnchor.constraint(equalToConstant: tabWidth),
             stack.topAnchor.constraint(equalTo: root.topAnchor, constant: 16),
-            stack.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -18),
+            // Прижимаем контент к верху: «<=» вместо «=». fittingSize по-прежнему даёт
+            // естественную высоту вкладки (минимум, где root.bottom >= stack.bottom+18),
+            // но когда окно растянуто до самой высокой вкладки, лишняя высота уходит ВНИЗ
+            // пустым местом, а не растягивает коробки, центрируя одинокие строки.
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: root.bottomAnchor, constant: -18),
             stack.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
             stack.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
         ])
@@ -175,33 +179,16 @@ final class SettingsWindowController {
     private func buildAutofixTab() -> NSView {
         let settings = SettingsManager.shared
 
-        // Мастер-карточка автозамены
+        // Мастер-карточка автозамены (без beta-бейджа — фича шипнута).
         let masterBox = FormBox()
         masterBox.addRow(FormUI.row(title: L10n.settingsAutofixTitle,
                                     subtitle: L10n.settingsAutofixSubtitle,
-                                    titleBold: true, badge: L10n.commonBeta,
+                                    titleBold: true,
                                     control: FormUI.makeSwitch(isOn: settings.autoConvert,
                                                                target: self, action: #selector(autoConvertChanged))))
 
-        // Флаг у курсора (issue #10)
-        let caretBox = FormBox()
-        let cfSwitch = FormUI.makeSwitch(isOn: settings.caretFlag,
-                                         target: self, action: #selector(caretFlagChanged))
-        caretFlagSwitch = cfSwitch
-        caretBox.addRow(FormUI.row(title: L10n.settingsAutofixCaretFlag,
-                                   badge: L10n.commonBeta, control: cfSwitch))
-
-        var sections: [NSView] = [masterBox, caretBox]
-
-        // Режим удалённого стола отложен в 2.5 — блок скрыт за флагом (для тестирования).
-        if settings.showRemoteDesktopBeta {
-            let remoteBox = FormBox()
-            remoteBox.addRow(FormUI.row(title: L10n.menuRemoteDesktop,
-                                        subtitle: L10n.settingsRemoteDesktopHint,
-                                        control: FormUI.makeSwitch(isOn: settings.remoteDesktopMode,
-                                                                   target: self, action: #selector(remoteDesktopChanged))))
-            sections.append(remoteBox)
-        }
+        // Экспериментальные тумблеры (флаг у курсора, удалёнка) переехали в Advanced.
+        var sections: [NSView] = [masterBox]
 
         // Единый список исключений с сегментным фильтром
         let pane = ExceptionsPane()
@@ -239,18 +226,44 @@ final class SettingsWindowController {
     // MARK: - Вкладка Advanced
 
     private func buildAdvancedTab() -> NSView {
+        let settings = SettingsManager.shared
+        var sections: [NSView] = []
+
+        // Экспериментальные тумблеры вверху Advanced (переехали из Auto-fix).
+        // Флаг у курсора (issue #10)
+        let caretBox = FormBox()
+        let cfSwitch = FormUI.makeSwitch(isOn: settings.caretFlag,
+                                         target: self, action: #selector(caretFlagChanged))
+        caretFlagSwitch = cfSwitch
+        caretBox.addRow(FormUI.row(title: L10n.settingsAutofixCaretFlag,
+                                   badge: L10n.commonBeta, control: cfSwitch))
+        sections.append(caretBox)
+
+        // Режим удалённого стола отложен в 2.5 — блок скрыт за флагом (для тестирования).
+        if settings.showRemoteDesktopBeta {
+            let remoteBox = FormBox()
+            remoteBox.addRow(FormUI.row(title: L10n.menuRemoteDesktop,
+                                        subtitle: L10n.settingsRemoteDesktopHint,
+                                        control: FormUI.makeSwitch(isOn: settings.remoteDesktopMode,
+                                                                   target: self, action: #selector(remoteDesktopChanged))))
+            sections.append(remoteBox)
+        }
+
         let debugBox = FormBox()
         debugBox.addRow(FormUI.row(title: L10n.settingsDebugLog,
-                                   control: FormUI.makeSwitch(isOn: SettingsManager.shared.debugLogEnabled,
+                                   control: FormUI.makeSwitch(isOn: settings.debugLogEnabled,
                                                               target: self, action: #selector(debugLogChanged))))
+        sections.append(debugBox)
 
         let showLogBtn = NSButton(title: L10n.settingsShowLog, target: self, action: #selector(showLogFile))
         showLogBtn.bezelStyle = .rounded
+        sections.append(showLogBtn)
 
         let pathLabel = FormUI.footnote(logFilePath())
         pathLabel.isSelectable = true
+        sections.append(pathLabel)
 
-        return makeTabRoot([debugBox, showLogBtn, pathLabel])
+        return makeTabRoot(sections)
     }
 
     // MARK: - Language Popup
