@@ -75,6 +75,13 @@ The menu SHALL replace the "Enable Switcher3way" checkbox with a "Pause Switcher
 - **WHEN** the user selects Resume while paused
 - **THEN** monitoring SHALL restart immediately regardless of remaining pause time
 
+### Requirement: Help menu item
+The status menu SHALL contain a localized Help item, placed after Settings…, with the standard ⌘? key equivalent, that opens the in-app help window.
+
+#### Scenario: Opening help from the menu
+- **WHEN** the user selects Help in the status menu
+- **THEN** the help window SHALL open showing the user guide in the interface language
+
 ### Requirement: Conditional permissions menu item
 The "Check Permissions…" item SHALL appear in the menu only when a required permission is missing; when shown, it SHALL open the onboarding checklist window.
 
