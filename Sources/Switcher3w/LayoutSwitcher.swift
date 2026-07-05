@@ -39,21 +39,17 @@ enum LayoutSwitcher {
         return last.replacingOccurrences(of: "-", with: " ")
     }
 
-    /// Переключает на противоположную раскладку (из настроенной пары)
-    static func switchToOpposite() {
-        let current = currentLayoutID()
-        let settings = SettingsManager.shared
+    /// Переключает на СЛЕДУЮЩУЮ установленную раскладку (по кругу). Фолбэк там, где рендер
+    /// набранного по раскладкам невозможен (удалёнка/выделение мышью): фиксированной пары
+    /// больше нет, поэтому просто листаем установленные источники.
+    static func switchToNextInstalled() {
         let sources = installedLayouts()
-
-        let id1 = settings.layout1ID.isEmpty ? autoDetectID1(from: sources) : settings.layout1ID
-        let id2 = settings.layout2ID.isEmpty ? autoDetectID2(from: sources) : settings.layout2ID
-
-        let targetID = (current == id1) ? id2 : id1
-
-        if let target = sources.first(where: { sourceID($0) == targetID }) {
-            TISEnableInputSource(target)
-            TISSelectInputSource(target)
-        }
+        guard !sources.isEmpty else { return }
+        let currentID = currentLayoutID()
+        let idx = sources.firstIndex(where: { sourceID($0) == currentID }) ?? -1
+        let target = sources[(idx + 1) % sources.count]
+        TISEnableInputSource(target)
+        TISSelectInputSource(target)
     }
 
     /// Переключает на конкретную раскладку по точному ID
@@ -101,22 +97,6 @@ enum LayoutSwitcher {
         }
         let langs = Unmanaged<CFArray>.fromOpaque(ptr).takeUnretainedValue() as? [String]
         return langs?.first
-    }
-
-    /// Коды языков текущей и противоположной раскладок (для авто-детекта раскладки).
-    static func currentAndOppositeLanguage() -> (current: String, opposite: String)? {
-        let settings = SettingsManager.shared
-        let sources = installedLayouts()
-        let currentID = currentLayoutID()
-        let id1 = settings.layout1ID.isEmpty ? autoDetectID1(from: sources) : settings.layout1ID
-        let id2 = settings.layout2ID.isEmpty ? autoDetectID2(from: sources) : settings.layout2ID
-        let targetID = (currentID == id1) ? id2 : id1
-        guard let cur = sources.first(where: { sourceID($0) == currentID }),
-              let tgt = sources.first(where: { sourceID($0) == targetID }),
-              let curLang = languageCode(cur), let tgtLang = languageCode(tgt) else {
-            return nil
-        }
-        return (curLang, tgtLang)
     }
 
     // MARK: - Auto-detect

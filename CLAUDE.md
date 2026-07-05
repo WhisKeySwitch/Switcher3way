@@ -98,8 +98,10 @@ Rationale + detail: `NOTES-3WAY.md`. Summary:
 - **`LayoutSwitcher.swift`** — TIS layout control: `switchTo(layoutID:)`, `switchToOpposite`,
   `installedLayouts`, `currentLayoutID`, `languageCode`, `autoDetectID1/2`.
 - **`TextConverter.swift`** — retype engine (backspace + Unicode insert, clipboard fallback):
-  `convert`, **`convertBuffer`** (N-way targeted retype), `reconvert`.
-- **`SettingsManager.swift`** — UserDefaults (`layout1ID`/`layout2ID` = manual-trigger pair only;
+  **`beginCycle`**/**`cycleStep`** (N-way candidate cycle — records the pre-conversion layout so
+  undo restores it exactly), `reconvert` (clipboard/selection path only).
+- **`SettingsManager.swift`** — UserDefaults (`layout1ID`/`layout2ID` are **dormant** — the old
+  manual-trigger pair, no longer read; retained for rollback;
   exception lists; feature flags; pause state: persisted `pausedUntil` + session-only
   `pausedUntilRestart`, computed `isPaused`/`effectivelyEnabled`). Keys are literal
   `com.switcher3w.*` strings; `migrateLegacyDefaults()` (called from main.swift before any
@@ -139,8 +141,10 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   the keychain identity is missing — re-import per `signing/README.md`.
 - **Never commit** `signing/cert.p12` / private key (git-ignored). Don't ship it in the DMG.
 - On another Mac the app is unnotarized → first launch needs right-click → **Open**.
-- Auto-conversion is N-way over all installed layouts; the Layout 1/2 pickers only set the
-  manual-trigger pair. There is intentionally no "third layout" field.
+- Both auto-conversion AND the manual trigger are N-way over all installed layouts. The manual
+  trigger converts to the best N-way target (and still acts on ambiguous words, since it's an
+  explicit request); repeated triggers cycle through the candidate layouts and back to the
+  original. There is no user-configurable layout pair (the old Layout 1/2 pickers were removed).
 
 ## Current state
 
@@ -152,9 +156,6 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Known issues / next steps
 
-- **⌥ undo layout** (5-sec window) after an auto-switch retypes the original text correctly but
-  may switch to the wrong layout in pure 3-way (built around a pair). Fix: record the pre-switch
-  layout ID in `AutoConverter`/conversion state and restore it on undo.
 - **Icon optical balance** — S/Э/Є are fine; could optically size-match if desired.
 - **Git:** all fork changes are committed on `main` (repo is a shallow clone of upstream; no
   remote push). `signing/cert.p12` is git-ignored — keep it that way. Don't commit `Switcher3way.app`.

@@ -1,10 +1,6 @@
-# Manual Conversion and Undo
+# Delta: Manual Conversion and Undo (rework-manual-trigger-nway)
 
-## Purpose
-
-The system SHALL convert typed text between keyboard layouts when the user invokes the configured trigger, and SHALL support repeated invocations to cycle through candidate layouts and reverse the most recent conversion.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Convert the last typed word
 The system SHALL convert the most recently typed word or the currently selected text when the manual trigger is invoked in an editable context. Because the trigger is an explicit user action, the system SHALL produce a conversion even when automatic detection would decline: if N-way detection finds a single unambiguous target the system SHALL convert to it, and otherwise the system SHALL convert to the first alternative candidate layout (the next installed layout whose rendering of the keystrokes differs from the current one).

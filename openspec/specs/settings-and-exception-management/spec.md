@@ -2,12 +2,12 @@
 
 ## Purpose
 
-The system SHALL expose and persist user preferences for trigger behavior, auto-conversion, layout pair selection, and the exception lists that govern when conversion is allowed or forced.
+The system SHALL expose and persist user preferences for trigger behavior, auto-conversion, and the exception lists that govern when conversion is allowed or forced.
 
 ## Requirements
 
 ### Requirement: Persist user preferences
-The system SHALL store settings in the app’s persistent defaults so that preferences survive app restarts and relaunches.
+The system SHALL store settings in the app’s persistent defaults so that preferences survive app restarts and relaunches. Preferences cover trigger behavior, auto-conversion, and the exception lists that govern when conversion is allowed or forced. The manual trigger SHALL NOT require a user-selected layout pair; any `layout1ID`/`layout2ID` values retained in defaults SHALL be treated as dormant rollback insurance and SHALL NOT drive trigger behavior.
 
 #### Scenario: Save a changed trigger setting
 - **WHEN** the user changes the conversion trigger or related options
@@ -16,6 +16,10 @@ The system SHALL store settings in the app’s persistent defaults so that prefe
 #### Scenario: Save a changed auto-conversion toggle
 - **WHEN** the user enables or disables automatic conversion or related features
 - **THEN** the system SHALL persist the new toggle state for future sessions
+
+#### Scenario: Legacy pair keys are ignored
+- **WHEN** `layout1ID` or `layout2ID` still hold values from a previous version
+- **THEN** the manual trigger SHALL ignore them and behave identically to a fresh install with no pair configured
 
 ### Requirement: Manage exception lists
 The system SHALL maintain separate lists for denied applications, denied words, and always-convert words so that conversion behavior can be tailored per context.
@@ -53,13 +57,6 @@ The General tab SHALL present the master on/off state as a status card at the to
 - **WHEN** the user flips the status card's switch
 - **THEN** the enable preference SHALL be persisted, the card title SHALL update to reflect the new state, and monitoring SHALL start or stop as it does today
 
-### Requirement: Merge manual layout pair into a single row
-The General tab SHALL present the manual-trigger layout pair as one "toggles between X ⇄ Y" row with two inline layout popups, replacing the separate Layout 1 / Layout 2 rows, with an explanatory footnote stating that auto-fix covers all installed layouts and this pair applies only to the manual trigger.
-
-#### Scenario: Changing either side of the pair
-- **WHEN** the user changes either popup in the pair row
-- **THEN** the corresponding existing layout preference (layout1ID or layout2ID) SHALL be persisted unchanged in key and format
-
 ### Requirement: Unified exceptions list with segmented filter
 The Auto-fix tab SHALL present the three exception lists (denied apps, never-convert words, always-convert words) as one full-height list controlled by a segmented filter whose segments show live item counts, with a search field that filters the visible list and an explicit add button ("+ Add app…" for the Apps segment, a text-entry affordance for the word segments).
 
@@ -83,15 +80,15 @@ Protected password-manager entries in the Apps list SHALL be visibly marked with
 - **THEN** the remove affordance SHALL be disabled and the row SHALL display the "always off" badge
 
 ### Requirement: Display names follow the interface language
-Names rendered by the app for keyboard layouts (manual-pair popups) and applications (exceptions list) SHALL be consistent with the app's effective interface language. When the interface language matches the macOS system language, system-localized names SHALL be used; when it differs, language-neutral names SHALL be used instead (layouts from the input-source ID, apps from the bundle's on-disk name).
+Names rendered by the app for applications (exceptions list) and any keyboard-layout names it displays SHALL be consistent with the app's effective interface language. When the interface language matches the macOS system language, system-localized names SHALL be used; when it differs, language-neutral names SHALL be used instead (apps from the bundle's on-disk name, layouts from the input-source ID).
 
 #### Scenario: English interface on a Russian-language system
 - **WHEN** the macOS system language is Russian, the app's interface language is English, and the user opens the exceptions Apps list
 - **THEN** app names SHALL be shown in their language-neutral on-disk form (e.g. "Terminal"), not Russian system-localized names
 
 #### Scenario: Interface language matches the system
-- **WHEN** the app's interface language is the system default and the user opens the manual-pair popups
-- **THEN** layouts SHALL show their system-localized names
+- **WHEN** the app's interface language is the system default and the app displays a keyboard-layout name
+- **THEN** the layout SHALL show its system-localized name
 
 ### Requirement: Centered About tab
 The About tab SHALL present the app name and version centered horizontally in the tab.

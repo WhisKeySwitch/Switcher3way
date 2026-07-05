@@ -81,7 +81,10 @@ Typed a word in the wrong layout? Tap the **trigger key** — by itself, without
 and Switcher3way converts the **last word** you typed and switches the layout. If you select
 text first, the selection is converted instead.
 
-Tap the trigger **again without typing anything in between** to undo (convert back).
+Tap the trigger **again without typing anything in between** to step through the other layouts:
+each extra tap retypes the word in the next installed layout and switches to it, and one more tap
+past the last one brings back your original text and layout. With two layouts this is just the
+familiar "tap again to undo"; with three or more it lets you reach any layout by tapping.
 
 The trigger is configurable in **Settings → General → Trigger**:
 
@@ -91,8 +94,10 @@ The trigger is configurable in **Settings → General → Trigger**:
 - **Require double tap** — conversion fires on a quick double tap instead of a single tap.
   Useful when the chosen key is one you often tap alone by accident (e.g. Shift).
 
-If the word is ambiguous for N-way detection, the manual trigger falls back to toggling between
-your **manual pair** — the two layouts chosen in Settings → General → Manual pair.
+The manual trigger is fully N-way: it converts to the best-matching layout, and because it's an
+explicit request it acts even on words that Auto-fix would leave alone (for example a word that's
+valid in more than one language) — just tap again to move to the next candidate if the first
+guess wasn't what you wanted. There is no layout pair to configure.
 
 **Learning from undo:** if Auto-fix converted a word and you immediately undo it with the
 trigger, Switcher3way offers to add that word to the **Never convert** list so it won't be
@@ -138,10 +143,8 @@ Open with **⌘,** from the menu. Four tabs:
 ### General
 
 - **Status card** — master on/off switch for the whole app (trigger + Auto-fix).
-- **Trigger** — the trigger key, right-key-only, double-tap (see above).
-- **Manual pair** — the two layouts the manual trigger toggles between when N-way detection is
-  ambiguous. *This is not a limitation of Auto-fix* — automatic detection always covers all
-  installed layouts; there is intentionally no "third layout" picker.
+- **Trigger** — the trigger key, right-key-only, double-tap (see above). Both the trigger and
+  Auto-fix are N-way over all installed layouts; there is no layout pair to pick.
 - **System** — Launch at login, Remember layout per app (restores each app's last layout when
   you switch back to it), Interface language (16 languages; "System default" follows macOS).
 
