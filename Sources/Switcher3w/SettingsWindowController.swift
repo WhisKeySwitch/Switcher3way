@@ -83,7 +83,11 @@ final class SettingsWindowController {
         NSLayoutConstraint.activate([
             root.widthAnchor.constraint(equalToConstant: tabWidth),
             stack.topAnchor.constraint(equalTo: root.topAnchor, constant: 16),
-            stack.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -18),
+            // Прижимаем контент к верху: «<=» вместо «=». fittingSize по-прежнему даёт
+            // естественную высоту вкладки (минимум, где root.bottom >= stack.bottom+18),
+            // но когда окно растянуто до самой высокой вкладки, лишняя высота уходит ВНИЗ
+            // пустым местом, а не растягивает коробки, центрируя одинокие строки.
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: root.bottomAnchor, constant: -18),
             stack.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
             stack.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
         ])
