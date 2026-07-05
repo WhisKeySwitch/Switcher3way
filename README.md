@@ -35,6 +35,7 @@ On first launch the onboarding checklist asks for two macOS permissions — **Ac
 
 ## Documentation
 
+- **[User Guide](docs/user-guide.md)** ([Українська](docs/user-guide.uk.md) · [Русский](docs/user-guide.ru.md)) — everything a user needs: setup, trigger, auto-fix, exceptions, settings, troubleshooting
 - `CLAUDE.md` — developer handover: architecture map, build loop, conventions
 - `NOTES-3WAY.md` — fork rationale, detection policy, DMG packaging
 - `openspec/` — capability specs

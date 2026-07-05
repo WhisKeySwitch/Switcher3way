@@ -156,6 +156,8 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Reference docs
 
+- `docs/user-guide.md` (+ `.uk.md`, `.ru.md`) — end-user manual (EN/UK/RU); keep in sync with
+  UI/behavior changes — it documents trigger semantics, auto-fix gates, exceptions, pause.
 - `NOTES-3WAY.md` — fork rationale, rebuild/DMG commands, detection policy, icon, updates-off.
 - `signing/README.md` — the stable code-signing identity (setup, re-import, backup).
 - `openspec/` — OpenSpec capability specs back-filled from the code (`CAPABILITIES.md` is the
