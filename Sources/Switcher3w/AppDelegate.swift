@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let textConverter = TextConverter()
     private let settingsController = SettingsWindowController()
     private let onboardingController = OnboardingWindowController()
+    private let helpController = HelpWindowController()
     private let perAppLayoutManager = PerAppLayoutManager()
     private var iconRefreshTimer: Timer?
     private var pauseTimer: Timer?         // авто-возобновление по истечении таймерной паузы (W4)
@@ -507,6 +508,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsItem.target = self
         menu.addItem(settingsItem)
 
+        // Справка: встроенное руководство (⌘? — стандартный шорткат помощи macOS)
+        let helpItem = NSMenuItem(title: L10n.menuHelp, action: #selector(openHelp), keyEquivalent: "?")
+        helpItem.target = self
+        menu.addItem(helpItem)
+
         // «Check for Updates», «Support Development», «Star on GitHub» удалены в форке Switcher3way.
         menu.addItem(NSMenuItem.separator())
 
@@ -696,6 +702,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         settingsController.showWindow()
+    }
+
+    @objc private func openHelp() {
+        helpController.show()
     }
 
     func applicationWillTerminate(_ notification: Notification) {

@@ -107,6 +107,7 @@ enum L10n {
     static var menuPause1h: String { s("menu.pause.1h") }
     static var menuPauseUntilRestart: String { s("menu.pause.untilRestart") }
     static func menuHeaderHint(_ trigger: String) -> String { String(format: s("menu.header.hint"), trigger) }
+    static var menuHelp: String { s("menu.help") }
 
 
     // MARK: - Language names (для выпадающего списка)
@@ -267,6 +268,7 @@ enum L10n {
             "menu.pause.1h": "For 1 hour",
             "menu.pause.untilRestart": "Until restart",
             "menu.header.hint": "%@ converts the last word",
+            "menu.help": "Help",
             "settings.autoLayoutsNote": "Auto-conversion covers all your installed keyboard layouts (e.g. English, Ukrainian, Russian) — nothing to configure. Layout 1 / 2 below only set which pair the manual trigger toggles between.",
             "settings.language": "Interface language:",
             "settings.languageAuto": "System default",
@@ -369,6 +371,7 @@ enum L10n {
             "menu.pause.1h": "На 1 час",
             "menu.pause.untilRestart": "До перезапуска",
             "menu.header.hint": "%@ конвертирует последнее слово",
+            "menu.help": "Справка",
             "settings.autoLayoutsNote": "Автозамена работает со всеми установленными раскладками (напр. English, Українська, Русский) — настраивать ничего не нужно. Раскладки 1 и 2 ниже задают лишь пару для ручного триггера.",
             "settings.language": "Язык интерфейса:",
             "settings.languageAuto": "Системный",
@@ -466,6 +469,7 @@ enum L10n {
             "menu.pause.1h": "Für 1 Stunde",
             "menu.pause.untilRestart": "Bis zum Neustart",
             "menu.header.hint": "%@ konvertiert das letzte Wort",
+            "menu.help": "Hilfe",
             "settings.language": "Sprache der Oberfläche:",
             "settings.languageAuto": "Systemstandard",
             "settings.perAppLayout": "Layout pro Anwendung merken",
@@ -564,6 +568,7 @@ enum L10n {
             "menu.pause.1h": "Pendant 1 heure",
             "menu.pause.untilRestart": "Jusqu’au redémarrage",
             "menu.header.hint": "%@ convertit le dernier mot",
+            "menu.help": "Aide",
             "settings.language": "Langue de l'interface :",
             "settings.languageAuto": "Système par défaut",
             "settings.perAppLayout": "Mémoriser la disposition par application",
@@ -662,6 +667,7 @@ enum L10n {
             "menu.pause.1h": "Durante 1 hora",
             "menu.pause.untilRestart": "Hasta reiniciar",
             "menu.header.hint": "%@ convierte la última palabra",
+            "menu.help": "Ayuda",
             "settings.language": "Idioma de la interfaz:",
             "settings.languageAuto": "Predeterminado del sistema",
             "settings.perAppLayout": "Recordar disposición por aplicación",
@@ -766,6 +772,7 @@ enum L10n {
             "menu.pause.1h": "Por 1 hora",
             "menu.pause.untilRestart": "Até reiniciar",
             "menu.header.hint": "%@ converte a última palavra",
+            "menu.help": "Ajuda",
         ],
 
         // ========== 中文 ==========
@@ -864,6 +871,7 @@ enum L10n {
             "menu.pause.1h": "1 小时",
             "menu.pause.untilRestart": "直到重启",
             "menu.header.hint": "%@ 转换最后一个词",
+            "menu.help": "帮助",
         ],
 
         // ========== 日本語 ==========
@@ -962,6 +970,7 @@ enum L10n {
             "menu.pause.1h": "1時間",
             "menu.pause.untilRestart": "再起動まで",
             "menu.header.hint": "%@ で直前の単語を変換",
+            "menu.help": "ヘルプ",
         ],
 
         // ========== 한국어 ==========
@@ -1060,6 +1069,7 @@ enum L10n {
             "menu.pause.1h": "1시간 동안",
             "menu.pause.untilRestart": "재시동까지",
             "menu.header.hint": "%@ 키로 마지막 단어 변환",
+            "menu.help": "도움말",
         ],
 
         // ========== УКРАЇНСЬКА ==========
@@ -1156,6 +1166,7 @@ enum L10n {
             "menu.pause.1h": "На 1 годину",
             "menu.pause.untilRestart": "До перезапуску",
             "menu.header.hint": "%@ конвертує останнє слово",
+            "menu.help": "Довідка",
             "settings.autoLayoutsNote": "Автозаміна працює з усіма встановленими розкладками (напр. English, Українська, Русский) — налаштовувати нічого не потрібно. Розкладки 1 і 2 нижче задають лише пару для ручного тригера.",
             "settings.language": "Мова інтерфейсу:",
             "settings.languageAuto": "Системна",
@@ -1258,6 +1269,7 @@ enum L10n {
             "menu.pause.1h": "На 1 гадзіну",
             "menu.pause.untilRestart": "Да перазапуску",
             "menu.header.hint": "%@ канвертуе апошняе слова",
+            "menu.help": "Даведка",
             "settings.language": "Мова інтэрфейсу:",
             "settings.languageAuto": "Сістэмная",
             "settings.perAppLayout": "Запамінаць раскладку для кожнай праграмы",
@@ -1361,6 +1373,7 @@ enum L10n {
             "menu.pause.1h": "Na 1 godzinę",
             "menu.pause.untilRestart": "Do ponownego uruchomienia",
             "menu.header.hint": "%@ konwertuje ostatnie słowo",
+            "menu.help": "Pomoc",
         ],
         "el": [
             "menu.autoSwitch": "Ενεργοποίηση Switcher3way",
@@ -1454,6 +1467,7 @@ enum L10n {
             "menu.pause.1h": "Για 1 ώρα",
             "menu.pause.untilRestart": "Έως την επανεκκίνηση",
             "menu.header.hint": "Το %@ μετατρέπει την τελευταία λέξη",
+            "menu.help": "Βοήθεια",
             "settings.language": "Γλώσσα διεπαφής:",
             "settings.languageAuto": "Προεπιλογή συστήματος",
             "settings.perAppLayout": "Απομνημόνευση διάταξης ανά εφαρμογή",
@@ -1550,6 +1564,7 @@ enum L10n {
             "menu.pause.1h": "За 1 час",
             "menu.pause.untilRestart": "До рестартиране",
             "menu.header.hint": "%@ конвертира последната дума",
+            "menu.help": "Помощ",
             "settings.language": "Език на интерфейса:",
             "settings.languageAuto": "Системен по подразбиране",
             "settings.perAppLayout": "Запомняне на подредбата за всяко приложение",
@@ -1646,6 +1661,7 @@ enum L10n {
             "menu.pause.1h": "1 ժամով",
             "menu.pause.untilRestart": "Մինչև վերագործարկում",
             "menu.header.hint": "%@-ը փոխարկում է վերջին բառը",
+            "menu.help": "Օգնություն",
             "settings.language": "Միջերեսի լեզու:",
             "settings.languageAuto": "Համակարգի լռելյայն",
             "settings.perAppLayout": "Հիշել դասավորությունն ըստ ծրագրի",
@@ -1742,6 +1758,7 @@ enum L10n {
             "menu.pause.1h": "1 საათით",
             "menu.pause.untilRestart": "გადატვირთვამდე",
             "menu.header.hint": "%@ გარდაქმნის ბოლო სიტყვას",
+            "menu.help": "დახმარება",
             "settings.language": "ინტერფეისის ენა:",
             "settings.languageAuto": "სისტემის ნაგულისხმევი",
             "settings.perAppLayout": "განლაგების დამახსოვრება თითო აპზე",

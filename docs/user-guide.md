@@ -64,6 +64,7 @@ Click the icon to open the menu:
 - **Quick toggles** — *Auto-fix as I type*, *Layout sound*, *Flag at cursor*. These mirror the
   corresponding switches in Settings.
 - **Pause Switcher3way ▸** — see [Pausing the app](#pausing-the-app).
+- **Help (⌘?)** — opens this guide right in the app, in your interface language.
 - **Settings… (⌘,)** and **Quit (⌘Q)**.
 
 Two optional signals about layout changes (both off by default):

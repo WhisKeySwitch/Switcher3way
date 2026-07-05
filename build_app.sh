@@ -56,6 +56,11 @@ echo "→ Stamped Info.plist: CFBundleShortVersionString=$SHORT_VERSION$DEV_TAG 
 # 5. Копируем иконку (имя файла = APP_NAME, чтобы совпадало с CFBundleIconFile)
 cp "$PROJECT_DIR/Switcher3way.icns" "$APP_BUNDLE/Contents/Resources/$APP_NAME.icns"
 
+# 5b. Генерируем встроенную справку из docs/user-guide*.md — руководства в репо
+#     единственный источник правды; отсутствующий исходник валит сборку (см. scripts/md2html.py).
+echo "→ Generating in-app help from docs/..."
+/usr/bin/python3 "$PROJECT_DIR/scripts/md2html.py" "$PROJECT_DIR/docs" "$APP_BUNDLE/Contents/Resources/help"
+
 # 6. Создаём PkgInfo
 echo -n "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 
