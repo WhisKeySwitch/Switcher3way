@@ -1,9 +1,9 @@
 import Carbon
 import Foundation
 
-/// Управление раскладками через TIS API
+/// Layout control via the TIS API
 enum LayoutSwitcher {
-    /// Возвращает ID текущей раскладки
+    /// Returns the ID of the current layout
     static func currentLayoutID() -> String {
         guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue() else {
             return ""
@@ -11,8 +11,8 @@ enum LayoutSwitcher {
         return sourceID(source)
     }
 
-    /// Код языка ТЕКУЩЕЙ раскладки (BCP-47, например "ru"/"en"). nil если недоступен.
-    /// Надёжнее парсинга ID: тот же признак, что использует сама ОС.
+    /// Language code of the CURRENT layout (BCP-47, e.g. "ru"/"en"). nil if unavailable.
+    /// More reliable than parsing the ID: the same attribute the OS itself uses.
     static func currentLanguageCode() -> String? {
         guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue() else {
             return nil
@@ -20,7 +20,7 @@ enum LayoutSwitcher {
         return languageCode(source)
     }
 
-    /// Имя ТЕКУЩЕЙ раскладки в языке интерфейса (для статусного заголовка меню, W4).
+    /// Name of the CURRENT layout in the interface language (for the menu status header, W4).
     static func currentLayoutName() -> String {
         guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue() else {
             return ""
@@ -28,10 +28,10 @@ enum LayoutSwitcher {
         return displayName(source)
     }
 
-    /// Имя раскладки, согласованное с языком интерфейса приложения: системно-
-    /// локализованное, когда языки совпадают; иначе — нейтральное из ID источника
-    /// (kTISPropertyLocalizedName локализуется по СИСТЕМЕ, не по приложению,
-    /// и на «русской» macOS с английским интерфейсом давало «Русская»).
+    /// Layout name consistent with the app's interface language: system-
+    /// localized when the languages match; otherwise — a neutral name from the source ID
+    /// (kTISPropertyLocalizedName is localized by the SYSTEM, not the app,
+    /// and on "Russian" macOS with an English interface it produced the Russian name).
     static func displayName(_ source: TISInputSource) -> String {
         if L10n.namesFollowSystem { return sourceName(source) }
         let last = sourceID(source).components(separatedBy: ".").last ?? ""
@@ -39,9 +39,9 @@ enum LayoutSwitcher {
         return last.replacingOccurrences(of: "-", with: " ")
     }
 
-    /// Переключает на СЛЕДУЮЩУЮ установленную раскладку (по кругу). Фолбэк там, где рендер
-    /// набранного по раскладкам невозможен (удалёнка/выделение мышью): фиксированной пары
-    /// больше нет, поэтому просто листаем установленные источники.
+    /// Switches to the NEXT installed layout (cycling). A fallback where rendering
+    /// the typed text through layouts is impossible (remote desktop/mouse selection): there is
+    /// no fixed pair anymore, so we just cycle through the installed sources.
     static func switchToNextInstalled() {
         let sources = installedLayouts()
         guard !sources.isEmpty else { return }
@@ -52,7 +52,7 @@ enum LayoutSwitcher {
         TISSelectInputSource(target)
     }
 
-    /// Переключает на конкретную раскладку по точному ID
+    /// Switches to a specific layout by its exact ID
     static func switchTo(layoutID: String) {
         let sources = installedLayouts()
         if let target = sources.first(where: { sourceID($0) == layoutID }) {
@@ -61,7 +61,7 @@ enum LayoutSwitcher {
         }
     }
 
-    /// Все установленные раскладки
+    /// All installed layouts
     static func installedLayouts() -> [TISInputSource] {
         let conditions: CFDictionary = [
             kTISPropertyInputSourceCategory as String: kTISCategoryKeyboardInputSource as Any,
@@ -74,7 +74,7 @@ enum LayoutSwitcher {
         return list
     }
 
-    /// ID раскладки (например "com.apple.keylayout.Russian")
+    /// Layout ID (e.g. "com.apple.keylayout.Russian")
     static func sourceID(_ source: TISInputSource) -> String {
         guard let ptr = TISGetInputSourceProperty(source, kTISPropertyInputSourceID) else {
             return ""
@@ -82,7 +82,7 @@ enum LayoutSwitcher {
         return Unmanaged<CFString>.fromOpaque(ptr).takeUnretainedValue() as String
     }
 
-    /// Локализованное имя раскладки (например "Русская")
+    /// Localized layout name (e.g. "Russian")
     static func sourceName(_ source: TISInputSource) -> String {
         guard let ptr = TISGetInputSourceProperty(source, kTISPropertyLocalizedName) else {
             return sourceID(source)
@@ -90,7 +90,7 @@ enum LayoutSwitcher {
         return Unmanaged<CFString>.fromOpaque(ptr).takeUnretainedValue() as String
     }
 
-    /// Код языка раскладки (BCP-47, например "ru", "en"), из kTISPropertyInputSourceLanguages
+    /// Layout language code (BCP-47, e.g. "ru", "en"), from kTISPropertyInputSourceLanguages
     static func languageCode(_ source: TISInputSource) -> String? {
         guard let ptr = TISGetInputSourceProperty(source, kTISPropertyInputSourceLanguages) else {
             return nil
@@ -101,9 +101,9 @@ enum LayoutSwitcher {
 
     // MARK: - Auto-detect
 
-    /// Авто-определение «английской» раскладки (используется и из DynamicKeyMapping).
+    /// Auto-detection of the "English" layout (also used from DynamicKeyMapping).
     static func autoDetectID1(from sources: [TISInputSource]) -> String {
-        // Ищем английскую
+        // Look for the English one
         for source in sources {
             let id = sourceID(source)
             if id.contains("ABC") || id.contains("US") || id.contains("British") {
@@ -113,10 +113,10 @@ enum LayoutSwitcher {
         return sources.first.map { sourceID($0) } ?? ""
     }
 
-    /// Авто-определение второй (не-английской) раскладки.
+    /// Auto-detection of the second (non-English) layout.
     static func autoDetectID2(from sources: [TISInputSource]) -> String {
         let id1 = autoDetectID1(from: sources)
-        // Ищем вторую (не английскую)
+        // Look for the second (non-English) one
         for source in sources {
             let id = sourceID(source)
             if id != id1 {

@@ -1,8 +1,8 @@
 import Carbon
 
-/// Маппинг keycode → символ для EN и RU раскладок (QWERTY / ЙЦУКЕН)
+/// Mapping keycode → character for EN and RU layouts (QWERTY / JCUKEN)
 enum KeyMapping {
-    // keycode → EN символ
+    // keycode → EN character
     static let keycodeToEN: [UInt16: Character] = [
         0: "a", 1: "s", 2: "d", 3: "f", 4: "h", 5: "g", 6: "z", 7: "x",
         8: "c", 9: "v", 11: "b", 12: "q", 13: "w", 14: "e", 15: "r",
@@ -14,10 +14,10 @@ enum KeyMapping {
         50: "`",
     ]
 
-    // keycode → RU символ (ЙЦУКЕН)
-    // Верхний ряд: Й Ц У К Е Н Г Ш Щ З Х Ъ
-    // Средний ряд: Ф Ы В А П Р О Л Д Ж Э
-    // Нижний ряд:  Я Ч С М И Т Ь Б Ю .
+    // keycode → RU character (JCUKEN)
+    // Top row:    J Ts U K E N G Sh Shch Z Kh Hard-sign
+    // Middle row: F Y V A P R O L D Zh E
+    // Bottom row: Ya Ch S M I T Soft-sign B Yu .
     static let keycodeToRU: [UInt16: Character] = [
         12: "й", 13: "ц", 14: "у", 15: "к", 17: "е", 16: "н",
         32: "г", 34: "ш", 31: "щ", 35: "з", 33: "х", 30: "ъ",
@@ -28,7 +28,7 @@ enum KeyMapping {
         42: "ё", 50: "ё",
     ]
 
-    // EN символ → RU символ (для конвертации текста)
+    // EN character → RU character (for text conversion)
     static let enToRu: [Character: Character] = [
         "q": "й", "w": "ц", "e": "у", "r": "к", "t": "е", "y": "н",
         "u": "г", "i": "ш", "o": "щ", "p": "з", "[": "х", "]": "ъ",
@@ -46,19 +46,19 @@ enum KeyMapping {
         "|": "Ё", "~": "Ё",
     ]
 
-    // RU символ → EN символ (обратная конвертация)
+    // RU character → EN character (reverse conversion)
     static let ruToEn: [Character: Character] = {
         var map: [Character: Character] = [:]
         for (en, ru) in enToRu {
             map[ru] = en
         }
-        // Явно задаём ё → ` (а не \, чтобы было однозначно)
+        // Explicitly map the "yo" key → ` (not \, to keep it unambiguous)
         map["ё"] = "`"
         map["Ё"] = "~"
         return map
     }()
 
-    /// Конвертирует строку из одной раскладки в другую
+    /// Converts a string from one layout to another
     static func convert(_ text: String) -> String {
         let isLikelyRussian = text.unicodeScalars.contains { $0.value >= 0x0400 && $0.value <= 0x04FF }
 

@@ -1,8 +1,8 @@
 import Foundation
 import ServiceManagement
 
-/// Централизованное хранение настроек через UserDefaults
-/// Настройки приложения. Свойства thread-safe через UserDefaults.
+/// Centralized settings storage via UserDefaults
+/// Application settings. Properties are thread-safe through UserDefaults.
 final class SettingsManager: @unchecked Sendable {
     static let shared = SettingsManager()
 
@@ -36,12 +36,12 @@ final class SettingsManager: @unchecked Sendable {
 
     private init() {}
 
-    // MARK: - Миграция ключей
+    // MARK: - Key migration
 
-    /// Одноразовая миграция настроек со старых ключей com.ruswitcher.* (унаследованных
-    /// от апстрима) на com.switcher3w.*. Вызывается из main.swift ДО любого чтения
-    /// настроек (включая ленивую инициализацию языка в L10n). Старые значения не
-    /// удаляем — страховка на случай отката на предыдущую сборку.
+    /// One-time migration of settings from the old com.ruswitcher.* keys (inherited
+    /// from upstream) to com.switcher3w.*. Called from main.swift BEFORE any settings
+    /// read (including lazy language initialization in L10n). Old values are not
+    /// removed — insurance in case of a rollback to a previous build.
     static func migrateLegacyDefaults() {
         let d = UserDefaults.standard
         let marker = "com.switcher3w.migratedLegacyKeys"
@@ -67,27 +67,27 @@ final class SettingsManager: @unchecked Sendable {
         set { defaults.set(newValue, forKey: Keys.autoSwitch) }
     }
 
-    // MARK: - Пауза (W4)
+    // MARK: - Pause (W4)
 
-    /// Пауза «до перезапуска» — только на сессию, НЕ персистится: после релонча
-    /// приложение всегда возобновляется (в этом смысл этого варианта паузы).
+    /// "Until restart" pause — session-only, NOT persistent: after a relaunch
+    /// the app always resumes (that's the point of this pause variant).
     private var pausedUntilRestart = false
 
-    /// Таймерная пауза. Отдельный ключ от autoSwitch: пауза не должна затирать
-    /// сохранённое предпочтение пользователя (та галочка переживает перезапуск, пауза — нет).
+    /// Timer-based pause. A separate key from autoSwitch: the pause must not overwrite
+    /// the user's saved preference (that checkbox survives a restart, the pause does not).
     var pausedUntil: Date? {
         get { defaults.object(forKey: Keys.pausedUntil) as? Date }
         set { defaults.set(newValue, forKey: Keys.pausedUntil) }
     }
 
-    /// Единый источник истины для «на паузе» (таймерная или до перезапуска).
+    /// Single source of truth for "paused" (timer-based or until restart).
     var isPaused: Bool {
         if pausedUntilRestart { return true }
         if let until = pausedUntil, until > Date() { return true }
         return false
     }
 
-    /// Ставит паузу: interval в секундах, nil = до перезапуска.
+    /// Sets a pause: interval in seconds, nil = until restart.
     func pause(for interval: TimeInterval?) {
         if let interval {
             pausedUntil = Date().addingTimeInterval(interval)
@@ -98,22 +98,22 @@ final class SettingsManager: @unchecked Sendable {
         }
     }
 
-    /// Снимает паузу (ручной Resume или истёкший таймер).
+    /// Clears the pause (manual Resume or an expired timer).
     func clearPause() {
         pausedUntilRestart = false
         pausedUntil = nil
     }
 
-    /// Эффективное «работаем»: мастер-тумблер И не на паузе. Гейтит триггер и автозамену.
+    /// Effective "working": master toggle AND not paused. Gates the trigger and auto-fix.
     var effectivelyEnabled: Bool { autoSwitchEnabled && !isPaused }
 
-    /// ID первой раскладки (пустая строка = авто-определение)
+    /// ID of the first layout (empty string = auto-detect)
     var layout1ID: String {
         get { defaults.string(forKey: Keys.layout1ID) ?? "" }
         set { defaults.set(newValue, forKey: Keys.layout1ID) }
     }
 
-    /// ID второй раскладки (пустая строка = авто-определение)
+    /// ID of the second layout (empty string = auto-detect)
     var layout2ID: String {
         get { defaults.string(forKey: Keys.layout2ID) ?? "" }
         set { defaults.set(newValue, forKey: Keys.layout2ID) }
@@ -135,7 +135,7 @@ final class SettingsManager: @unchecked Sendable {
         }
     }
 
-    /// Язык интерфейса (пустая строка = авто-определение по системе)
+    /// Interface language (empty string = auto-detect from the system)
     var interfaceLanguage: String {
         get { defaults.string(forKey: Keys.interfaceLanguage) ?? "" }
         set {
@@ -144,7 +144,7 @@ final class SettingsManager: @unchecked Sendable {
         }
     }
 
-    /// Флаг: разрешения были ранее выданы (для определения сброса после обновления)
+    /// Flag: permissions were previously granted (to detect a reset after an update)
     var permissionsWereGranted: Bool {
         get { defaults.bool(forKey: Keys.permissionsWereGranted) }
         set { defaults.set(newValue, forKey: Keys.permissionsWereGranted) }
@@ -160,78 +160,78 @@ final class SettingsManager: @unchecked Sendable {
         set { defaults.set(newValue, forKey: Keys.perAppLayout) }
     }
 
-    // MARK: - Триггер конвертации
+    // MARK: - Conversion trigger
 
-    /// Клавиша-триггер: "option" | "command" | "control" | "shift" | "capsLock".
-    /// Дефолт — option (как было до 2.3, поведение не меняется).
+    /// Trigger key: "option" | "command" | "control" | "shift" | "capsLock".
+    /// Default is option (as it was before 2.3, behavior unchanged).
     var triggerKey: String {
         get { defaults.string(forKey: Keys.triggerKey) ?? "option" }
         set { defaults.set(newValue, forKey: Keys.triggerKey) }
     }
 
-    /// Реагировать только на правую клавишу модификатора (для option/command/control/shift).
+    /// React only to the right modifier key (for option/command/control/shift).
     var triggerRightOnly: Bool {
         get { defaults.bool(forKey: Keys.triggerRightOnly) }
         set { defaults.set(newValue, forKey: Keys.triggerRightOnly) }
     }
 
-    /// Двойной тап вместо одиночного.
+    /// Double tap instead of single.
     var triggerDoubleTap: Bool {
         get { defaults.bool(forKey: Keys.triggerDoubleTap) }
         set { defaults.set(newValue, forKey: Keys.triggerDoubleTap) }
     }
 
-    /// Caps Lock как триггер требует consume-tap (чтобы подавить переключение регистра).
+    /// Caps Lock as a trigger requires a consume-tap (to suppress the case toggle).
     var triggerIsCapsLock: Bool { triggerKey == "capsLock" }
 
-    /// Автоматическая конвертация «на лету» (детект неправильной раскладки на границе
-    /// слова). Отдельный флаг от autoSwitchEnabled (тот гейтит РУЧНОЙ триггер).
-    /// По умолчанию ВЫКЛ — точность важнее, не делаем ничего без явного включения.
+    /// Automatic "on the fly" conversion (detects the wrong layout at a word
+    /// boundary). A separate flag from autoSwitchEnabled (that one gates the MANUAL trigger).
+    /// OFF by default — precision matters more, we do nothing without explicit opt-in.
     var autoConvert: Bool {
         get { defaults.bool(forKey: Keys.autoConvert) }
         set { defaults.set(newValue, forKey: Keys.autoConvert) }
     }
 
-    /// issue #10: показывать флаг раскладки у текстовой каретки (бета). По умолчанию ВЫКЛ.
+    /// issue #10: show the layout flag at the text caret (beta). OFF by default.
     var caretFlag: Bool {
         get { defaults.bool(forKey: Keys.caretFlag) }
         set { defaults.set(newValue, forKey: Keys.caretFlag) }
     }
 
-    /// Режим работы через удалённый рабочий стол (Apple Screen Sharing и т.п.).
-    /// При включении: tap поднимается на session-уровень (видит проброшенные
-    /// нажатия), и инстанс «уступает удалёнке», если в фокусе клиент удалёнки.
+    /// Remote desktop working mode (Apple Screen Sharing, etc.).
+    /// When enabled: the tap is raised to session level (sees forwarded
+    /// keystrokes), and the instance "defers to the remote desktop" if a remote desktop client is focused.
     var remoteDesktopMode: Bool {
         get { defaults.bool(forKey: Keys.remoteDesktopMode) }
         set { defaults.set(newValue, forKey: Keys.remoteDesktopMode) }
     }
 
-    /// Показывать ли тумблер «Режим удалённого стола» (видимая бета в 2.5). По умолчанию
-    /// ВКЛючён; спрятать можно явно: `defaults write com.switcher3way.app com.switcher3w.showRemoteDesktopBeta -bool NO`.
+    /// Whether to show the "Remote desktop mode" toggle (visible beta in 2.5). ON by
+    /// default; can be hidden explicitly: `defaults write com.switcher3way.app com.switcher3w.showRemoteDesktopBeta -bool NO`.
     var showRemoteDesktopBeta: Bool {
         get {
-            // Нет записи в defaults → считаем включённым (дефолт ON для 2.5).
+            // No entry in defaults → treat as enabled (default ON for 2.5).
             if defaults.object(forKey: Keys.showRemoteDesktopBeta) == nil { return true }
             return defaults.bool(forKey: Keys.showRemoteDesktopBeta)
         }
         set { defaults.set(newValue, forKey: Keys.showRemoteDesktopBeta) }
     }
 
-    /// Предлагали ли уже автозамену при первом запуске (онбординг показывается один раз).
+    /// Whether auto-fix was already offered on first launch (onboarding is shown once).
     var autoConvertOffered: Bool {
         get { defaults.bool(forKey: Keys.autoConvertOffered) }
         set { defaults.set(newValue, forKey: Keys.autoConvertOffered) }
     }
 
-    /// issue #7: звук раскладки на первой букве после смены раскладки. По умолчанию OFF.
+    /// issue #7: layout sound on the first letter after a layout change. OFF by default.
     var keySound: Bool {
         get { defaults.bool(forKey: Keys.keySound) }
         set { defaults.set(newValue, forKey: Keys.keySound) }
     }
 
-    /// Приложения, где авто-конверсия выключена. Эффективный список = дефолты минус
-    /// явно удалённые пользователем плюс явно добавленные. Так новые дефолты из будущих
-    /// версий подхватываются автоматически, а правки пользователя сохраняются.
+    /// Apps where auto-conversion is disabled. The effective list = defaults minus
+    /// entries the user explicitly removed plus explicitly added ones. This way new defaults from future
+    /// versions are picked up automatically, while the user's edits are preserved.
     var deniedApps: [String] {
         get {
             let removed = Set(defaults.stringArray(forKey: Keys.deniedAppsRemoved) ?? [])
@@ -250,14 +250,14 @@ final class SettingsManager: @unchecked Sendable {
         }
     }
 
-    /// Слова, которые авто-конверсия никогда не трогает.
+    /// Words that auto-conversion never touches.
     var deniedWords: [String] {
         get { defaults.stringArray(forKey: Keys.deniedWords) ?? [] }
         set { defaults.set(newValue, forKey: Keys.deniedWords) }
     }
     var deniedWordsSet: Set<String> { Set(deniedWords.map { $0.lowercased() }) }
 
-    /// Слова, которые авто-конверсия переключает всегда (даже если их нет в словаре).
+    /// Words that auto-conversion always switches (even if they are not in the dictionary).
     var alwaysConvertWords: [String] {
         get { defaults.stringArray(forKey: Keys.alwaysConvertWords) ?? [] }
         set { defaults.set(newValue, forKey: Keys.alwaysConvertWords) }
@@ -281,7 +281,7 @@ final class SettingsManager: @unchecked Sendable {
         }
     }
 
-    /// Текущий статус автозапуска (может отличаться от настройки)
+    /// Current launch-at-login status (may differ from the setting)
     var loginItemStatus: SMAppService.Status {
         SMAppService.mainApp.status
     }

@@ -1,8 +1,8 @@
 import AppKit
 import Carbon
 
-/// Окно настроек: тулбарные вкладки в стиле Системных настроек (W1/W2),
-/// сгруппированные формы с переключателями вместо голых чекбоксов.
+/// Settings window: toolbar tabs in the System Settings style (W1/W2),
+/// grouped forms with switches instead of bare checkboxes.
 @MainActor
 final class SettingsWindowController {
     private var window: NSWindow?
@@ -11,7 +11,7 @@ final class SettingsWindowController {
     private var caretFlagSwitch: NSSwitch?
     private var exceptionsPane: ExceptionsPane?
 
-    /// Callback для обновления меню
+    /// Callback for updating the menu
     var onAutoSwitchChanged: ((Bool) -> Void)?
     var onPerAppLayoutChanged: ((Bool) -> Void)?
     var onLanguageChanged: (() -> Void)?
@@ -31,7 +31,7 @@ final class SettingsWindowController {
 
         let tabVC = NSTabViewController()
         tabVC.tabStyle = .toolbar
-        // Порядок вкладок по W1: General / Auto-fix / Advanced / About.
+        // Tab order per W1: General / Auto-fix / Advanced / About.
         tabVC.addTabViewItem(makeTab(title: L10n.settingsTabGeneral, symbol: "gearshape",
                                      view: buildGeneralTab()))
         tabVC.addTabViewItem(makeTab(title: L10n.settingsTabAutofix, symbol: "wand.and.stars",
@@ -53,13 +53,13 @@ final class SettingsWindowController {
         window = win
     }
 
-    /// Обёртка вкладки: view-контроллер с иконкой SF Symbol и вычисленным
-    /// preferredContentSize (тулбарный стиль ресайзит окно по нему).
+    /// Tab wrapper: a view controller with an SF Symbol icon and a computed
+    /// preferredContentSize (the toolbar style resizes the window to it).
     private func makeTab(title: String, symbol: String, view: NSView) -> NSTabViewItem {
         let vc = NSViewController()
         vc.view = view
-        // NSTabViewController в тулбарном стиле берёт заголовок окна из title
-        // выбранного контроллера — без него окно называется «Без названия».
+        // NSTabViewController in the toolbar style takes the window title from the title
+        // of the selected controller — without it the window is called "Untitled".
         vc.title = L10n.settingsTitle
         view.layoutSubtreeIfNeeded()
         vc.preferredContentSize = NSSize(width: tabWidth, height: view.fittingSize.height)
@@ -69,7 +69,7 @@ final class SettingsWindowController {
         return item
     }
 
-    /// Каркас вкладки: вертикальный стек секций с отступами, ширина фиксирована.
+    /// Tab skeleton: a vertical stack of sections with padding, fixed width.
     private func makeTabRoot(_ sections: [NSView],
                              alignment: NSLayoutConstraint.Attribute = .leading) -> NSView {
         let root = NSView()
@@ -83,10 +83,10 @@ final class SettingsWindowController {
         NSLayoutConstraint.activate([
             root.widthAnchor.constraint(equalToConstant: tabWidth),
             stack.topAnchor.constraint(equalTo: root.topAnchor, constant: 16),
-            // Прижимаем контент к верху: «<=» вместо «=». fittingSize по-прежнему даёт
-            // естественную высоту вкладки (минимум, где root.bottom >= stack.bottom+18),
-            // но когда окно растянуто до самой высокой вкладки, лишняя высота уходит ВНИЗ
-            // пустым местом, а не растягивает коробки, центрируя одинокие строки.
+            // Pin content to the top: "<=" instead of "=". fittingSize still gives the
+            // natural tab height (the minimum where root.bottom >= stack.bottom+18),
+            // but when the window is stretched to the tallest tab, the extra height goes DOWN
+            // as empty space rather than stretching the boxes and centering lone rows.
             stack.bottomAnchor.constraint(lessThanOrEqualTo: root.bottomAnchor, constant: -18),
             stack.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
             stack.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
@@ -97,23 +97,23 @@ final class SettingsWindowController {
         return root
     }
 
-    /// Обновить состояние мастер-переключателя извне (меню / пауза)
+    /// Update the master switch state from outside (menu / pause)
     func updateAutoSwitchState(_ enabled: Bool) {
         statusSwitch?.state = enabled ? .on : .off
         statusTitleLabel?.stringValue = enabled ? L10n.settingsStatusOn : L10n.settingsStatusOff
     }
 
-    /// Обновить переключатель «флаг у курсора» извне (когда переключили из меню)
+    /// Update the "caret flag" switch from outside (when toggled from the menu)
     func updateCaretFlagState(_ enabled: Bool) {
         caretFlagSwitch?.state = enabled ? .on : .off
     }
 
-    // MARK: - Вкладка General (W1)
+    // MARK: - General tab (W1)
 
     private func buildGeneralTab() -> NSView {
         let settings = SettingsManager.shared
 
-        // Статус-карточка: мастер-тумблер, повышенный из голого чекбокса.
+        // Status card: master toggle, promoted from a bare checkbox.
         let statusBox = FormBox()
         let sw = FormUI.makeSwitch(isOn: settings.autoSwitchEnabled,
                                    target: self, action: #selector(autoSwitchChanged))
@@ -123,7 +123,7 @@ final class SettingsWindowController {
         statusTitleLabel = findTitleLabel(in: statusRow)
         statusBox.addRow(statusRow)
 
-        // Секция «Триггер»
+        // "Trigger" section
         let triggerBox = FormBox()
         let triggerPopup = NSPopUpButton()
         populateTriggerPopup(triggerPopup)
@@ -137,10 +137,10 @@ final class SettingsWindowController {
                                      control: FormUI.makeSwitch(isOn: settings.triggerDoubleTap,
                                                                 target: self, action: #selector(triggerDoubleTapChanged))))
 
-        // Ручной триггер теперь полностью N-way (перебирает кандидатов по всем установленным
-        // раскладкам), фиксированной пары Layout 1/2 больше нет — соответствующий ряд удалён.
+        // The manual trigger is now fully N-way (cycles candidates over all installed
+        // layouts); the fixed Layout 1/2 pair is gone — the corresponding row was removed.
 
-        // Секция «Система»
+        // "System" section
         let systemBox = FormBox()
         systemBox.addRow(FormUI.row(title: L10n.settingsLaunchAtLogin,
                                     control: FormUI.makeSwitch(isOn: settings.launchAtLogin,
@@ -164,7 +164,7 @@ final class SettingsWindowController {
         ])
     }
 
-    /// Достаёт жирный заголовок из строки FormUI.row (для статус-карточки).
+    /// Extracts the bold title from a FormUI.row row (for the status card).
     private func findTitleLabel(in row: NSView) -> NSTextField? {
         func walk(_ v: NSView) -> NSTextField? {
             if let tf = v as? NSTextField, tf.font == NSFont.boldSystemFont(ofSize: 13) { return tf }
@@ -174,12 +174,12 @@ final class SettingsWindowController {
         return walk(row)
     }
 
-    // MARK: - Вкладка Auto-fix (W2)
+    // MARK: - Auto-fix tab (W2)
 
     private func buildAutofixTab() -> NSView {
         let settings = SettingsManager.shared
 
-        // Мастер-карточка автозамены (без beta-бейджа — фича шипнута).
+        // Auto-fix master card (no beta badge — the feature has shipped).
         let masterBox = FormBox()
         masterBox.addRow(FormUI.row(title: L10n.settingsAutofixTitle,
                                     subtitle: L10n.settingsAutofixSubtitle,
@@ -187,10 +187,10 @@ final class SettingsWindowController {
                                     control: FormUI.makeSwitch(isOn: settings.autoConvert,
                                                                target: self, action: #selector(autoConvertChanged))))
 
-        // Экспериментальные тумблеры (флаг у курсора, удалёнка) переехали в Advanced.
+        // Experimental toggles (caret flag, remote desktop) moved to Advanced.
         var sections: [NSView] = [masterBox]
 
-        // Единый список исключений с сегментным фильтром
+        // Unified exceptions list with a segmented filter
         let pane = ExceptionsPane()
         exceptionsPane = pane
         sections.append(FormUI.sectionHeader(L10n.settingsGroupExceptions))
@@ -199,7 +199,7 @@ final class SettingsWindowController {
         return makeTabRoot(sections)
     }
 
-    // MARK: - Вкладка About
+    // MARK: - About tab
 
     private func buildAboutTab() -> NSView {
         let titleLabel = NSTextField(labelWithString: "Switcher3way")
@@ -213,24 +213,24 @@ final class SettingsWindowController {
         versionLabel.textColor = .secondaryLabelColor
         versionLabel.alignment = .center
 
-        // Слоган под версией.
+        // Tagline under the version.
         let taglineLabel = NSTextField(labelWithString: L10n.settingsVersion)
         taglineLabel.font = .systemFont(ofSize: 12)
         taglineLabel.textColor = .secondaryLabelColor
         taglineLabel.alignment = .center
 
-        // Все кнопки (Star on GitHub / Donate / Contact / Check for Updates) удалены в форке Switcher3way.
+        // All buttons (Star on GitHub / Donate / Contact / Check for Updates) removed in the Switcher3way fork.
         return makeTabRoot([titleLabel, versionLabel, taglineLabel], alignment: .centerX)
     }
 
-    // MARK: - Вкладка Advanced
+    // MARK: - Advanced tab
 
     private func buildAdvancedTab() -> NSView {
         let settings = SettingsManager.shared
         var sections: [NSView] = []
 
-        // Экспериментальные тумблеры вверху Advanced (переехали из Auto-fix).
-        // Флаг у курсора (issue #10)
+        // Experimental toggles at the top of Advanced (moved from Auto-fix).
+        // Caret flag (issue #10)
         let caretBox = FormBox()
         let cfSwitch = FormUI.makeSwitch(isOn: settings.caretFlag,
                                          target: self, action: #selector(caretFlagChanged))
@@ -239,7 +239,7 @@ final class SettingsWindowController {
                                    badge: L10n.commonBeta, control: cfSwitch))
         sections.append(caretBox)
 
-        // Режим удалённого стола отложен в 2.5 — блок скрыт за флагом (для тестирования).
+        // Remote desktop mode deferred to 2.5 — the block is hidden behind a flag (for testing).
         if settings.showRemoteDesktopBeta {
             let remoteBox = FormBox()
             remoteBox.addRow(FormUI.row(title: L10n.menuRemoteDesktop,
@@ -281,7 +281,7 @@ final class SettingsWindowController {
         selectItem(in: popup, matching: SettingsManager.shared.interfaceLanguage)
     }
 
-    /// Выбирает в popup пункт, у которого representedObject == id (или первый при пустом id)
+    /// Selects the popup item whose representedObject == id (or the first one when id is empty)
     private func selectItem(in popup: NSPopUpButton, matching id: String) {
         if id.isEmpty {
             popup.selectItem(at: 0)
@@ -300,15 +300,15 @@ final class SettingsWindowController {
 
     private func populateTriggerPopup(_ popup: NSPopUpButton) {
         popup.removeAllItems()
-        // Имена клавиш не локализуем — это стандартные обозначения Apple.
+        // Key names are not localized — these are standard Apple notations.
         let items: [(key: String, title: String)] = [
             ("option", "Option ⌥ (Alt)"),
             ("command", "Command ⌘"),
             ("control", "Control ⌃"),
             ("shift", "Shift ⇧"),
-            // Caps Lock убран: нативный перехват нестабилен (HID-дебаунс/тоггл) — см. техдолг.
+            // Caps Lock removed: native interception is unstable (HID debounce/toggle) — see tech debt.
         ]
-        // issue #12: комбо двух модификаторов (привычный по Windows стиль Alt+Shift).
+        // issue #12: a combo of two modifiers (the familiar Windows-style Alt+Shift).
         let comboItems: [(key: String, title: String)] = [
             ("command+shift", "⌘ + ⇧  (Command + Shift)"),
             ("control+shift", "⌃ + ⇧  (Control + Shift)"),
@@ -342,9 +342,9 @@ final class SettingsWindowController {
 
     @objc private func languageChanged(_ sender: NSPopUpButton) {
         let langCode = (sender.selectedItem?.representedObject as? String) ?? ""
-        SettingsManager.shared.interfaceLanguage = langCode  // вызывает L10n.reloadLanguage()
-        onLanguageChanged?()  // пересобрать меню статус-бара под новый язык
-        // Пересоздаём окно для применения нового языка
+        SettingsManager.shared.interfaceLanguage = langCode  // calls L10n.reloadLanguage()
+        onLanguageChanged?()  // rebuild the status-bar menu for the new language
+        // Recreate the window to apply the new language
         window?.close()
         window = nil
         showWindow()

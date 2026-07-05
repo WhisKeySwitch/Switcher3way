@@ -1,25 +1,25 @@
 import AppKit
 import ApplicationServices
 
-/// Онбординг-чеклист (W3): одно постоянное окно вместо цепочки модальных алертов.
-/// Живой статус разрешений (опрос раз в секунду), объяснение «зачем» в одну строку,
-/// встроенный тумблер автозагрузки. Закрытие ничего не теряет — окно можно открыть снова.
+/// Onboarding checklist (W3): a single persistent window instead of a chain of modal alerts.
+/// Live permission status (polled once a second), a one-line "why" explanation,
+/// an inline launch-at-login switch. Closing loses nothing — the window can be reopened.
 @MainActor
 final class OnboardingWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var pollTimer: Timer?
     private var showResetNotice = false
 
-    // Живые элементы строк чек-листа
+    // Live elements of the checklist rows
     private var accBubble: NSView?
     private var accTrailing: NSStackView?
     private var inpBubble: NSView?
     private var inpTrailing: NSStackView?
     private var stepLabel: NSTextField?
 
-    /// Все разрешения выданы (по нажатию Continue) — AppDelegate запускает мониторинг.
+    /// All permissions granted (on Continue) — AppDelegate starts monitoring.
     var onAllGranted: (() -> Void)?
-    /// Input Monitoring только что выдан — нужен перезапуск (как в старом визарде).
+    /// Input Monitoring was just granted — a restart is needed (as in the old wizard).
     var onRequestRestart: (() -> Void)?
 
     private var accGranted: Bool { AXIsProcessTrusted() }
@@ -27,7 +27,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
 
     func show(resetNotice: Bool = false) {
         showResetNotice = resetNotice
-        // Онбординг заменяет старый одноразовый алерт автозагрузки — гасим его флаг.
+        // Onboarding replaces the old one-time launch-at-login alert — clear its flag.
         SettingsManager.shared.launchAtLoginAsked = true
 
         if window == nil { window = buildWindow() }
@@ -38,7 +38,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         startPolling()
     }
 
-    // MARK: - Построение окна
+    // MARK: - Window construction
 
     private func buildWindow() -> NSWindow {
         let icon = NSImageView(image: NSApp.applicationIconImage ?? NSImage())
@@ -65,7 +65,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
             headerViews.append(notice)
         }
 
-        // Чек-лист: два разрешения + автозагрузка (вместо отдельного алерта)
+        // Checklist: two permissions + launch at login (instead of a separate alert)
         let box = FormBox()
 
         let (accRow, accB, accT) = makeChecklistRow(
@@ -88,7 +88,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
                                             target: self, action: #selector(launchAtLoginChanged))
         box.addRow(FormUI.row(title: L10n.settingsLaunchAtLogin, control: loginSwitch))
 
-        // Футер: слева шаг, справа Continue
+        // Footer: step on the left, Continue on the right
         let step = NSTextField(labelWithString: "")
         step.font = .systemFont(ofSize: 11)
         step.textColor = .tertiaryLabelColor
@@ -134,7 +134,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         return win
     }
 
-    /// Строка чек-листа: кружок-номер, заголовок + объяснение, справа статус/кнопка.
+    /// Checklist row: number bubble, title + explanation, status/button on the right.
     private func makeChecklistRow(number: Int, title: String, subtitle: String,
                                   action: Selector) -> (NSView, NSView, NSStackView) {
         let bubble = NSView()
@@ -163,7 +163,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         textStack.alignment = .leading
         textStack.spacing = 2
 
-        // Правая часть меняется опросом: кнопка «Открыть настройки» ↔ метка «Выдано»
+        // The right side changes on poll: an "Open Settings" button ↔ a "Granted" label
         let trailing = NSStackView()
         trailing.orientation = .horizontal
         let button = NSButton(title: L10n.wizardOpenSettings, target: self, action: action)
@@ -180,7 +180,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         return (row, bubble, trailing)
     }
 
-    // MARK: - Живой статус
+    // MARK: - Live status
 
     private func startPolling() {
         pollTimer?.invalidate()
@@ -192,8 +192,8 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
     private func poll() {
         let inpWasGranted = inpTrailingShowsGranted
         refresh()
-        // Input Monitoring только что выдали: как и старый визард — перезапуск,
-        // иначе event tap не заработает (требование macOS).
+        // Input Monitoring was just granted: like the old wizard — restart,
+        // otherwise the event tap won't work (a macOS requirement).
         if inpGranted && !inpWasGranted && accGranted {
             rslog("Input Monitoring granted! Restarting...")
             SettingsManager.shared.permissionsWereGranted = true
@@ -205,7 +205,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
 
     private var inpTrailingShowsGranted = false
 
-    /// Перерисовывает строки под текущее состояние разрешений.
+    /// Redraws the rows to match the current permission state.
     private func refresh() {
         updateRow(bubble: accBubble, trailing: accTrailing, granted: accGranted,
                   number: 1, action: #selector(openAccessibilitySettings))
@@ -250,16 +250,16 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    // MARK: - Действия
+    // MARK: - Actions
 
     @objc private func openAccessibilitySettings() {
-        // Системный диалог: prompt=true добавляет программу в список Accessibility автоматически.
+        // System dialog: prompt=true adds the app to the Accessibility list automatically.
         let options = ["AXTrustedCheckOptionPrompt" as CFString: true as CFBoolean] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(options)
     }
 
     @objc private func openInputMonitoringSettings() {
-        // Системный диалог: добавляет программу в список Input Monitoring автоматически.
+        // System dialog: adds the app to the Input Monitoring list automatically.
         CGRequestListenEventAccess()
     }
 
@@ -270,7 +270,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
 
     @objc private func continueTapped() {
         if accGranted && inpGranted { onAllGranted?() }
-        window?.close()   // «Позже»: ничего не теряется, окно можно открыть снова
+        window?.close()   // "Later": nothing is lost, the window can be reopened
     }
 
     // MARK: - NSWindowDelegate

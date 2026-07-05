@@ -1,11 +1,11 @@
 import AppKit
 import Foundation
 
-/// Единая точка перезапуска приложения.
-/// Раньше эта последовательность была скопирована в AppDelegate и UpdateChecker.
+/// Single point for relaunching the app.
+/// This sequence used to be duplicated in AppDelegate and UpdateChecker.
 @MainActor
 enum AppRelauncher {
-    /// Перезапускает приложение: открывает бандл заново и завершает текущий процесс.
+    /// Relaunches the app: reopens the bundle and terminates the current process.
     static func relaunch(bundlePath: String = Bundle.main.bundlePath) {
         let task = Process()
         task.launchPath = "/bin/sh"

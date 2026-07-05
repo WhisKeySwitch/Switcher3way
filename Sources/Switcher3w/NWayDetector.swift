@@ -1,30 +1,31 @@
 import AppKit
 import Carbon
 
-/// N-way детект раскладки: обобщение `LayoutDetector.decide` с пары на любое число
-/// установленных раскладок (напр. EN + UK + RU). Набранные keycodes прогоняются через
-/// КАЖДУЮ раскладку, у которой есть системный словарь, и слово проверяется в языке этой
-/// раскладки. Точность-first: переключаем, только когда целевой язык ровно один.
+/// N-way layout detection: generalizes `LayoutDetector.decide` from a pair to any number
+/// of installed layouts (e.g. EN + UK + RU). The typed keycodes are rendered through
+/// EVERY layout that has a system dictionary, and the word is validated in that layout's
+/// language. Precision-first: switch only when there is exactly one target language.
 enum NWayResolver {
 
-    /// Один кандидат: раскладка + её язык + как в ней выглядит набранное + валидно ли это слово.
+    /// One candidate: layout + its language + how the input looks in it + whether the word is valid.
     private struct Candidate {
         let layoutID: String
-        let lang: String      // 2-буквенный код (ru/uk/en…)
-        let string: String    // keycodes, прочитанные в этой раскладке
-        let isValid: Bool     // string — реальное слово в language словаре
+        let lang: String      // 2-letter code (ru/uk/en…)
+        let string: String    // keycodes read in this layout
+        let isValid: Bool     // string is a real word in the language dictionary
     }
 
-    /// Решение: в какую раскладку переключиться и какой текст впечатать. nil — оставить как есть.
+    /// Decision: which layout to switch to and what text to type. nil — leave as is.
     struct Decision {
         let targetLayoutID: String
         let original: String
         let converted: String
     }
 
-    /// Прогоняет набранное через все раскладки-с-словарём и выбирает целевую.
-    /// Возвращает nil, если: раскладку/язык не определить; слово валидно в текущем языке;
-    /// подходящих других языков ноль ИЛИ больше одного (неоднозначность uk/ru → не трогаем).
+    /// Renders the input through all layouts-with-dictionary and picks the target.
+    /// Returns nil if: the layout/language can't be determined; the word is valid in the
+    /// current language; there are zero OR more than one matching other languages
+    /// (uk/ru ambiguity → leave it alone).
     @MainActor
     static func resolve(keys: [TypedKey], capsLock: Bool) -> Decision? {
         guard !keys.isEmpty else { return nil }
@@ -37,8 +38,8 @@ enum NWayResolver {
         }
         let currentLang = String(currentLangFull.prefix(2))
 
-        // Один кандидат на язык (несколько раскладок одного языка — напр. US/ABC — схлопываем,
-        // предпочитая валидную и каноничную). Пропускаем языки без системного словаря.
+        // One candidate per language (several layouts of the same language — e.g. US/ABC — are
+        // collapsed, preferring the valid and canonical one). Skip languages without a system dictionary.
         var byLang: [String: Candidate] = [:]
         for layout in layouts {
             guard let langFull = LayoutSwitcher.languageCode(layout) else { continue }
@@ -48,7 +49,7 @@ enum NWayResolver {
             let valid = Dict.isValidWord(rendered.lowercased(), lang: lang)
             let id = LayoutSwitcher.sourceID(layout)
             if let existing = byLang[lang] {
-                if valid && !existing.isValid {   // валидный рендер важнее любого другого
+                if valid && !existing.isValid {   // a valid render outweighs any other
                     byLang[lang] = Candidate(layoutID: id, lang: lang, string: rendered, isValid: true)
                 }
             } else {
@@ -59,45 +60,45 @@ enum NWayResolver {
         guard let current = byLang[currentLang] else { return nil }
         let typed = current.string
 
-        // always-convert — ЯВНЫЙ override пользователя: если рендер в каком-то другом языке
-        // лежит в списке «всегда конвертить», переключаем туда даже минуя словарь и вето.
+        // always-convert — an EXPLICIT user override: if the render in some other language
+        // is in the "always convert" list, switch there even bypassing the dictionary and vetoes.
         for cand in byLang.values where cand.lang != currentLang {
             if AutoSwitchPolicy.isAlwaysConvert(cand.string) {
                 return Decision(targetLayoutID: cand.layoutID, original: typed, converted: cand.string)
             }
         }
 
-        // Мягкие вето — те же, что в 2-way (короткое/акроним/код/цифры).
+        // Soft vetoes — the same as in 2-way (short/acronym/code/digits).
         guard LayoutDetector.passesSoftGates(typed, capsLock: capsLock) else { return nil }
 
-        // Набрано корректно в текущем языке → ничего не делаем.
+        // Typed correctly in the current language → do nothing.
         if current.isValid { return nil }
 
-        // Другие языки, где набранное — реальное слово.
+        // Other languages where the input is a real word.
         let validOthers = byLang.values.filter { $0.lang != currentLang && $0.isValid }
-        // 0 — не wrong-layout; >1 — неоднозначно (uk↔ru): точность-first, не трогаем.
+        // 0 — not wrong-layout; >1 — ambiguous (uk↔ru): precision-first, leave it alone.
         guard validOthers.count == 1, let winner = validOthers.first else { return nil }
 
         return Decision(targetLayoutID: winner.layoutID, original: typed, converted: winner.string)
     }
 
-    /// Один шаг ручного цикла: целевая раскладка + как в ней выглядит набранное.
+    /// One step of the manual cycle: target layout + how the input looks in it.
     struct ManualCandidate {
         let targetLayoutID: String
         let converted: String
     }
 
-    /// План ручного триггера: исходный текст (рендер в текущей раскладке) + упорядоченные
-    /// кандидаты для перебора. В отличие от `resolve` (авто, точность-first, словарь):
-    /// это ЯВНОЕ действие пользователя, поэтому перебираем ВСЕ раскладки, дающие иной рендер,
-    /// даже без словаря и при неоднозначности. Однозначный словарный победитель ставится первым.
-    /// `nil` — если рендер невозможен (нет данных раскладки; проброшенные символы удалёнки).
+    /// Manual trigger plan: the original text (render in the current layout) + ordered
+    /// candidates to cycle through. Unlike `resolve` (auto, precision-first, dictionary):
+    /// this is an EXPLICIT user action, so we cycle through ALL layouts that give a different
+    /// render, even without a dictionary and under ambiguity. An unambiguous dictionary winner
+    /// is placed first. `nil` — if a render is impossible (no layout data; forwarded remote-desktop chars).
     @MainActor
     static func manualPlan(keys: [TypedKey], capsLock: Bool)
         -> (original: String, originalLayoutID: String, candidates: [ManualCandidate])? {
         guard !keys.isEmpty else { return nil }
-        // Проброшенные через удалёнку символы (keyCode 0 + char) все раскладки дают одинаково —
-        // перебор по раскладкам бессмыслен. Пусть обрабатывает вызывающий (2-way по скрипту).
+        // Chars forwarded through a remote desktop (keyCode 0 + char) render identically in
+        // every layout — cycling over layouts is pointless. Let the caller handle it (2-way by script).
         if keys.contains(where: { $0.char != nil }) { return nil }
 
         let layouts = LayoutSwitcher.installedLayouts()
@@ -107,11 +108,11 @@ enum NWayResolver {
             return nil
         }
 
-        // Рендер набранного в каждой установленной раскладке (порядок — как у ОС), начиная
-        // со следующей после текущей и по кругу, чтобы «следующий» кандидат был предсказуем.
+        // Render the input in every installed layout (order as in the OS), starting from the
+        // one after the current and wrapping around, so the "next" candidate is predictable.
         let ordered = rotate(layouts, startingAfter: currentID)
         var candidates: [ManualCandidate] = []
-        var seen: Set<String> = [original]   // не предлагаем то, что уже на экране, и дубликаты
+        var seen: Set<String> = [original]   // don't offer what's already on screen, nor duplicates
         for layout in ordered {
             let id = LayoutSwitcher.sourceID(layout)
             guard id != currentID, let rendered = render(keys, layout: layout) else { continue }
@@ -121,8 +122,8 @@ enum NWayResolver {
         }
         guard !candidates.isEmpty else { return nil }
 
-        // Однозначный словарный победитель (как в авто) — вперёд, чтобы один тап давал
-        // «правильную» раскладку в типичном случае.
+        // The unambiguous dictionary winner (as in auto) goes first, so one tap gives the
+        // "correct" layout in the typical case.
         if let winner = resolve(keys: keys, capsLock: capsLock),
            let idx = candidates.firstIndex(where: { $0.targetLayoutID == winner.targetLayoutID }) {
             let w = candidates.remove(at: idx)
@@ -134,7 +135,7 @@ enum NWayResolver {
         return (original, currentID, candidates)
     }
 
-    /// Список раскладок, повёрнутый так, чтобы он начинался сразу ПОСЛЕ раскладки `afterID`.
+    /// The list of layouts rotated so it starts right AFTER the layout `afterID`.
     private static func rotate(_ layouts: [TISInputSource], startingAfter afterID: String) -> [TISInputSource] {
         guard let i = layouts.firstIndex(where: { LayoutSwitcher.sourceID($0) == afterID }) else {
             return layouts
@@ -142,9 +143,9 @@ enum NWayResolver {
         return Array(layouts[(i + 1)...]) + Array(layouts[...i])
     }
 
-    /// Как набранные keycodes выглядят в конкретной раскладке. Для проброшенного через
-    /// удалённый стол текста (keyCode 0 + char) все раскладки дали бы один и тот же символ,
-    /// поэтому N-way там неприменим — возвращаем nil (обрабатывается старым 2-way путём).
+    /// How the typed keycodes look in a specific layout. For text forwarded through a
+    /// remote desktop (keyCode 0 + char) every layout would give the same character,
+    /// so N-way doesn't apply there — return nil (handled by the old 2-way path).
     @MainActor
     private static func render(_ keys: [TypedKey], layout: TISInputSource) -> String? {
         if keys.contains(where: { $0.char != nil }) { return nil }

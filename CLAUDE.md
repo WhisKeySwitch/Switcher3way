@@ -9,7 +9,8 @@ two-layout design to N-way. Pure Swift + AppKit, SwiftPM, universal (arm64 + x86
 > target/module is `Switcher3w`** with sources in `Sources/Switcher3w/` (renamed from upstream's
 > `RuSwitcher` in July 2026 — all app-owned identifiers use `switcher3w`/`Switcher3w`; mentions
 > of the *upstream project* rashn/RuSwitcher in URLs/attribution are intentionally untouched).
-> Upstream code comments are in Russian; keep that style when editing existing files.
+> Code comments are in English (the upstream Russian comments were translated in July 2026);
+> write new comments in English.
 
 ## Quick start (IDE)
 
