@@ -241,13 +241,19 @@ final class SettingsWindowController {
 
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
         let devTag = Bundle.main.infoDictionary?["RSDevTag"] as? String ?? ""
-        let versionLabel = NSTextField(labelWithString: "v\(version)\(devTag) — \(L10n.settingsVersion)")
+        let versionLabel = NSTextField(labelWithString: "v\(version)\(devTag)")
         versionLabel.font = .systemFont(ofSize: 12)
         versionLabel.textColor = .secondaryLabelColor
         versionLabel.alignment = .center
 
+        // Слоган под версией.
+        let taglineLabel = NSTextField(labelWithString: L10n.settingsVersion)
+        taglineLabel.font = .systemFont(ofSize: 12)
+        taglineLabel.textColor = .secondaryLabelColor
+        taglineLabel.alignment = .center
+
         // Все кнопки (Star on GitHub / Donate / Contact / Check for Updates) удалены в форке Switcher3way.
-        return makeTabRoot([titleLabel, versionLabel], alignment: .centerX)
+        return makeTabRoot([titleLabel, versionLabel, taglineLabel], alignment: .centerX)
     }
 
     // MARK: - Вкладка Advanced
