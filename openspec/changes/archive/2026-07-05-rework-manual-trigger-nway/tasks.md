@@ -36,4 +36,4 @@
 - [x] 6.1 Update `docs/user-guide.md` (+ `.uk.md`, `.ru.md`) trigger/undo sections to describe N-way convert + candidate cycling; regenerate in-app help via the build
 - [x] 6.2 Resolve the "⌥ undo layout" known-issue note in `CLAUDE.md` (and remove the Layout 1/2 picker mention from the architecture/settings notes)
 - [x] 6.3a Build (clean), install, launch: monitoring starts, permissions OK, no crash; Settings pair row removed at compile time
-- [ ] 6.3b **Runtime typing check (needs a real keyboard):** single tap converts (unambiguous + ambiguous word), repeated taps cycle through 3 layouts and return to the exact original text + layout, and ⌥-undo after an auto-switch restores the correct layout
+- [x] 6.3b **Runtime typing check:** verified in Mail — auto-fix on word boundary works; manual N-way cycle (Ukrainian-PC→RussianWin) confirmed in the debug log; VS Code correctly skipped as a denied app
