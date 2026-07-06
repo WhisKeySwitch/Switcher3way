@@ -287,7 +287,7 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
 
     private func displayText(_ id: String) -> String {
         guard adapter.kind == .apps else { return id }
-        if id.hasSuffix("*") { return String(id.dropLast()) + "* (все)" }
+        if id.hasSuffix("*") { return L10n.exceptionsWildcard(String(id.dropLast())) }
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) {
             // FileManager.displayName is localized by the SYSTEM; when the app's interface
             // language differs, we take the neutral bundle name from disk ("Terminal").
