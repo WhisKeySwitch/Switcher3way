@@ -18,11 +18,19 @@ The system SHALL inspect the current word when a word boundary is detected and e
 - **THEN** the system SHALL not initiate an automatic conversion on a word boundary
 
 ### Requirement: Apply safety gates before converting
-The system SHALL reject automatic conversion for words that are too short, contain punctuation or digits, look like acronyms or code identifiers, or are otherwise excluded by policy.
+The system SHALL reject automatic conversion for words whose letter core is a single letter, looks like an acronym or code identifier, or is otherwise excluded by policy. The safety gates SHALL be evaluated against the word's letter core — the input with leading and trailing non-letter characters removed — so that attached punctuation does not by itself prevent conversion.
 
-#### Scenario: Reject short or code-like input
-- **WHEN** the typed input is short, all caps, mixed-script, or otherwise matches the soft-gate exclusions
+#### Scenario: Reject single-letter or code-like input
+- **WHEN** the typed input's letter core is a single letter, all caps, mixed-script, or otherwise matches the soft-gate exclusions
 - **THEN** the system SHALL leave the text unchanged
+
+#### Scenario: Convert a word that has attached punctuation
+- **WHEN** the typed word carries leading or trailing punctuation (for example a trailing "!" or a wrapping parenthesis) and its letter core is a valid word in exactly one alternative language
+- **THEN** the system SHALL convert the word, validating only the letter core while re-rendering the whole token — punctuation included — in the target layout
+
+#### Scenario: Accept short words of at least two letters
+- **WHEN** the typed input's letter core is two or more letters and it otherwise passes the gates
+- **THEN** the system SHALL allow the word to be evaluated for conversion
 
 #### Scenario: Respect user exception lists
 - **WHEN** the application, the typed word, or the converted word matches a configured exception rule
