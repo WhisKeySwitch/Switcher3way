@@ -47,10 +47,11 @@ enum LayoutDetector {
     }
 
     /// Soft vetoes, shared by 2-way (`decide`) and N-way (`NWayResolver`): we let
-    /// a word into the detector only if it's a "real" word, and not 1–2 letters, an acronym,
-    /// code, or a token with digits/punctuation. Precision-first — on doubt, false.
+    /// a word into the detector only if it's a "real" word, and not a single letter, an acronym,
+    /// or code. Any non-letter still vetoes; the N-way path trims edge punctuation to the letter
+    /// core before calling, so attached punctuation no longer blocks it. Precision-first — on doubt, false.
     static func passesSoftGates(_ typed: String, capsLock: Bool) -> Bool {
-        guard typed.count >= 3 else { return false }                  // 1–2 letters: too many collisions between layouts
+        guard typed.count >= 2 else { return false }                  // 1 letter (я/a/i/і): hopelessly ambiguous between layouts
         guard typed.allSatisfy({ $0.isLetter }) else { return false } // digits/punctuation/URL/code/email
         // Under Caps Lock all text is UPPERCASE — this is NOT an acronym and NOT camelCase,
         // so these two vetoes are applied only when Caps Lock is off.

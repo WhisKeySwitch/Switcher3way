@@ -24,6 +24,10 @@ The system SHALL select a target layout when the typed input appears to be valid
 - **WHEN** the typed input is valid in exactly one alternative language and passes the safety gates
 - **THEN** the system SHALL switch to the corresponding target layout and retype the word in that layout
 
+#### Scenario: Re-render the whole token in the target layout
+- **WHEN** the system converts a word whose keystrokes include punctuation keys
+- **THEN** the system SHALL render every keystroke — letters and punctuation alike — through the target layout, so that punctuation keys that differ between layouts (for example the key that types "/" on a Latin layout and "." on the Cyrillic PC layouts) produce the target layout's character rather than the source character
+
 #### Scenario: Leave the input unchanged when the result is ambiguous
 - **WHEN** multiple alternative layouts could plausibly match the input
 - **THEN** the system SHALL avoid switching layouts and SHALL leave the current text unchanged
