@@ -32,5 +32,8 @@ The menu-bar status item whose emoji-flag icon live-tracks the active layout (in
 ## 10. Diagnostics and debug logging
 Opt-in rotating file log (5 MB cap) with an Advanced-tab toggle, path display, and reveal-in-Finder action.
 
+## Planned (spec exists, not yet implemented)
+**Windows platform support** — a target contract for a future Windows port of the app, capturing the platform-independent requirements (keystroke observation, layout enumeration/switching, per-layout rendering, offline validation, N-way detection semantics, text rewrite, tray UI, exclusion policy, signed offline distribution). The spec lives at `specs/windows-platform-support/`; the planning artifacts (design + API mapping + phased roadmap) are archived under `changes/archive/2026-07-20-windows-port-plan/`. No Windows code exists yet.
+
 ## Explicitly out of scope (disabled in this fork)
 **Update checking** — removed entirely (July 2026 cleanup; `UpdateChecker.swift` deleted). Auto-update was disabled at fork time so upstream releases could not clobber the fork, then the dormant pipeline was deleted. No spec exists for it.
