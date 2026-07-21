@@ -1,15 +1,15 @@
 ## 1. Signing + CI foundation (do first — unsigned won't launch on managed devices)
 
 - [ ] 1.1 Apply to the **SignPath Foundation** OSS program for Switcher3way (MIT + public repo); record the organization id, project slug, and signing-policy slug
-- [ ] 1.2 Scaffold the production Windows solution (`windows/`), a C#/.NET app with `UseAppHost=true` so a real apphost `.exe` is produced (unlike the spike's `UseAppHost=false`)
+- [x] 1.2 Scaffold the production Windows solution (`windows/Switcher3way.slnx` — `Switcher3way.Core` lib + `Switcher3way.Core.Tests` xunit). App-shell exe project (`UseAppHost=true`) deferred to phase 6/M6 (WPF vs WinForms). SignPath/CI tasks (1.1, 1.3–1.5) remain deferred to post-traction.
 - [ ] 1.3 Add a GitHub Actions workflow: `dotnet publish` → upload artifact → `signpath/github-action-submit-signing-request` → download signed artifact; store `SIGNPATH_API_TOKEN` as a CI secret
 - [ ] 1.4 Sign **both** the executable and the installer, RFC-3161 **timestamped**; `signtool verify /pa` in CI to gate the build
 - [ ] 1.5 Confirm the release-signed artifact runs cleanly on a **clean/managed Windows machine** with no SmartScreen block. (Dev-machine launch is already unblocked — the original block was a managed ASR "block low-prevalence executables" rule, since disabled/unenrolled; dev builds run unsigned or via the `dotnet` host, optionally signed with the self-signed dev identity in `signing/README-windows.md`.)
 
 ## 2. Portable detection core (C#, no Win32)
 
-- [ ] 2.1 Port `NWayResolver.resolve`/`manualPlan`, `LayoutDetector.passesSoftGates` + letter-core trimming, and `AutoSwitchPolicy` (exceptions/pause/per-app/secure-context) into a UI/OS-free assembly
-- [ ] 2.2 Unit-test the core against the macOS behavior: single unambiguous winner, ambiguity left alone (e.g. `там`), letter-core trimming, punctuation re-render, 2-letter minimum, code-like gates
+- [x] 2.1 Port `NWayResolver.resolve`/`manualPlan`, `LayoutDetector.passesSoftGates` + letter-core trimming into a UI/OS-free assembly (`Switcher3way.Core`); the OS bindings (dictionary, layout enumeration/render) and always-convert list are behind interfaces (`IDictionaryValidator`, `ILayoutCatalog`, `IAlwaysConvertList`). Remaining `AutoSwitchPolicy` bits (denied-apps / secure-input / remote) are orchestrator/platform concerns → phase 5.3.
+- [x] 2.2 Unit-test the core against the macOS behavior — **27 xunit tests green**: single winner, uk↔ru ambiguity left alone, valid-in-current, always-convert override, punctuation re-render (`db,fxnt`→`вибачте`), 2-letter minimum, all-caps/camelCase/mixed-alphabet gates, letter-core trimming, manual cycle order + dedup + remote-forwarded bail-out.
 
 ## 3. Offline dictionaries (Hunspell)
 

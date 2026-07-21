@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Switcher3way.Core/Switcher3way.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Switcher3way.Core.Tests/Switcher3way.Core.Tests.csproj" />
+  </Folder>
+</Solution>
