@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/yaremenko2205/switcher3way-releases/releases/latest"><img src="https://img.shields.io/github/v/release/yaremenko2205/switcher3way-releases?label=latest&color=blue" alt="Latest release"></a>
+  <a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest"><img src="https://img.shields.io/github/v/release/WhisKeySwitch/switcher3way-releases?label=latest&color=blue" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/macOS-13%2B-black?logo=apple&logoColor=white" alt="macOS 13+">
   <img src="https://img.shields.io/badge/arch-universal%20(arm64%20%2B%20x86__64)-lightgrey" alt="Universal binary">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/yaremenko2205/switcher3way-releases/releases/latest"><b>⬇&nbsp; Download the latest DMG</b></a>
+  <a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest"><b>⬇&nbsp; Download the latest DMG</b></a>
 </p>
 
 Typed `ghbdtn` when you meant `привет` — or `ghbdsn` when you meant `привіт`? Switcher3way notices words typed in the wrong layout and converts them, either **automatically as you type** or when you tap the **trigger key**. Unlike two-layout switchers, detection is **N-way**: the typed keystrokes are rendered through *every* installed layout, each candidate is validated against its own language's dictionary, and the app switches only when there's a single unambiguous winner. Precision-first: words valid in more than one language (e.g. `там` in both Ukrainian and Russian) are left alone.
@@ -33,7 +33,7 @@ Typed `ghbdtn` when you meant `привет` — or `ghbdsn` when you meant `п�
 
 ## Install
 
-**Download the DMG** from the [latest release](https://github.com/yaremenko2205/switcher3way-releases/releases/latest), open it, and drag **Switcher3way.app** into **Applications**.
+**Download the DMG** from the [latest release](https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest), open it, and drag **Switcher3way.app** into **Applications**.
 
 The app is unnotarized (no Apple Developer account), so the **first** launch is blocked by Gatekeeper if you double-click it — instead **right-click the app → Open**, then confirm. macOS remembers the choice, so later launches are normal.
 
@@ -44,8 +44,8 @@ On first launch the onboarding checklist asks for two macOS permissions — **Ac
 Requires the Swift toolchain (Xcode or the Command Line Tools):
 
 ```bash
-git clone https://github.com/yaremenko2205/switcher3w.git
-cd switcher3w
+git clone https://github.com/WhisKeySwitch/Switcher3way.git
+cd Switcher3way
 bash build_app.sh                    # SwiftPM release (universal), signed
 cp -R Switcher3way.app /Applications/
 open /Applications/Switcher3way.app
