@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    THROWAWAY feasibility spike for the Switcher3way Windows port.
+    Proves the Win32 mechanics (hook / ToUnicodeEx / layout switch / SendInput) on real
+    Windows before the MVP is built. NOT the shipped app. See FINDINGS.md after running.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>windows-spike</AssemblyName>
+    <RootNamespace>Switcher3wSpike</RootNamespace>
+    <!--
+      Do NOT emit a native apphost .exe. On this machine launching the freshly-built unsigned
+      apphost fails with "Access is denied" (see FINDINGS.md); running the managed DLL through the
+      signed `dotnet` host works. UseAppHost=false makes `dotnet run` use that host too.
+    -->
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+
+</Project>
