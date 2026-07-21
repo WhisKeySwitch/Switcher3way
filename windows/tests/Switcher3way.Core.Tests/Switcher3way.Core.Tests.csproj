@@ -21,7 +21,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Switcher3way.Core\Switcher3way.Core.csproj" />
+    <ProjectReference Include="..\..\src\Switcher3way.Dictionaries\Switcher3way.Dictionaries.csproj" />
   </ItemGroup>
 
 </Project>
