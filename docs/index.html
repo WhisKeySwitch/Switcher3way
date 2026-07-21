@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Switcher3way — auto-fix your keyboard layout (EN · UK · RU)</title>
+<meta name="description" content="macOS menu-bar app that detects the language you're typing and fixes the keyboard layout across English, Ukrainian, and Russian. Precision-first N-way detection.">
+<meta property="og:title" content="Switcher3way">
+<meta property="og:description" content="Detects the language you're typing and fixes the keyboard layout — across English, Ukrainian, and Russian.">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --bg:#ffffff; --fg:#16181d; --muted:#5b616e; --card:#f6f7f9; --line:#e6e8ec;
+    --accent:#3b5bdb; --accent-2:#7048e8; --good:#2b8a3e; --code-bg:#f1f3f5;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0d0f14; --fg:#e8eaed; --muted:#9aa2b1; --card:#161a22; --line:#242a35;
+      --accent:#748ffc; --accent-2:#b197fc; --good:#69db7c; --code-bg:#12151c; }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+  /* Hero */
+  header.hero{text-align:center;padding:72px 0 40px}
+  .icon{width:112px;height:112px;border-radius:24px;box-shadow:0 8px 30px rgba(0,0,0,.18)}
+  h1{font-size:clamp(2.2rem,6vw,3.4rem);margin:.5em 0 .1em;letter-spacing:-.02em}
+  .tag{font-size:clamp(1.05rem,2.6vw,1.35rem);color:var(--muted);max-width:640px;margin:0 auto 1.4em}
+  .badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:26px}
+  .badge{font-size:.8rem;color:var(--muted);background:var(--card);border:1px solid var(--line);
+    border-radius:999px;padding:4px 12px}
+  .cta{display:inline-flex;align-items:center;gap:9px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#fff;font-weight:600;font-size:1.05rem;padding:14px 26px;border-radius:12px;
+    box-shadow:0 6px 22px rgba(59,91,219,.35)}
+  .cta:hover{text-decoration:none;filter:brightness(1.06)}
+  .subcta{display:block;margin-top:12px;font-size:.9rem;color:var(--muted)}
+
+  /* Demo */
+  .demo{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;margin:48px 0;
+    text-align:center}
+  .demo h2{margin:0 0 6px;font-size:1.1rem;color:var(--muted);font-weight:600}
+  .flow{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;
+    font-size:clamp(1.3rem,4vw,2rem);margin-top:14px}
+  .chip{padding:8px 16px;border-radius:10px;border:1px solid var(--line);background:var(--bg)}
+  .chip.wrong{color:var(--muted);text-decoration:line-through;text-decoration-color:#e03131aa}
+  .chip.right{color:var(--good);border-color:var(--good)}
+  .arrow{color:var(--accent);font-size:1.4em}
+  .demo p{color:var(--muted);margin:16px auto 0;max-width:620px;font-size:.98rem}
+
+  /* Sections */
+  section{padding:26px 0}
+  h2.sec{font-size:1.5rem;letter-spacing:-.01em;margin:0 0 18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .feat h3{margin:0 0 6px;font-size:1.05rem}
+  .feat p{margin:0;color:var(--muted);font-size:.95rem}
+  ol.steps{padding-left:20px}
+  ol.steps li{margin:10px 0}
+  .note{background:var(--code-bg);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:12px 16px;color:var(--muted);font-size:.92rem;margin-top:14px}
+  kbd{font-family:inherit;background:var(--bg);border:1px solid var(--line);border-bottom-width:2px;
+    border-radius:6px;padding:1px 7px;font-size:.85em}
+
+  footer{border-top:1px solid var(--line);margin-top:40px;padding:30px 0 60px;color:var(--muted);
+    font-size:.9rem;text-align:center}
+  footer a{color:var(--muted);text-decoration:underline}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <img class="icon" src="icon.png" alt="Switcher3way icon">
+    <h1>Switcher3way</h1>
+    <p class="tag">The macOS menu-bar app that notices the language you're typing and fixes the keyboard layout — across <b>English</b>, <b>Ukrainian</b>, and <b>Russian</b>.</p>
+    <div class="badges">
+      <span class="badge">macOS 13+</span>
+      <span class="badge">Universal (arm64 + Intel)</span>
+      <span class="badge">Open source · MIT</span>
+      <span class="badge">Free</span>
+    </div>
+    <a class="cta" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">⬇&nbsp; Download for macOS</a>
+    <span class="subcta">Free &amp; open source · <a href="https://github.com/WhisKeySwitch/Switcher3way">View on GitHub</a></span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="demo">
+    <h2>Typed the right word in the wrong layout?</h2>
+    <div class="flow">
+      <span class="chip wrong mono">ghbdtn</span>
+      <span class="arrow">→</span>
+      <span class="chip right mono">привет</span>
+    </div>
+    <p>Switcher3way renders your keystrokes through <em>every</em> installed layout, validates each candidate against its own language's dictionary, and switches only when there's a single unambiguous winner — automatically as you type, or on a key tap.</p>
+  </div>
+
+  <section>
+    <h2 class="sec">Why it's different</h2>
+    <div class="grid">
+      <div class="feat"><h3>N-way, not two-way</h3><p>Most switchers flip between two layouts. Switcher3way considers <em>all</em> your installed layouts at once and picks the right one.</p></div>
+      <div class="feat"><h3>Precision-first</h3><p>Words valid in more than one language (like <span class="mono">там</span> in Ukrainian &amp; Russian) are left untouched — no wrong "corrections".</p></div>
+      <div class="feat"><h3>Auto or manual</h3><p>Fix words automatically as you type, or tap a trigger key to convert the last word or selection — tap again to undo.</p></div>
+      <div class="feat"><h3>Stays out of your way</h3><p>Per-app exceptions, never/always-convert word lists, password-manager safety, and pause (30 min / 1 h / until restart).</p></div>
+      <div class="feat"><h3>Little touches</h3><p>Menu-bar status header, per-app layout memory, an optional layout flag at the cursor, and a UI localized in 16 languages.</p></div>
+      <div class="feat"><h3>Private &amp; offline</h3><p>Everything runs locally on your Mac. No accounts, no telemetry, no network.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">Install</h2>
+    <ol class="steps">
+      <li><a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">Download the DMG</a>, open it, and drag <b>Switcher3way.app</b> into <b>Applications</b>.</li>
+      <li>First launch: the app is unnotarized, so <b>right-click → Open</b> once (double-clicking is blocked by Gatekeeper). macOS remembers the choice.</li>
+      <li>Grant two permissions when asked — <b>Accessibility</b> (retype the fixed word) and <b>Input Monitoring</b> (see keystrokes). The onboarding checklist detects grants live.</li>
+    </ol>
+    <div class="note">Prefer to build it yourself? <code class="mono">git clone</code> the repo and run <code class="mono">bash build_app.sh</code> — see the <a href="https://github.com/WhisKeySwitch/Switcher3way#build-it-yourself">README</a>.</div>
+  </section>
+
+  <section>
+    <h2 class="sec">Documentation</h2>
+    <p>
+      <a href="https://github.com/WhisKeySwitch/Switcher3way/blob/main/docs/user-guide.md">User Guide (English)</a> ·
+      <a href="https://github.com/WhisKeySwitch/Switcher3way/blob/main/docs/user-guide.uk.md">Українська</a> ·
+      <a href="https://github.com/WhisKeySwitch/Switcher3way/blob/main/docs/user-guide.ru.md">Русский</a>
+    </p>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Switcher3way is free and open source under the <a href="https://github.com/WhisKeySwitch/Switcher3way/blob/main/LICENSE">MIT License</a> — a fork of <a href="https://github.com/rashn/RuSwitcher">RuSwitcher</a>, generalized to N-way.</p>
+    <p><a href="https://github.com/WhisKeySwitch/Switcher3way">GitHub</a> · <a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">Download</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
