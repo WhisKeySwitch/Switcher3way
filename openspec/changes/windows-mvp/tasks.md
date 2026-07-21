@@ -13,9 +13,9 @@
 
 ## 3. Offline dictionaries (Hunspell)
 
-- [ ] 3.1 Integrate Hunspell into the app and bundle en/uk/ru dictionaries
-- [ ] 3.2 Validate dictionary quality against the macOS `NSSpellChecker` baseline on a representative word set (punctuation-attached and 2-letter cases included)
-- [ ] 3.3 Wire validation behind the letter-core validator interface the detection core expects
+- [x] 3.1 Integrate Hunspell (`WeCantSpell.Hunspell`, managed — no native deps): `Switcher3way.Dictionaries.HunspellDictionaryValidator` loads `<lang>.dic/.aff` lazily + cached. Mechanism done + tested against fixture dicts; **bundling the real full en/uk/ru dictionaries is an open licensing/size decision** documented in `windows/src/Switcher3way.Dictionaries/DICTIONARIES.md`.
+- [ ] 3.2 Validate dictionary quality against the macOS `NSSpellChecker` baseline on a representative word set (punctuation-attached and 2-letter cases included) — pending real dictionaries + a Mac-captured baseline (see DICTIONARIES.md)
+- [x] 3.3 Wire validation behind the letter-core validator interface the detection core expects — `HunspellDictionaryValidator : IDictionaryValidator`; end-to-end test plugs it into `NWayResolver` (real Hunspell check of привет/вибачте). 37 tests green.
 
 ## 4. Live detection loop (graduate the spike's proven patterns)
 
