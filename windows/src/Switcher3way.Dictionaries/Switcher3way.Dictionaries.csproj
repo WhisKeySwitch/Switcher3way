@@ -8,6 +8,12 @@
     <PackageReference Include="WeCantSpell.Hunspell" Version="7.0.1" />
   </ItemGroup>
 
+  <!-- Bundled Hunspell dictionaries (en/ru/uk .dic/.aff + their license files). Content flows to
+       the app's output and to referencing projects (e.g. tests). See dict/DICTIONARIES note. -->
+  <ItemGroup>
+    <Content Include="dict\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

@@ -1,0 +1,3 @@
+# Dictionary data — keep bytes exact (no CRLF conversion), don't diff/merge as text.
+*.dic -text
+*.aff -text

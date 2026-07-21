@@ -18,6 +18,9 @@ public sealed class HunspellDictionaryValidator : IDictionaryValidator
     /// <param name="dictionaryDirectory">Folder holding <c>en.dic/en.aff</c>, <c>ru.dic/ru.aff</c>, …</param>
     public HunspellDictionaryValidator(string dictionaryDirectory) => _directory = dictionaryDirectory;
 
+    /// <summary>Uses the <c>dict/</c> folder deployed next to the assembly (the bundled dictionaries).</summary>
+    public HunspellDictionaryValidator() : this(Path.Combine(AppContext.BaseDirectory, "dict")) { }
+
     private static string Two(string lang) => lang.Length <= 2 ? lang : lang.Substring(0, 2);
 
     private WordList? Load(string lang) => _cache.GetOrAdd(Two(lang), l =>
