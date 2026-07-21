@@ -119,26 +119,33 @@ many interleaved words and conversions for the whole session, and the self-test 
 stability. EN/UK/RU make little use of dead keys, so residual R3 risk is low; revisit if a
 diacritic-heavy layout is added.
 
-## Environment blocker worth recording — R1 materialized (→ D8)
+## Environment blocker worth recording — a managed ASR rule (not signing)
 
-The freshly built **unsigned apphost exe cannot be launched at all**: `CreateProcess` returns
-"Access is denied" — reproduced in a normal **elevated** terminal (`dotnet run`), so it is not the
-build automation. App-control policy is NOT the cause (AppLocker audit-only, WDAC user-mode off,
-SAC off). The cause is **Microsoft Defender for Endpoint** blocking a brand-new, unsigned,
-low-prevalence executable — the exact real-world shape of **risk R1**, on a managed device.
+The freshly built **unsigned apphost exe could not be launched**: `CreateProcess` returned "Access
+is denied", reproduced in a normal **elevated** terminal. Initial investigation attributed this to
+Microsoft Defender for Endpoint (the `Sense` service was running). **Further testing corrected the
+root cause:** a managed **Attack Surface Reduction** rule — *"Block executable files from running
+unless they meet a prevalence, age, or trusted-list criterion"*
+(`01443614-cd74-433a-b99e-2ecdc07bfc25`), pushed via device management (Defender Exploit Guard event
+1121, "blocked by your IT administrator"). Offboarding MDE did **not** lift it (the ASR rule is
+managed separately); only disabling that rule after the device was unenrolled unblocked launch.
 
-This is the single most important finding of the spike for planning: an unsigned
-keystroke-hooking/`SendInput` binary is precisely what enterprise EDR distrusts, and it is blocked
-**before a single line runs**. Direct, early confirmation of **D8 (Authenticode signing + build
-reputation)** — for a managed/corporate audience, signing is not polish, it is a prerequisite to
-the app launching.
+**Signing implication (verified by experiment).** This rule evaluates **Microsoft-cloud prevalence**,
+not local signature validity:
+- A **self-signed** cert — even with a `Valid` signature and the cert trusted in the local Root
+  store — is **still blocked** by the rule.
+- With the rule disabled, an **unsigned** exe launches fine (so does a self-signed one).
 
-**Workarounds (both verified here):**
-1. `<UseAppHost>false</UseAppHost>` in the csproj (already applied) — no apphost exe is emitted, so
-   `dotnet run` and `dotnet windows-spike.dll` both execute the identical code through the signed
-   `dotnet` host. This is how the self-test and the interactive spike run today, unsigned.
-2. For the real MVP: Authenticode-sign the exe and submit for reputation (D8). The dotnet-host
-   route is a spike convenience, not a shipping strategy.
+So signing is **not a dev-launch prerequisite** — it is a **distribution** concern. On an unmanaged
+machine no signing is needed; end-user machines that enforce this ASR rule (common in enterprises)
+or SmartScreen will block a low-prevalence exe until it earns Microsoft-cloud prevalence (via
+downloads) or is signed with an **EV** certificate. A self-signed cert never satisfies either.
+
+**Dev workarounds (verified):**
+1. Run via the signed **`dotnet` host** (`dotnet …\windows-spike.dll`) — works regardless of the ASR
+   rule (the spike ships `<UseAppHost>false</UseAppHost>`, so `dotnet run` uses this path).
+2. On your own machine, **disable the ASR rule** (or add an ASR exclusion); on a managed device, ask
+   IT. See `signing/README-windows.md`.
 
 ## How to finish the spike (operator steps)
 
@@ -171,7 +178,7 @@ Every mechanic the plan depends on now works on real Windows, confirmed end to e
 | D6 text rewrite (`SendInput` backspace+Unicode) | ✅ clean round-trip after fixing hook re-entrancy + timing |
 | N-way manual cycle (…→ru→uk→original) | ✅ confirmed live |
 | R2 / UIPI (elevated windows) | ⚠️ understood: elevated app needs elevated mode; non-elevated is inert there |
-| R1 / D8 signing | ⚠️ confirmed real: MDE blocks the unsigned exe — **signing is a prerequisite, not polish** |
+| R1 / D8 signing | ⚠️ refined: the dev-machine block was a managed **ASR "block low-prevalence exe" rule**, not a signing gap — signing is a **distribution** concern (SmartScreen + enterprise ASR); self-signed does not satisfy it, EV/prevalence does |
 
 **Recommendation:** proceed to the `windows-mvp` change (roadmap phases 1, 3, 4, 5, 6). Graduate
 these proven patterns: layout enumeration, dead-key-safe `ToUnicodeEx` rendering, the
