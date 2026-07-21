@@ -3,9 +3,7 @@
 ## Purpose
 
 The system SHALL, on Windows, reproduce Switcher3way's N-way wrong-layout detection and correction behavior across English, Ukrainian, and Russian — observing keystrokes, rendering them through every installed layout, validating against bundled offline dictionaries, and switching/rewriting only on a single unambiguous winner — while adapting to Windows-specific input, layout, and distribution mechanisms. This capability is a target contract for a future Windows build; it is not yet implemented in code.
-
 ## Requirements
-
 ### Requirement: Observe keystrokes and buffer words globally
 The Windows build SHALL observe keystrokes system-wide without requiring focus in the app, and SHALL buffer the current word and detect word boundaries so that finished words can be evaluated, mirroring the macOS keystroke buffer.
 
@@ -62,11 +60,17 @@ The Windows build SHALL reproduce the application's N-way detection behavior: va
 - **THEN** the system SHALL validate only the letter core and rewrite the whole token — punctuation included — in the target layout
 
 ### Requirement: Switch the foreground application's layout
-The Windows build SHALL change the active keyboard layout of the foreground application, accounting for the per-thread nature of the Windows input language.
+The Windows build SHALL change the active keyboard layout of the foreground application,
+accounting for the per-thread nature of the Windows input language, and SHALL confirm the
+change took effect rather than assuming a single switch mechanism always succeeds.
 
 #### Scenario: Change the layout of the active window
 - **WHEN** the system decides to convert a word to another language
 - **THEN** the system SHALL activate the corresponding layout for the foreground application so continued typing uses that layout
+
+#### Scenario: Confirm the switch and fall back when it does not take effect
+- **WHEN** the system requests a foreground-layout change through its primary mechanism
+- **THEN** the system SHALL determine whether the active layout actually changed, and SHALL attempt an alternative switch mechanism when the primary request did not take effect
 
 ### Requirement: Rewrite typed text in place
 The Windows build SHALL replace the mistyped word with its converted form by erasing the original characters and inserting the corrected Unicode text, with a clipboard-based fallback for selected text.
@@ -118,3 +122,4 @@ The Windows build SHALL be distributed as a code-signed installer and SHALL oper
 #### Scenario: No runtime network dependency
 - **WHEN** the application performs detection, validation, or conversion
 - **THEN** it SHALL do so without any network access
+
