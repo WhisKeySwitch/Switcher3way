@@ -43,17 +43,24 @@ quality against the macOS `NSSpellChecker` baseline on a representative word set
 SignPath's HSM; signing happens server-side via the `signpath/github-action-submit-signing-request`
 GitHub Action. Sign **both** the apphost `.exe` and the installer; always RFC-3161 **timestamp**.
 **Why:** free for MIT/public-repo OSS, globally available (no region gate), no hardware token to
-manage. The spike proved this matters — an unsigned exe is blocked by Defender for Endpoint before
-it runs, so signing is a launch prerequisite, not polish.
+manage. Signing is for **distribution trust**, not a dev-launch requirement: the spike's dev-machine
+block turned out to be a managed **ASR "block low-prevalence executables"** rule, not a missing
+signature (see `windows-spike/FINDINGS.md`). But end-user machines enforce SmartScreen and often that
+same ASR rule, and both judge **Microsoft-cloud prevalence** — so a reputation-backed signature (or
+**EV** for instant reputation) is what lets a release run cleanly. A **self-signed** cert does not
+(it has no cloud prevalence — verified).
+**Local dev builds** may optionally be signed with the stable self-signed dev identity
+(`signing/README-windows.md`), but it is not required — unsigned launches fine on an unmanaged machine.
 **Fallback:** Azure Trusted/Artifact Signing (~$10/mo) if SignPath OSS is declined — but individual
 enrollment is **US/Canada only**, so it is a fallback, not the default.
-**Trade-off:** signing is server-side/CI-bound (can't sign a local ad-hoc build without a request);
-acceptable for release artifacts.
+**Trade-off:** SignPath is reputation-gated (needs adoption first); server-side/CI-bound. Acceptable
+for release artifacts, and it sequences after launch traction — not before.
 
 ### M5 — Production build emits a signable exe (`UseAppHost=true`)
-Unlike the spike (`UseAppHost=false`, run via the signed `dotnet` host to dodge the block), the
-shipping app produces a real apphost `.exe` so users double-click it — which is exactly why it must
-be signed (M4). Consider self-contained/single-file publish for a dependency-free install.
+Unlike the spike (`UseAppHost=false`, run via the signed `dotnet` host to dodge the dev-machine ASR
+rule), the shipping app produces a real apphost `.exe` so users can double-click it — which then gets
+release-signed (M4) for SmartScreen/ASR trust on end-user machines. Consider self-contained/single-file
+publish for a dependency-free install.
 
 ### M6 — Shell + installer (decide at implementation start)
 WPF or WinForms shell with a `NotifyIcon` tray; MSIX (cleaner install/uninstall, stricter signing —

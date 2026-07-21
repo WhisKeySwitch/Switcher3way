@@ -4,7 +4,7 @@
 - [ ] 1.2 Scaffold the production Windows solution (`windows/`), a C#/.NET app with `UseAppHost=true` so a real apphost `.exe` is produced (unlike the spike's `UseAppHost=false`)
 - [ ] 1.3 Add a GitHub Actions workflow: `dotnet publish` → upload artifact → `signpath/github-action-submit-signing-request` → download signed artifact; store `SIGNPATH_API_TOKEN` as a CI secret
 - [ ] 1.4 Sign **both** the executable and the installer, RFC-3161 **timestamped**; `signtool verify /pa` in CI to gate the build
-- [ ] 1.5 Confirm the signed exe **launches on the Defender-for-Endpoint machine** (the spike's block is gone once signed) — this unblocks all further Windows development
+- [ ] 1.5 Confirm the release-signed artifact runs cleanly on a **clean/managed Windows machine** with no SmartScreen block. (Dev-machine launch is already unblocked — the original block was a managed ASR "block low-prevalence executables" rule, since disabled/unenrolled; dev builds run unsigned or via the `dotnet` host, optionally signed with the self-signed dev identity in `signing/README-windows.md`.)
 
 ## 2. Portable detection core (C#, no Win32)
 
