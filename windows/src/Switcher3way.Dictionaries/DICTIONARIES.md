@@ -1,43 +1,44 @@
 # Dictionaries
 
 `HunspellDictionaryValidator` loads `<lang>.dic` + `<lang>.aff` (Hunspell format) from a directory,
-one file pair per 2-letter language (`en`, `ru`, `uk`). It uses the managed
-[`WeCantSpell.Hunspell`](https://www.nuget.org/packages/WeCantSpell.Hunspell) — no native deps —
-so validation is fully offline and independent of any OS language packs.
+one pair per 2-letter language. It uses managed
+[`WeCantSpell.Hunspell`](https://www.nuget.org/packages/WeCantSpell.Hunspell) (no native deps), so
+validation is fully offline and independent of installed OS language packs. The default constructor
+reads the `dict/` folder deployed next to the assembly.
 
-The integration and wiring are **done and tested** (see `HunspellValidatorTests`, which run against
-tiny fixture dictionaries under `tests/Switcher3way.Core.Tests/fixtures/`). What is **not** yet in
-the repo is the *real, full* en/uk/ru dictionaries — that's a deliberate, open decision:
+## Bundled dictionaries (in `dict/`)
 
-## Bundling the real dictionaries — a licensing decision (open)
+All three are **free and permissively licensed** — safe to bundle in this MIT app. Each dictionary's
+own license text ships alongside it as `<lang>.license`.
 
-Detection depends entirely on dictionary quality, so the MVP must bundle real en/uk/ru Hunspell
-dictionaries. **Their licenses vary and often are not MIT** — verify per source before committing:
+| Lang | Source | License | Notes |
+|------|--------|---------|-------|
+| `en` | [wooorm/dictionaries](https://github.com/wooorm/dictionaries) (SCOWL) | **MIT AND BSD** | `en_US` |
+| `ru` | [wooorm/dictionaries](https://github.com/wooorm/dictionaries) (Lebedev/Klukvin) | **BSD-3-Clause** | attribution only |
+| `uk` | [LibreOffice/dictionaries `uk_UA`](https://github.com/LibreOffice/dictionaries/tree/master/uk_UA) | **MPL 1.1** | file-level copyleft; keep under MPL |
 
-| Lang | Common sources | Typical license (verify!) |
-|------|----------------|---------------------------|
-| en   | SCOWL / Hunspell `en_US`, LibreOffice | permissive-ish (SCOWL), varies |
-| ru   | LibreOffice `ru_RU`, Firefox | BSD / GPL depending on build |
-| uk   | `dict_uk` (brown-uk), LibreOffice `uk_UA` | GPL / LGPL / MPL tri-license (verify) |
+### Why not `dict_uk` for Ukrainian?
+The modern [`brown-uk/dict_uk`](https://github.com/brown-uk/dict_uk) dictionary *data* is
+**CC BY-NC-SA 4.0 (NonCommercial)** — not an open license, and incompatible with an MIT app (its
+build *software* is GPL-3.0, which is what some repackagers, e.g. wooorm's `uk`, label it). We use
+the older **LibreOffice `uk_UA` (MPL 1.1)** lineage instead, which is genuinely free.
 
-A convenient aggregator is [`wooorm/dictionaries`](https://github.com/wooorm/dictionaries) (per-language
-`index.dic`/`index.aff` with the license noted for each). LibreOffice dictionaries are another source.
+## Compliance
 
-**Implications for this MIT app:**
-- Dictionaries are **data files**, bundled (aggregated), not linked as code — but each file stays
-  under **its own** license. If you ship a GPL/LGPL dictionary, include that dictionary's license
-  text next to it and honor its terms; keep MIT app code and dictionary data clearly separated.
-- Prefer permissively-licensed dictionaries where quality is comparable; otherwise document each
-  dictionary's license in this folder.
+- Each `<lang>.license` file stays next to its `.dic`/`.aff`.
+- MPL (uk) is file-level copyleft: keep the dictionary files under MPL and unmodified-in-license;
+  the MIT app code is unaffected (aggregation of data, not linked code). BSD (ru) and MIT/BSD (en)
+  need only attribution.
+- `dict/.gitattributes` marks `*.dic`/`*.aff` as binary so line endings stay byte-exact.
 
-**When bundling:** drop the files in the app's dictionary directory named `en.dic/en.aff`,
-`ru.dic/ru.aff`, `uk.dic/uk.aff` (or add a locale→2-letter mapping if you keep `en_US` etc. names),
-point `HunspellDictionaryValidator` at that directory, and mark them `CopyToOutputDirectory` /
-include them in the installer payload.
+## Loading
+
+`new HunspellDictionaryValidator()` → `dict/` next to the assembly. The csproj marks `dict/**` as
+`Content` with `CopyToOutputDirectory`, so the files deploy with the app and flow to referencing
+projects (the tests load them for the real-dictionary smoke tests).
 
 ## Quality baseline (task 3.2, open)
 
-Before shipping, validate the chosen uk/ru dictionaries against the macOS `NSSpellChecker` baseline
-on a representative word set — including punctuation-attached words (`db,fxnt`→`вибачте`) and
-2-letter cases — and check that set in as a fixture so regressions are caught. Capture the baseline
-on a Mac (the shipping macOS app's validator) and compare.
+Before shipping, compare these uk/ru dictionaries against the macOS `NSSpellChecker` baseline on a
+representative word set — including punctuation-attached (`db,fxnt`→`вибачте`) and 2-letter cases —
+and check that set in as a fixture so regressions are caught. Capture the baseline on a Mac.
