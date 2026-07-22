@@ -36,6 +36,6 @@
 ## 7. Verification
 
 - [ ] 7.1 Build signed app; verify menu item, settings toggle, and localized strings render
-- [ ] 7.2 Test manual check against the live public repo (current = latest → "up to date"); test with a locally lowered bundle version → update prompt appears with 1.0.2 notes
+- [x] 7.2 Test manual check against the live public repo (current = latest → "up to date"); test with a locally lowered bundle version → update prompt appears with 1.0.2 notes
 - [x] 7.3 End-to-end install test: run the lowered-version build, click Install and Relaunch, confirm the released 1.0.2 replaces it, relaunches, and permissions survive
 - [ ] 7.4 Verify skip-version persistence, Later behavior, background-failure silence (network off), and `openspec validate --specs`
