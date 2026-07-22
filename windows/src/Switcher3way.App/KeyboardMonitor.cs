@@ -17,8 +17,9 @@ internal sealed class KeyboardMonitor
     private readonly List<TypedKey> _prev = new();
     private readonly object _lock = new();
 
-    private IntPtr _hook;
-    private Native.LowLevelKeyboardProc? _proc; // keep the delegate alive
+    private IntPtr _hook, _mouseHook;
+    private Native.LowLevelKeyboardProc? _proc, _mouseProc; // keep the delegates alive
+    private IntPtr _bufferHwnd; // the foreground window the current buffer belongs to
 
     /// <summary>A word finished at a boundary: the keys + the boundary char (' ', '\n', '\t').</summary>
     public event Action<IReadOnlyList<TypedKey>, char>? WordCompleted;
@@ -32,14 +33,26 @@ internal sealed class KeyboardMonitor
     /// <summary>Thread-safe snapshot of the current (in-progress) and previous (completed) words.</summary>
     public (IReadOnlyList<TypedKey> Current, IReadOnlyList<TypedKey> Prev) Snapshot()
     {
-        lock (_lock) return (new List<TypedKey>(_current), new List<TypedKey>(_prev));
+        lock (_lock)
+        {
+            // If focus moved since the buffer was filled (e.g. Alt+Tab, no click), it's stale.
+            if (_bufferHwnd != IntPtr.Zero && Native.GetForegroundWindow() != _bufferHwnd)
+            {
+                _current.Clear(); _prev.Clear(); _bufferHwnd = IntPtr.Zero;
+                return (Array.Empty<TypedKey>(), Array.Empty<TypedKey>());
+            }
+            return (new List<TypedKey>(_current), new List<TypedKey>(_prev));
+        }
     }
 
     /// <summary>Installs the hook and runs the message pump (blocks — call on a dedicated STA thread).</summary>
     public void Run()
     {
+        IntPtr hmod = Native.GetModuleHandle(null);
         _proc = HookCallback;
-        _hook = Native.SetWindowsHookEx(Native.WH_KEYBOARD_LL, _proc, Native.GetModuleHandle(null), 0);
+        _hook = Native.SetWindowsHookEx(Native.WH_KEYBOARD_LL, _proc, hmod, 0);
+        _mouseProc = MouseCallback;
+        _mouseHook = Native.SetWindowsHookEx(Native.WH_MOUSE_LL, _mouseProc, hmod, 0); // clears buffer on clicks
         if (_hook == IntPtr.Zero) { Console.WriteLine("Failed to install WH_KEYBOARD_LL hook."); return; }
         while (Native.GetMessage(out var msg, IntPtr.Zero, 0, 0) > 0)
         {
@@ -47,6 +60,27 @@ internal sealed class KeyboardMonitor
             Native.DispatchMessage(ref msg);
         }
         Native.UnhookWindowsHookEx(_hook);
+        if (_mouseHook != IntPtr.Zero) Native.UnhookWindowsHookEx(_mouseHook);
+    }
+
+    // A mouse click may move the caret or select text → the word buffer no longer matches the
+    // caret, so discard it (mirrors the macOS "reset on mouse" guard). This is what stops F9 from
+    // deleting a selection after you click.
+    private IntPtr MouseCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0)
+        {
+            uint msg = (uint)wParam;
+            if (msg is Native.WM_LBUTTONDOWN or Native.WM_RBUTTONDOWN or Native.WM_MBUTTONDOWN or Native.WM_XBUTTONDOWN)
+                ClearBuffer();
+        }
+        return Native.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+    }
+
+    private void ClearBuffer()
+    {
+        lock (_lock) { _current.Clear(); _prev.Clear(); _bufferHwnd = IntPtr.Zero; }
+        Typed?.Invoke(); // also end any in-progress manual cycle
     }
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -76,7 +110,7 @@ internal sealed class KeyboardMonitor
             case KeyKind.Character:
                 bool shift = (Native.GetAsyncKeyState((int)Native.VK_SHIFT) & 0x8000) != 0;
                 bool caps = (Native.GetAsyncKeyState((int)Native.VK_CAPITAL) & 0x0001) != 0;
-                lock (_lock) _current.Add(new TypedKey((int)vk, shift, caps));
+                lock (_lock) { _current.Add(new TypedKey((int)vk, shift, caps)); _bufferHwnd = Native.GetForegroundWindow(); }
                 break;
             case KeyKind.Boundary:
                 CompleteWord(vk);
@@ -99,6 +133,9 @@ internal sealed class KeyboardMonitor
         lock (_lock)
         {
             if (_current.Count == 0) return;
+            // Focus moved since the word was typed → caret no longer matches the buffer; drop it.
+            if (_bufferHwnd != IntPtr.Zero && Native.GetForegroundWindow() != _bufferHwnd)
+            { _current.Clear(); _prev.Clear(); _bufferHwnd = IntPtr.Zero; return; }
             finished = new List<TypedKey>(_current);
             _prev.Clear(); _prev.AddRange(_current); _current.Clear();
         }

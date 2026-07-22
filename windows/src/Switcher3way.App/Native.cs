@@ -11,6 +11,10 @@ internal static class Native
     public const int WM_KEYDOWN = 0x0100, WM_KEYUP = 0x0101, WM_SYSKEYDOWN = 0x0104, WM_SYSKEYUP = 0x0105;
     public const uint LLKHF_INJECTED = 0x00000010; // set on synthesized (SendInput) events
 
+    // ---- Low-level mouse hook (to reset the word buffer on clicks) --------------------------
+    public const int WH_MOUSE_LL = 14;
+    public const uint WM_LBUTTONDOWN = 0x0201, WM_RBUTTONDOWN = 0x0204, WM_MBUTTONDOWN = 0x0207, WM_XBUTTONDOWN = 0x020B;
+
     public const uint VK_SHIFT = 0x10, VK_CAPITAL = 0x14, VK_BACK = 0x08;
 
     [StructLayout(LayoutKind.Sequential)]
