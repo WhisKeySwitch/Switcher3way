@@ -28,7 +28,7 @@
 
 - [x] 5.1 Tray UI (`TrayApp`, WinForms `NotifyIcon`): status header, **Enabled** + **Auto-fix** toggles, **Pause** submenu (30 min / 1 h / until restart / resume), **Quit**; icon + tooltip reflect on/off/paused; a 30 s timer resumes a timed pause visually. `Engine` now gates auto on `EffectivelyEnabled && AutoFix` and manual (F9) on `EffectivelyEnabled`. (App runs as a tray app; End is a normal key again — no console-quit.)
 - [~] 5.2 Settings **persistence** done — `SettingsManager` reads/writes `%AppData%\Switcher3way\settings.json` (Enabled, AutoFix, PausedUntil); feature toggles live in the tray menu. A dedicated **settings window** (trigger-key config, etc.) is still to build.
-- [ ] 5.3 Exceptions: denied-apps list, never-convert / always-convert word lists, secure/password-field detection via UI Automation
+- [~] 5.3 Exceptions: **denied-apps** list (with defaults — password managers, terminals, RDP), **never-convert** / **always-convert** word lists — all persisted in `SettingsManager` and enforced in `Engine` (denied-app gate on auto AND manual; never-convert on auto; always-convert via Core `IAlwaysConvertList`). Secure/**password-field detection via UI Automation** still to add; exception editor UI pending the settings window.
 - [ ] 5.4 Per-app layout memory
 - [ ] 5.5 Interface localization parity (reuse the existing string set where possible)
 - [ ] 5.6 Diagnostics/debug log equivalent to the macOS `rslog` decision trace

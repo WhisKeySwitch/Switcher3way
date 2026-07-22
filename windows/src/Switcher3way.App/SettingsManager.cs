@@ -13,6 +13,33 @@ public sealed class SettingsManager
     public bool AutoFix { get; set; } = true;
     public DateTime? PausedUntil { get; set; }
 
+    /// <summary>Apps (exe names) where auto-conversion is suppressed — terminals, password managers, RDP.</summary>
+    public List<string> DeniedApps { get; set; } = new(DefaultDeniedApps);
+    /// <summary>Words never to auto-convert (matched on either side of the pair, case-insensitive).</summary>
+    public List<string> NeverConvertWords { get; set; } = new();
+    /// <summary>Words to always convert (matched against the target/converted form).</summary>
+    public List<string> AlwaysConvertWords { get; set; } = new();
+
+    /// <summary>Sensible defaults (exe names, lower-case): password managers, terminals, RDP.</summary>
+    public static readonly string[] DefaultDeniedApps =
+    {
+        "1password.exe", "bitwarden.exe", "keepass.exe", "keepassxc.exe", "lastpass.exe", "dashlane.exe",
+        "cmd.exe", "powershell.exe", "pwsh.exe", "windowsterminal.exe", "conhost.exe", "putty.exe", "mstsc.exe",
+    };
+
+    public bool IsDeniedApp(string? exe) =>
+        exe is not null && DeniedApps.Any(a => string.Equals(a, exe, StringComparison.OrdinalIgnoreCase));
+
+    public bool IsNeverConvert(string typed, string converted)
+    {
+        if (NeverConvertWords.Count == 0) return false;
+        var set = new HashSet<string>(NeverConvertWords.Select(w => w.ToLowerInvariant()));
+        return set.Contains(typed.ToLowerInvariant()) || set.Contains(converted.ToLowerInvariant());
+    }
+
+    public bool IsAlwaysConvertWord(string converted) =>
+        AlwaysConvertWords.Any(w => string.Equals(w, converted, StringComparison.OrdinalIgnoreCase));
+
     /// <summary>Session-only "pause until restart" (not persisted).</summary>
     [JsonIgnore] public bool PausedUntilRestart { get; set; }
 
