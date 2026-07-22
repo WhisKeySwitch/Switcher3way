@@ -56,12 +56,17 @@ Rationale + detail: `NOTES-3WAY.md`. Summary:
    candidate in its own language, switches to the single unambiguous winner. Precision-first:
    words valid in **both** uk & ru (e.g. `там`) are left alone.
 2. **Rename** to Switcher3way (Info.plist identity, `build_app.sh`, all UI strings, menu header).
-3. **Updater removed** — auto-update deleted outright (July 2026 cleanup; originally
-   disabled so the stock 2-way upstream couldn't clobber the fork). `AppRelauncher` stays
-   (used by onboarding's post-grant restart).
+3. **Updater rebuilt for the fork** — the upstream updater was deleted at fork time (so
+   stock 2-way upstream releases couldn't clobber the fork); July 2026 added a new one
+   (`UpdateChecker.swift` + `UpdateInstaller.swift`) whose ONLY source is the fork's own
+   public releases repo (`WhisKeySwitch/switcher3way-releases`): daily background check
+   (General-tab toggle, default on) + "Check for Updates…" menu item; notify → one-click
+   verified install (manifest sha256 + same-certificate codesign gate — that's what keeps
+   TCC permissions across updates) → relaunch via `AppRelauncher`.
 4. **Custom icon** — `icon-design/` (S / Э / Є cycling; `generate_icon_3way.swift`).
 5. **UI trims** — About tab buttons removed; Advanced tab "Send log" removed; General tab
-   "check for updates" checkbox removed; note added explaining auto = all layouts.
+   "check for updates" checkbox removed (returned in July 2026 with the fork's own updater,
+   see 3); note added explaining auto = all layouts.
 6. **Stable signing** — `build_app.sh` signs with the self-signed identity instead of ad-hoc.
 7. **UI modernization** (`openspec/changes/modernize-ui`, from the W1–W4 design-review
    wireframes): Settings became toolbar-tab preferences (General / Auto-fix / Advanced / About)
@@ -122,8 +127,14 @@ Rationale + detail: `NOTES-3WAY.md`. Summary:
   `docs/user-guide*.md` via `scripts/md2html.py` — the manuals are the single source of truth,
   a missing guide fails the build.
 - **`Localization.swift`** — `L10n` strings, 16 languages; `s()` falls back to English.
+- **`UpdateChecker.swift`** — fork updater: GitHub Releases API of the public downloads repo,
+  numeric semver compare, 15 s-after-launch + daily schedule (gated on the setting), the
+  notify alert (Install / Later / Skip This Version), busy state for the menu item.
+- **`UpdateInstaller.swift`** — verified install: DMG download → sha256 vs the `version.json`
+  release asset (release-notes fallback) → mount → codesign identity must equal the running
+  app's → move-aside + `ditto` swap with rollback → relaunch.
 - Others: `CaretIndicator` (flag at cursor), `PerAppLayoutManager`, `KeyMapping`/`KeyCodes`
-  (static fallback tables), `AppRelauncher` (used by onboarding's restart).
+  (static fallback tables), `AppRelauncher` (used by onboarding's restart and the updater).
 
 ## Debugging
 
@@ -149,7 +160,8 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Current state
 
-- Feature-complete: 3-way auto + manual switching, renamed, custom icon, updater off,
+- Feature-complete: 3-way auto + manual switching, renamed, custom icon, in-app updates
+  from the fork's own releases repo,
   modernized UI (toolbar-tab Settings, onboarding checklist, status-first menu with Pause),
   stable signing. Builds clean; installed at `/Applications/Switcher3way.app` (v1.0.2 — fork versioning restarted from 1.0).
 - **Pending user action:** visual pass of the new UI against the W1–W4 wireframes
@@ -166,8 +178,9 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 - `docs/user-guide.md` (+ `.uk.md`, `.ru.md`) — end-user manual (EN/UK/RU); keep in sync with
   UI/behavior changes — it documents trigger semantics, auto-fix gates, exceptions, pause.
   Also compiled into the app's Help window on every build (`scripts/md2html.py`).
-- `NOTES-3WAY.md` — fork rationale, rebuild/DMG commands, detection policy, icon, updates-off.
+- `NOTES-3WAY.md` — fork rationale, rebuild/DMG commands, detection policy, icon, updates.
 - `signing/README.md` — the stable code-signing identity (setup, re-import, backup).
 - `openspec/` — OpenSpec capability specs back-filled from the code (`CAPABILITIES.md` is the
-  overview; 10 specs under `specs/`; validate with `openspec validate --specs`). Update checking
-  is documented there as intentionally disabled — don't spec the dormant updater pipeline.
+  overview; validate with `openspec validate --specs`). Software updates are a first-class
+  capability (`specs/software-updates/`) since July 2026 — the updater targets only the fork's
+  own releases repo.

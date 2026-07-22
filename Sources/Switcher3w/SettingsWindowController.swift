@@ -148,6 +148,9 @@ final class SettingsWindowController {
         systemBox.addRow(FormUI.row(title: L10n.settingsPerAppLayout,
                                     control: FormUI.makeSwitch(isOn: settings.perAppLayout,
                                                                target: self, action: #selector(perAppLayoutChanged))))
+        systemBox.addRow(FormUI.row(title: L10n.settingsCheckUpdates,
+                                    control: FormUI.makeSwitch(isOn: settings.checkForUpdates,
+                                                               target: self, action: #selector(checkUpdatesChanged))))
         let langPopup = NSPopUpButton()
         populateLanguagePopup(langPopup)
         langPopup.target = self
@@ -334,6 +337,11 @@ final class SettingsWindowController {
         SettingsManager.shared.autoSwitchEnabled = enabled
         statusTitleLabel?.stringValue = enabled ? L10n.settingsStatusOn : L10n.settingsStatusOff
         onAutoSwitchChanged?(enabled)
+    }
+
+    @objc private func checkUpdatesChanged(_ sender: NSSwitch) {
+        SettingsManager.shared.checkForUpdates = sender.state == .on
+        UpdateChecker.shared.startSchedule()   // apply immediately: starts or stops the daily timer
     }
 
     @objc private func launchAtLoginChanged(_ sender: NSSwitch) {

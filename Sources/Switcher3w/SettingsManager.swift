@@ -32,6 +32,9 @@ final class SettingsManager: @unchecked Sendable {
         static let deniedWords = "com.switcher3w.deniedWords"
         static let alwaysConvertWords = "com.switcher3w.alwaysConvertWords"
         static let pausedUntil = "com.switcher3w.pausedUntil"
+        static let checkForUpdates = "com.switcher3w.checkForUpdates"
+        static let skippedVersion = "com.switcher3w.skippedVersion"
+        static let lastUpdateCheck = "com.switcher3w.lastUpdateCheck"
     }
 
     private init() {}
@@ -221,6 +224,22 @@ final class SettingsManager: @unchecked Sendable {
     var autoConvertOffered: Bool {
         get { defaults.bool(forKey: Keys.autoConvertOffered) }
         set { defaults.set(newValue, forKey: Keys.autoConvertOffered) }
+    }
+    /// Automatic daily update checks (default ON). The updater's only source is the
+    /// fork's own public releases repo — see UpdateChecker.
+    var checkForUpdates: Bool {
+        get { defaults.object(forKey: Keys.checkForUpdates) == nil ? true : defaults.bool(forKey: Keys.checkForUpdates) }
+        set { defaults.set(newValue, forKey: Keys.checkForUpdates) }
+    }
+    /// Version the user chose "Skip This Version" for (background checks stay silent about it).
+    var skippedVersion: String? {
+        get { defaults.string(forKey: Keys.skippedVersion) }
+        set { defaults.set(newValue, forKey: Keys.skippedVersion) }
+    }
+    /// Timestamp of the last successful update check (informational).
+    var lastUpdateCheck: Date? {
+        get { defaults.object(forKey: Keys.lastUpdateCheck) as? Date }
+        set { defaults.set(newValue, forKey: Keys.lastUpdateCheck) }
     }
 
     /// issue #7: layout sound on the first letter after a layout change. OFF by default.

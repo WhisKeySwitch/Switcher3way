@@ -27,6 +27,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         syncLoginItem()
         applyEnabledState()   // arms the timer if the persistent pause hasn't expired yet
         runPermissionWizard()
+
+        // Software updates: menu state follows the checker; first background check ~15 s
+        // after launch, then daily (gated on the setting inside startSchedule).
+        UpdateChecker.shared.onStateChange = { [weak self] in self?.rebuildMenu() }
+        UpdateChecker.shared.startSchedule()
     }
 
     private func setupSettingsCallbacks() {
@@ -531,7 +536,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         helpItem.target = self
         menu.addItem(helpItem)
 
-        // "Check for Updates", "Support Development", "Star on GitHub" removed in the Switcher3way fork.
+        // Updates: the fork's own updater (source = WhisKeySwitch/switcher3way-releases).
+        // Disabled with a busy title while a check or install is in progress.
+        let checker = UpdateChecker.shared
+        let updatesTitle = checker.isInstalling ? L10n.menuInstallingUpdate
+                         : checker.isBusy ? L10n.menuCheckingUpdates
+                         : L10n.menuCheckUpdates
+        let updatesItem = NSMenuItem(title: updatesTitle,
+                                     action: checker.isBusy ? nil : #selector(checkForUpdatesTapped),
+                                     keyEquivalent: "")
+        updatesItem.target = self
+        menu.addItem(updatesItem)
+
+        // "Support Development", "Star on GitHub" removed in the Switcher3way fork.
         menu.addItem(NSMenuItem.separator())
 
         let quitItem = NSMenuItem(title: L10n.menuQuit, action: #selector(quit), keyEquivalent: "q")
@@ -724,6 +741,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openHelp() {
         helpController.show()
+    }
+
+    @objc private func checkForUpdatesTapped() {
+        UpdateChecker.shared.checkManually()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
