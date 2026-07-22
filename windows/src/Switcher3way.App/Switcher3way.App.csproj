@@ -15,6 +15,7 @@
     <UseWPF>true</UseWPF> <!-- for System.Windows.Automation (UIA) password-field detection -->
     <RootNamespace>Switcher3way.App</RootNamespace>
     <AssemblyName>Switcher3way</AssemblyName>
+    <ApplicationIcon>Switcher3way.ico</ApplicationIcon>
     <!-- No apphost for dev runs (use the managed dotnet host); the release build/installer sets
          this true and signs the exe (windows-mvp decision M5). -->
     <UseAppHost>false</UseAppHost>

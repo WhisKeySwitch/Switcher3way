@@ -26,6 +26,7 @@ internal sealed class SettingsForm : Form
     {
         _s = s;
         Text = "Switcher3way — Settings";
+        try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath!); } catch { /* dev host */ }
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
