@@ -32,7 +32,7 @@
 - [x] 5.4 Per-app layout memory: a `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` foreground watcher remembers each app's last-used layout (by exe) and restores it on focus return; gated on `EffectivelyEnabled` + a `PerAppMemory` setting with a tray toggle. Foreground change also clears the word buffer (app-switch safety).
 - [ ] 5.5 Interface localization parity (reuse the existing string set where possible)
 - [x] 5.6 Diagnostics: opt-in rotating file log (`Diagnostics`, `%AppData%\Switcher3way\Logs\switcher3way.log`, 5 MB cap + one backup), off by default, with tray **Debug log** toggle + **Open log folder**. App is now **`WinExe`** (no console window); the self-test attaches to the parent console (`AttachConsole`). Engine conversion trace routed to the log (mirrors macOS `rslog`).
-- [ ] 5.7 Elevated-window handling (R2): surface "can't act in this window" rather than silently failing; optionally offer an elevated mode
+- [x] 5.7 Elevated-window handling (R2): when the rewrite's `SendInput` is refused/short (`Protected`/`Partial` — a higher-integrity target), the Engine raises a throttled (30 s) notification and the tray shows a balloon ("can't change text in this window — it may be running as administrator") instead of failing silently. (Optional elevated *mode* deferred.)
 
 ## 6. Packaging, distribution, docs
 

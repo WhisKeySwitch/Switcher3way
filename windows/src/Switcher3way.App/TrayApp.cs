@@ -16,11 +16,14 @@ internal sealed class TrayApp : IDisposable
 
     private readonly ToolStripMenuItem _enabledItem, _autoFixItem, _perAppItem, _debugItem;
     private readonly System.Windows.Forms.Timer _refresh;
+    private readonly System.Threading.SynchronizationContext? _ui;
 
     public TrayApp()
     {
+        _ui = System.Threading.SynchronizationContext.Current; // WinForms UI context (ctor runs on the UI thread)
         _settings = SettingsManager.Load();
         _engine = new Engine(_settings);
+        _engine.Notify += ShowBalloon;
 
         _activeIcon = MakeIcon("S", Color.FromArgb(59, 91, 219));   // blue = active
         _pausedIcon = MakeIcon("S", Color.FromArgb(120, 124, 133)); // grey = off/paused
@@ -75,6 +78,13 @@ internal sealed class TrayApp : IDisposable
         _icon.Icon = on ? _activeIcon : _pausedIcon;
         _icon.Text = on ? "Switcher3way — on"
                         : _settings.IsPaused ? "Switcher3way — paused" : "Switcher3way — off";
+    }
+
+    private void ShowBalloon(string message)
+    {
+        // Engine fires this from a worker thread → marshal to the UI thread for the NotifyIcon.
+        void Show() => _icon.ShowBalloonTip(4000, "Switcher3way", message, ToolTipIcon.Info);
+        if (_ui is not null) _ui.Post(_ => Show(), null); else Show();
     }
 
     private static void OpenLogFolder()
