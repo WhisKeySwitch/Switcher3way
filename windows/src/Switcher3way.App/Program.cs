@@ -19,6 +19,10 @@ internal static class Program
             return;
         }
 
+        // Single instance — two copies would install two hooks and double-convert.
+        using var mutex = new System.Threading.Mutex(initiallyOwned: true, "Switcher3way.SingleInstance", out bool createdNew);
+        if (!createdNew) return;
+
         ApplicationConfiguration.Initialize();
         using var tray = new TrayApp();
         Application.Run();
