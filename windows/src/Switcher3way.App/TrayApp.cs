@@ -49,6 +49,7 @@ internal sealed class TrayApp : IDisposable
         menu.Items.Add(_perAppItem);
         menu.Items.Add(pause);
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(new ToolStripMenuItem("Settings…", null, (_, _) => OpenSettings()));
         menu.Items.Add(_debugItem);
         menu.Items.Add(new ToolStripMenuItem("Open log folder", null, (_, _) => OpenLogFolder()));
         menu.Items.Add(new ToolStripSeparator());
@@ -113,6 +114,12 @@ internal sealed class TrayApp : IDisposable
         // Engine fires this from a worker thread → marshal to the UI thread for the NotifyIcon.
         void Show() => _icon.ShowBalloonTip(4000, "Switcher3way", message, ToolTipIcon.Info);
         if (_ui is not null) _ui.Post(_ => Show(), null); else Show();
+    }
+
+    private void OpenSettings()
+    {
+        using var form = new SettingsForm(_settings);
+        if (form.ShowDialog() == DialogResult.OK) UpdateUi();
     }
 
     private static void OpenLogFolder()
