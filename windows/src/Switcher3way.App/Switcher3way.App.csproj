@@ -12,6 +12,7 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF> <!-- for System.Windows.Automation (UIA) password-field detection -->
     <RootNamespace>Switcher3way.App</RootNamespace>
     <AssemblyName>Switcher3way</AssemblyName>
     <!-- No apphost for dev runs (use the managed dotnet host); the release build/installer sets

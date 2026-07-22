@@ -29,14 +29,12 @@ internal sealed class Engine
     private readonly Win32LayoutCatalog _catalog = new();
     private readonly IDictionaryValidator _dict = new HunspellDictionaryValidator();
     private readonly NWayResolver _resolver;
-    private readonly KeyboardMonitor _monitor = new();
+    private readonly KeyboardMonitor _monitor;
     private readonly BlockingCollection<Action> _work = new();
 
     private volatile bool _converting;
     private readonly object _cycleLock = new();
     private Cycle? _cycle;
-
-    private const int VK_F9 = 0x78;
 
     /// <summary>User-facing notification (e.g. "can't act in this window"), shown by the tray.</summary>
     public event Action<string>? Notify;
@@ -69,6 +67,7 @@ internal sealed class Engine
     {
         _settings = settings;
         Diagnostics.Configure(settings);
+        _monitor = new KeyboardMonitor(settings);
         _resolver = new NWayResolver(_catalog, _dict, new SettingsAlwaysConvert(settings));
         _monitor.WordCompleted += (word, boundary) =>
         {
@@ -127,6 +126,7 @@ internal sealed class Engine
     private void AutoConvert(IReadOnlyList<TypedKey> word, char boundary)
     {
         if (_settings.IsDeniedApp(LayoutSwitcher.Foreground().Exe)) return; // terminals / password managers / RDP
+        if (SecureField.IsFocusedPassword()) return;                       // never touch a password field
 
         bool caps = word.Any(k => k.Caps);
         var d = _resolver.Resolve(word, caps);
@@ -164,6 +164,7 @@ internal sealed class Engine
     private void ManualStep()
     {
         if (_settings.IsDeniedApp(LayoutSwitcher.Foreground().Exe)) return; // safety: never touch text here
+        if (SecureField.IsFocusedPassword()) return;                       // never touch a password field
         Cycle cyc;
         lock (_cycleLock)
         {
@@ -189,7 +190,7 @@ internal sealed class Engine
         string text = (restore ? cyc.Plan.Original : cyc.Plan.Candidates[cyc.Step].Converted) + cyc.Suffix;
 
         var path = LayoutSwitcher.SwitchForeground(targetId);
-        var res = TextRewriter.Rewrite(cyc.OnScreenLen, text, waitForKeyUpVk: VK_F9);
+        var res = TextRewriter.Rewrite(cyc.OnScreenLen, text, waitForKeyUpVk: _settings.TriggerKey);
         Diagnostics.Log($"  cycle[{cyc.Step}] -> [{label}] \"{text.TrimEnd()}\" via {path} : {res}");
         if (res != TextRewriter.Result.Ok) NotifyProtected();
 

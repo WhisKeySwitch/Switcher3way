@@ -12,7 +12,15 @@ internal sealed class SettingsForm : Form
 {
     private readonly SettingsManager _s;
     private readonly CheckBox _enabled, _autoFix, _perApp, _debug;
+    private readonly ComboBox _trigger;
     private readonly TextBox _denied, _never, _always;
+
+    private sealed record KeyItem(string Name, int Vk) { public override string ToString() => Name; }
+    private static readonly KeyItem[] TriggerKeys =
+    {
+        new("F8", 0x77), new("F9", 0x78), new("F10", 0x79), new("F11", 0x7A), new("F12", 0x7B),
+        new("Pause/Break", 0x13), new("Scroll Lock", 0x91), new("Right Ctrl", 0xA3),
+    };
 
     public SettingsForm(SettingsManager s)
     {
@@ -22,7 +30,7 @@ internal sealed class SettingsForm : Form
         MaximizeBox = MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9f);
-        ClientSize = new Size(440, 524);
+        ClientSize = new Size(440, 562);
 
         const int x = 14, w = 412;
         int y = 12;
@@ -31,7 +39,12 @@ internal sealed class SettingsForm : Form
         _perApp = Check("Remember layout per app", ref y, x);
         _debug = Check("Debug log", ref y, x);
 
-        y += 6;
+        y += 4;
+        Controls.Add(new Label { Text = "Manual trigger key:", Location = new Point(x, y + 5), AutoSize = true });
+        _trigger = new ComboBox { Location = new Point(x + 130, y), Width = 150, DropDownStyle = ComboBoxStyle.DropDownList };
+        _trigger.Items.AddRange(TriggerKeys);
+        Controls.Add(_trigger);
+        y += 34;
         _denied = ListField("Denied apps (one exe name per line, e.g. keepass.exe)", ref y, x, w);
         _never = ListField("Never convert (one word per line)", ref y, x, w);
         _always = ListField("Always convert (one word per line)", ref y, x, w);
@@ -71,6 +84,7 @@ internal sealed class SettingsForm : Form
         _autoFix.Checked = _s.AutoFix;
         _perApp.Checked = _s.PerAppMemory;
         _debug.Checked = _s.DebugLog;
+        _trigger.SelectedItem = TriggerKeys.FirstOrDefault(k => k.Vk == _s.TriggerKey) ?? TriggerKeys[1];
         _denied.Text = string.Join(Environment.NewLine, _s.DeniedApps);
         _never.Text = string.Join(Environment.NewLine, _s.NeverConvertWords);
         _always.Text = string.Join(Environment.NewLine, _s.AlwaysConvertWords);
@@ -82,6 +96,7 @@ internal sealed class SettingsForm : Form
         _s.AutoFix = _autoFix.Checked;
         _s.PerAppMemory = _perApp.Checked;
         _s.DebugLog = _debug.Checked;
+        if (_trigger.SelectedItem is KeyItem k) _s.TriggerKey = k.Vk;
         _s.DeniedApps = Lines(_denied);
         _s.NeverConvertWords = Lines(_never);
         _s.AlwaysConvertWords = Lines(_always);
