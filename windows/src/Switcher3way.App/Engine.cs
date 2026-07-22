@@ -70,6 +70,14 @@ internal sealed class Engine
         if (d is null) return;
 
         var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
+        // Same text in the target layout (e.g. Cyrillic that looks identical in uk vs ru): the
+        // layout was wrong but the characters are already correct — switch, don't rewrite (avoids a
+        // needless erase/retype).
+        if (d.Converted == d.Original)
+        {
+            Console.WriteLine($"  auto: layout -> [{d.TargetLayoutId}] (text \"{d.Original}\" unchanged) via {path}");
+            return;
+        }
         // The boundary char is already on screen; erase word+boundary and re-type converted+boundary.
         var res = TextRewriter.Rewrite(word.Count + 1, d.Converted + boundary);
         Console.WriteLine($"  auto: \"{d.Original}\" -> \"{d.Converted}\" [{d.TargetLayoutId}] via {path} : {res}");
