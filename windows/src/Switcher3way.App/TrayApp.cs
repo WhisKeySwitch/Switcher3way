@@ -14,7 +14,7 @@ internal sealed class TrayApp : IDisposable
     private readonly NotifyIcon _icon;
     private readonly Icon _activeIcon, _pausedIcon;
 
-    private readonly ToolStripMenuItem _enabledItem, _autoFixItem;
+    private readonly ToolStripMenuItem _enabledItem, _autoFixItem, _perAppItem;
     private readonly System.Windows.Forms.Timer _refresh;
 
     public TrayApp()
@@ -27,6 +27,7 @@ internal sealed class TrayApp : IDisposable
 
         _enabledItem = new ToolStripMenuItem("Enabled", null, (_, _) => Toggle(() => _settings.Enabled = !_settings.Enabled));
         _autoFixItem = new ToolStripMenuItem("Auto-fix as you type", null, (_, _) => Toggle(() => _settings.AutoFix = !_settings.AutoFix));
+        _perAppItem = new ToolStripMenuItem("Remember layout per app", null, (_, _) => Toggle(() => _settings.PerAppMemory = !_settings.PerAppMemory));
 
         var pause = new ToolStripMenuItem("Pause");
         pause.DropDownItems.Add(new ToolStripMenuItem("30 minutes", null, (_, _) => DoPause(TimeSpan.FromMinutes(30))));
@@ -41,6 +42,7 @@ internal sealed class TrayApp : IDisposable
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_enabledItem);
         menu.Items.Add(_autoFixItem);
+        menu.Items.Add(_perAppItem);
         menu.Items.Add(pause);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Quit", null, (_, _) => Quit()));
@@ -63,6 +65,7 @@ internal sealed class TrayApp : IDisposable
     {
         _enabledItem.Checked = _settings.Enabled;
         _autoFixItem.Checked = _settings.AutoFix;
+        _perAppItem.Checked = _settings.PerAppMemory;
         bool on = _settings.EffectivelyEnabled;
         _icon.Icon = on ? _activeIcon : _pausedIcon;
         _icon.Text = on ? "Switcher3way — on"

@@ -11,6 +11,7 @@ public sealed class SettingsManager
 {
     public bool Enabled { get; set; } = true;
     public bool AutoFix { get; set; } = true;
+    public bool PerAppMemory { get; set; } = true;
     public DateTime? PausedUntil { get; set; }
 
     /// <summary>Apps (exe names) where auto-conversion is suppressed — terminals, password managers, RDP.</summary>

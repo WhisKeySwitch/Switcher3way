@@ -16,8 +16,9 @@ internal sealed class KeyboardMonitor
     private readonly List<TypedKey> _prev = new();
     private readonly object _lock = new();
 
-    private IntPtr _hook, _mouseHook;
+    private IntPtr _hook, _mouseHook, _winEventHook;
     private Native.LowLevelKeyboardProc? _proc, _mouseProc; // keep the delegates alive
+    private Native.WinEventProc? _winEventProc;
     private IntPtr _bufferHwnd; // the foreground window the current buffer belongs to
 
     /// <summary>A word finished at a boundary: the keys + the boundary char (' ', '\n', '\t').</summary>
@@ -26,6 +27,8 @@ internal sealed class KeyboardMonitor
     public event Action? TriggerPressed;
     /// <summary>Any real keystroke (not the trigger) — used to reset an in-progress manual cycle.</summary>
     public event Action? Typed;
+    /// <summary>The foreground window changed (for per-app layout memory). Carries the new hwnd.</summary>
+    public event Action<IntPtr>? ForegroundChanged;
 
     /// <summary>Thread-safe snapshot of the current (in-progress) and previous (completed) words.</summary>
     public (IReadOnlyList<TypedKey> Current, IReadOnlyList<TypedKey> Prev) Snapshot()
@@ -50,6 +53,9 @@ internal sealed class KeyboardMonitor
         _hook = Native.SetWindowsHookEx(Native.WH_KEYBOARD_LL, _proc, hmod, 0);
         _mouseProc = MouseCallback;
         _mouseHook = Native.SetWindowsHookEx(Native.WH_MOUSE_LL, _mouseProc, hmod, 0); // clears buffer on clicks
+        _winEventProc = WinEventCallback;
+        _winEventHook = Native.SetWinEventHook(Native.EVENT_SYSTEM_FOREGROUND, Native.EVENT_SYSTEM_FOREGROUND,
+            IntPtr.Zero, _winEventProc, 0, 0, Native.WINEVENT_OUTOFCONTEXT); // foreground change → per-app memory
         if (_hook == IntPtr.Zero) { Console.WriteLine("Failed to install WH_KEYBOARD_LL hook."); return; }
         while (Native.GetMessage(out var msg, IntPtr.Zero, 0, 0) > 0)
         {
@@ -58,6 +64,14 @@ internal sealed class KeyboardMonitor
         }
         Native.UnhookWindowsHookEx(_hook);
         if (_mouseHook != IntPtr.Zero) Native.UnhookWindowsHookEx(_mouseHook);
+        if (_winEventHook != IntPtr.Zero) Native.UnhookWinEvent(_winEventHook);
+    }
+
+    private void WinEventCallback(IntPtr hHook, uint ev, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
+    {
+        if (hwnd == IntPtr.Zero) return;
+        ClearBuffer();                  // app switch → the buffer is stale (unsafe cursor context)
+        ForegroundChanged?.Invoke(hwnd);
     }
 
     // A mouse click may move the caret or select text → the word buffer no longer matches the
