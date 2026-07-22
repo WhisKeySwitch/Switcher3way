@@ -1,4 +1,0 @@
-# Build artifacts — the spike is source + FINDINGS.md only.
-bin/
-obj/
-dist/

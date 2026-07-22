@@ -1,5 +1,12 @@
 # Windows Win32 spike — findings
 
+> **Graduated (2026-07-22).** The spike's proven Win32 patterns — dead-key-safe `ToUnicodeEx`
+> renderer, `GetKeyboardLayoutList` enumeration, `KeyClassifier`, `WH_KEYBOARD_LL` hook (ignoring
+> injected input), foreground switch with confirm + fallback, and per-char `SendInput` rewrite —
+> now live in the production app at `windows/src/Switcher3way.App/` (windows-mvp phase 4), wired to
+> the tested `Switcher3way.Core` engine and real Hunspell dictionaries. The throwaway spike **code**
+> has been removed; this findings record is retained for the rationale and the verified results.
+
 Throwaway feasibility spike for the Switcher3way Windows port. Status as of the first run on
 this Windows 11 machine. Verdicts are split into **proven here** (ran non-interactively) and
 **pending interactive run** (need a human typing into real apps — see "How to finish" below).
