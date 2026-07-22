@@ -5,6 +5,13 @@
     <ProjectReference Include="..\Switcher3way.Dictionaries\Switcher3way.Dictionaries.csproj" />
   </ItemGroup>
 
+  <!-- Tray flag images (public-domain flags), embedded and drawn as the layout indicator. -->
+  <ItemGroup>
+    <EmbeddedResource Include="assets\en.png"><LogicalName>en.png</LogicalName></EmbeddedResource>
+    <EmbeddedResource Include="assets\ru.png"><LogicalName>ru.png</LogicalName></EmbeddedResource>
+    <EmbeddedResource Include="assets\uk.png"><LogicalName>uk.png</LogicalName></EmbeddedResource>
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
