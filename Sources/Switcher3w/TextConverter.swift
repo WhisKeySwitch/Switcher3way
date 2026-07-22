@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import Carbon
 import CoreGraphics
 
 /// Text conversion between layouts
@@ -23,6 +24,15 @@ final class TextConverter {
     private var cycleShownCount = 0                                   // characters currently on screen (for erasing)
     private var cyclePreviousLayoutID = ""                           // the layout active BEFORE the first conversion
     private var lastWasBuffer = false
+
+    // State of the clipboard/selection cycle (mouse-selected text → paste). Parallel to the
+    // buffer cycle above but N-way over ALL installed layouts: the selection is re-rendered into
+    // each layout by a character-position map, the dictionary-unambiguous language is offered
+    // first, and repeated triggers page through the rest and back to the original.
+    private var selHome = ""                                          // original selected text
+    private var selSteps: [(text: String, layoutID: String)] = []    // ordered candidates (dictionary winner first)
+    private var selIndex = -1                                         // -1 = original shown; 0..n-1 = candidate i
+    private var selPrevLayout = ""                                    // layout active BEFORE the first selection conversion
 
     /// Creates a CGEventSource with a marker so KeyboardMonitor ignores our events
     nonisolated private func makeSource() -> CGEventSource? {
@@ -115,10 +125,12 @@ final class TextConverter {
         }
     }
 
-    /// Re-conversion of the selection via the clipboard. The buffer (word-by-word) path goes
-    /// through `cycleStep`; only mouse-selected text reaches here (clipboard engine).
-    func reconvert() -> Bool {
-        guard !isConverting, !lastWasBuffer else { return false }
+    /// Next step of the selection cycle (second+ trigger, no input between). The buffer
+    /// (word-by-word) path goes through `cycleStep`; only mouse-selected text reaches here.
+    /// Returns the target layout and the `restored` flag (true — wrapped back to the original
+    /// text → switch to the pre-conversion layout). nil — no active selection conversion.
+    func reconvert() -> (layoutID: String, restored: Bool)? {
+        guard !isConverting, !lastWasBuffer, !selSteps.isEmpty else { return nil }
         return reconvertViaClipboard()
     }
 
@@ -134,12 +146,14 @@ final class TextConverter {
         }
     }
 
-    /// Conversion via the clipboard (fallback: mouse-selected text etc.).
-    /// First checks the selection, then tries the word by counter.
-    func convertViaClipboard(wordLength: Int, prevWordLength: Int, boundaryCount: Int) -> Bool {
+    /// Conversion via the clipboard (fallback: mouse-selected text etc.). First checks the
+    /// selection, then tries the word by counter. Builds the N-way candidate cycle (see
+    /// `buildSelectionSteps`) and applies the first candidate. Returns the target layout ID to
+    /// switch to, or nil if there was nothing to convert.
+    func convertViaClipboard(wordLength: Int, prevWordLength: Int, boundaryCount: Int) -> String? {
         guard !isConverting else {
             rslog("convert: skipped — already converting")
-            return false
+            return nil
         }
         isConverting = true
         lastWasBuffer = false
@@ -162,16 +176,12 @@ final class TextConverter {
         // --- Attempt 1: is there already selected text? ---
         if let text = tryCopy(pasteboard) {
             rslog("convert: selection len=\(text.count)")
-            let converted = DynamicKeyMapping.convert(text).precomposedStringWithCanonicalMapping
-            pasteText(converted, pasteboard: pasteboard)
-            // The cursor stays at the end of the inserted text — don't re-select,
-            // so the next input doesn't overwrite the result. For reconvert the
-            // unified path via selectBack(lastConvertedCount) is used.
-            lastConvertedCount = converted.count
-            lastBoundaryCount = 0
+            guard let target = beginSelectionCycle(original: text, boundary: 0, pasteboard: pasteboard) else {
+                rslog("convert: no candidate layouts for selection")
+                return nil
+            }
             conversionSucceeded = true
-            scheduleClipboardRestore()
-            return true
+            return target
         }
 
         // --- Attempt 2: select the word by counter ---
@@ -187,7 +197,7 @@ final class TextConverter {
             usedBoundary = boundaryCount
         } else {
             rslog("convert: nothing to convert (wordLen=\(wordLength) prevLen=\(prevWordLength))")
-            return false
+            return nil
         }
 
         rslog("convert: selecting \(charCount) chars (boundary=\(usedBoundary))")
@@ -198,60 +208,172 @@ final class TextConverter {
             rslog("convert: copy failed")
             simKey(keyCode: KC.right, flags: []) // clear the selection
             moveRight(usedBoundary)
-            return false
+            return nil
         }
 
         rslog("convert: word len=\(text.count)")
-        let converted = DynamicKeyMapping.convert(text).precomposedStringWithCanonicalMapping
-        pasteText(converted, pasteboard: pasteboard)
-
+        guard let target = beginSelectionCycle(original: text, boundary: usedBoundary, pasteboard: pasteboard) else {
+            simKey(keyCode: KC.right, flags: [])
+            moveRight(usedBoundary)
+            return nil
+        }
         moveRight(usedBoundary)
-
-        lastConvertedCount = converted.count
-        lastBoundaryCount = usedBoundary
         conversionSucceeded = true
-        scheduleClipboardRestore()
-        return true
+        return target
     }
 
-    /// Re-conversion via the clipboard (fallback).
-    private func reconvertViaClipboard() -> Bool {
+    /// Builds the N-way candidate cycle for `original`, applies the first candidate, and records
+    /// the cycle state. Returns the first candidate's layout ID, or nil if there are none.
+    private func beginSelectionCycle(original: String, boundary: Int, pasteboard: NSPasteboard) -> String? {
+        let steps = buildSelectionSteps(original: original)
+        guard let first = steps.first else { return nil }
+
+        pasteText(first.text, pasteboard: pasteboard)
+
+        selHome = original
+        selSteps = steps
+        selIndex = 0
+        selPrevLayout = LayoutSwitcher.currentLayoutID()
+        lastConvertedCount = first.text.count
+        lastBoundaryCount = boundary
+        scheduleClipboardRestore()
+        rslog("selection cycle: \(steps.count) candidate(s), → \(first.layoutID.components(separatedBy: ".").last ?? "?")")
+        return first.layoutID
+    }
+
+    /// Advances the selection cycle by one candidate via the clipboard, wrapping back to the
+    /// original text (and the pre-conversion layout) after the last one.
+    private func reconvertViaClipboard() -> (layoutID: String, restored: Bool)? {
         guard !isConverting else {
             rslog("reconvert: skipped — already converting")
-            return false
+            return nil
         }
         isConverting = true
         defer { isConverting = false }
 
-        rslog("reconvert: lastCount=\(lastConvertedCount) boundary=\(lastBoundaryCount)")
-        guard lastConvertedCount > 0 else { return false }
+        guard lastConvertedCount > 0, !selSteps.isEmpty else { return nil }
 
         let pasteboard = NSPasteboard.general
-        // Cancel the deferred clipboard restore — we're still working
         cancelClipboardRestore()
 
+        // Re-select the currently shown text (its length is known; no typing happened in between,
+        // so we don't need to re-copy — we page through our stored candidates).
         moveLeft(lastBoundaryCount)
-
         selectBack(lastConvertedCount)
-        usleep(80_000)  // give the app time to process the selection
+        usleep(80_000)
 
-        guard let text = tryCopy(pasteboard) else {
-            rslog("reconvert: copy failed, count=\(lastConvertedCount)")
-            simKey(keyCode: KC.right, flags: [])
-            moveRight(lastBoundaryCount)
-            scheduleClipboardRestore()
-            return false
+        let next = selIndex + 1
+        let insert: String
+        let resultLayout: String
+        let restored: Bool
+        if next < selSteps.count {
+            insert = selSteps[next].text
+            resultLayout = selSteps[next].layoutID
+            restored = false
+            selIndex = next
+        } else {
+            insert = selHome
+            resultLayout = selPrevLayout
+            restored = true
+            selIndex = -1
         }
 
-        rslog("reconvert: len=\(text.count) → converting")
-        let converted = DynamicKeyMapping.convert(text).precomposedStringWithCanonicalMapping
-        pasteText(converted, pasteboard: pasteboard)
-
+        pasteText(insert, pasteboard: pasteboard)
         moveRight(lastBoundaryCount)
-
-        lastConvertedCount = converted.count
+        lastConvertedCount = insert.count
         scheduleClipboardRestore()
-        return true
+        rslog("reconvert: step \(selIndex) → \(resultLayout.components(separatedBy: ".").last ?? "?") restored=\(restored)")
+        return (resultLayout, restored)
+    }
+
+    /// Ordered N-way candidates for a selection: the text mapped character-by-character into every
+    /// other installed layout (via `DynamicKeyMapping.buildMap`), deduplicated, with the single
+    /// dictionary-unambiguous language (if any) placed first. This mirrors `NWayResolver.manualPlan`
+    /// but operates on already-rendered characters, since a selection gives us text, not keystrokes.
+    private func buildSelectionSteps(original: String) -> [(text: String, layoutID: String)] {
+        let layouts = LayoutSwitcher.installedLayouts()
+        let currentID = LayoutSwitcher.currentLayoutID()
+        guard let currentSource = layouts.first(where: { LayoutSwitcher.sourceID($0) == currentID }) else { return [] }
+
+        // The selection is characters, not keystrokes, so we infer the layout that PRODUCED it
+        // (the one whose repertoire covers the text) rather than assuming the active layout — auto
+        // may have left a different layout active while the leftover words are still in the old one.
+        let source = sourceLayout(for: original, among: layouts, current: currentSource)
+        let sourceID = LayoutSwitcher.sourceID(source)
+
+        // Start the cycle just after the source layout and wrap, so "next" is predictable.
+        let ordered: [TISInputSource]
+        if let i = layouts.firstIndex(where: { LayoutSwitcher.sourceID($0) == sourceID }) {
+            ordered = Array(layouts[(i + 1)...]) + Array(layouts[...i])
+        } else {
+            ordered = layouts
+        }
+
+        var steps: [(text: String, layoutID: String, lang: String)] = []
+        var seen: Set<String> = [original]   // don't offer what's already on screen, nor duplicates
+        for layout in ordered {
+            let id = LayoutSwitcher.sourceID(layout)
+            guard id != sourceID else { continue }
+            let map = DynamicKeyMapping.buildMap(from: source, to: layout)
+            guard !map.isEmpty else { continue }
+            let text = String(original.map { map[$0] ?? $0 }).precomposedStringWithCanonicalMapping
+            guard !seen.contains(text) else { continue }
+            seen.insert(text)
+            let lang = String((LayoutSwitcher.languageCode(layout) ?? "").prefix(2))
+            steps.append((text, id, lang))
+        }
+
+        // Dictionary-first: for a single-word selection, if exactly one candidate is a real word in
+        // its language, move it to the front so one tap gives the "correct" layout (as in auto).
+        let core = letterCore(original)
+        if !core.isEmpty, !core.contains(where: { $0.isWhitespace }) {
+            let validIdxs = steps.indices.filter { i in
+                let c = letterCore(steps[i].text)
+                return !c.isEmpty && Dict.isAvailable(steps[i].lang)
+                    && Dict.isValidWord(c.lowercased(), lang: steps[i].lang)
+            }
+            if validIdxs.count == 1 {
+                let w = steps.remove(at: validIdxs[0])
+                steps.insert(w, at: 0)
+            }
+        }
+
+        return steps.map { (text: $0.text, layoutID: $0.layoutID) }
+    }
+
+    /// Picks the layout that most likely produced `text`: the one whose character repertoire covers
+    /// the most of the selection's letters. Falls back to the current layout (e.g. for text that is
+    /// identical across layouts). This lets the selection cycle work even when auto-switching has
+    /// left a different layout active than the one the selected words were typed in.
+    private func sourceLayout(for text: String, among layouts: [TISInputSource],
+                              current: TISInputSource) -> TISInputSource {
+        let letters = Set(text.lowercased().filter { $0.isLetter })
+        guard !letters.isEmpty else { return current }
+
+        var best = current
+        var bestScore = -1
+        for layout in layouts {
+            var repertoire: Set<Character> = []
+            for kc in UInt16(0)...UInt16(50) {
+                guard let c = DynamicKeyMapping.characterForKeycode(kc, layout: layout) else { continue }
+                for ch in String(c).lowercased() { repertoire.insert(ch) }
+            }
+            let score = letters.reduce(0) { $0 + (repertoire.contains($1) ? 1 : 0) }
+            if score > bestScore {
+                bestScore = score
+                best = layout
+            }
+        }
+        return best
+    }
+
+    /// The word's letter core: the string with leading/trailing non-letters trimmed.
+    private func letterCore(_ s: String) -> String {
+        let chars = Array(s)
+        var lo = 0, hi = chars.count
+        while lo < hi && !chars[lo].isLetter { lo += 1 }
+        while hi > lo && !chars[hi - 1].isLetter { hi -= 1 }
+        return String(chars[lo..<hi])
     }
 
     func clearState() {
@@ -263,6 +385,10 @@ final class TextConverter {
         cycleShownCount = 0
         cyclePreviousLayoutID = ""
         lastWasBuffer = false
+        selHome = ""
+        selSteps = []
+        selIndex = -1
+        selPrevLayout = ""
     }
 
     // MARK: - Private

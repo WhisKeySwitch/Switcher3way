@@ -249,13 +249,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         self.updateStatusIcon()
                         self.lastAutoConverted = nil
                     }
-                } else if self.textConverter.convertViaClipboard(wordLength: keys.count,
-                                                                 prevWordLength: prevKeys.count,
-                                                                 boundaryCount: bc) {
-                    // No keystroke buffer (text selected with the mouse) or remote desktop: rendering by layout
-                    // is impossible — convert by script via the clipboard and just page through the layout.
+                } else if let target = self.textConverter.convertViaClipboard(wordLength: keys.count,
+                                                                              prevWordLength: prevKeys.count,
+                                                                              boundaryCount: bc) {
+                    // No keystroke buffer (text selected with the mouse): rendering by keycode is
+                    // impossible, so the clipboard path maps the selection into each layout and
+                    // switches to the chosen candidate (N-way, dictionary winner first).
                     self.keyboardMonitor.markConverted()
-                    LayoutSwitcher.switchToNextInstalled()
+                    LayoutSwitcher.switchTo(layoutID: target)
                     self.updateStatusIcon()
                     self.lastAutoConverted = nil
                 }
@@ -276,11 +277,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     LayoutSwitcher.switchTo(layoutID: step.layoutID)
                     self.updateStatusIcon()
                     if step.restored { self.offerExceptionAfterUndo() }
-                } else if self.textConverter.reconvert() {
+                } else if let step = self.textConverter.reconvert() {
                     self.keyboardMonitor.markConverted()
-                    LayoutSwitcher.switchToNextInstalled()
+                    LayoutSwitcher.switchTo(layoutID: step.layoutID)
                     self.updateStatusIcon()
-                    self.offerExceptionAfterUndo()
+                    if step.restored { self.offerExceptionAfterUndo() }
                 }
             }
         ) {

@@ -72,34 +72,6 @@ enum DynamicKeyMapping {
         return map
     }
 
-    /// Converts text from the current layout to the target layout
-    static func convert(_ text: String) -> String {
-        let settings = SettingsManager.shared
-        let layouts = LayoutSwitcher.installedLayouts()
-        let currentID = LayoutSwitcher.currentLayoutID()
-
-        // Determine source and target layouts (auto-detect — shared with LayoutSwitcher)
-        let layout1ID = settings.layout1ID.isEmpty ? LayoutSwitcher.autoDetectID1(from: layouts) : settings.layout1ID
-        let layout2ID = settings.layout2ID.isEmpty ? LayoutSwitcher.autoDetectID2(from: layouts) : settings.layout2ID
-
-        guard let source = layouts.first(where: { LayoutSwitcher.sourceID($0) == currentID }),
-              let targetID = (currentID == layout1ID) ? layout2ID : layout1ID as String?,
-              let target = layouts.first(where: { LayoutSwitcher.sourceID($0) == targetID }) else {
-            // Fallback to static mapping
-            rslog("DynamicKeyMapping: fallback to static mapping")
-            return KeyMapping.convert(text)
-        }
-
-        let map = buildMap(from: source, to: target)
-
-        if map.isEmpty {
-            rslog("DynamicKeyMapping: empty map, fallback to static")
-            return KeyMapping.convert(text)
-        }
-
-        return String(text.map { map[$0] ?? $0 })
-    }
-
     /// Clear the cache (when layouts change in settings)
     static func clearCache() {
         mapCache.removeAll()
