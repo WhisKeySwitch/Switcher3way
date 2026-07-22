@@ -147,30 +147,25 @@ internal sealed class TrayApp : IDisposable
         using (var g = Graphics.FromImage(bmp))
         {
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
             g.Clear(Color.Transparent);
             var r = new Rectangle(2, 6, 28, 20);
 
-            switch (lang)
+            var img = FlagImage(lang);
+            if (img is not null)
             {
-                case "ru":
-                    Bands(g, r, Color.White, Color.FromArgb(0x00, 0x39, 0xA6), Color.FromArgb(0xD5, 0x2B, 0x1E));
-                    break;
-                case "uk":
-                    Bands(g, r, Color.FromArgb(0x00, 0x57, 0xB7), Color.FromArgb(0xFF, 0xD5, 0x00));
-                    break;
-                case "en":
-                    UsFlag(g, r);
-                    break;
-                default: // unknown language: a coloured badge with the 2-letter code
-                    using (var b = new SolidBrush(Color.FromArgb(0x2B, 0x36, 0x52))) g.FillRectangle(b, r);
-                    var code = (lang.Length >= 2 ? lang[..2] : lang).ToUpperInvariant();
-                    using (var f = new Font("Segoe UI", 12, FontStyle.Bold, GraphicsUnit.Pixel))
-                    using (var fb = new SolidBrush(Color.White))
-                    {
-                        var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-                        g.DrawString(code, f, fb, new RectangleF(r.X, r.Y, r.Width, r.Height), sf);
-                    }
-                    break;
+                g.DrawImage(img, r);
+            }
+            else // unknown language: a coloured badge with the 2-letter code
+            {
+                using var b = new SolidBrush(Color.FromArgb(0x2B, 0x36, 0x52));
+                g.FillRectangle(b, r);
+                var code = (lang.Length >= 2 ? lang[..2] : lang).ToUpperInvariant();
+                using var f = new Font("Segoe UI", 12, FontStyle.Bold, GraphicsUnit.Pixel);
+                using var fb = new SolidBrush(Color.White);
+                var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                g.DrawString(code, f, fb, new RectangleF(r.X, r.Y, r.Width, r.Height), sf);
             }
 
             using (var pen = new Pen(Color.FromArgb(90, 0, 0, 0))) g.DrawRectangle(pen, r);
@@ -190,38 +185,20 @@ internal sealed class TrayApp : IDisposable
         return icon;
     }
 
-    /// <summary>A simplified US flag (7 stripes + blue canton with suggested stars) legible at tray size.</summary>
-    private static void UsFlag(Graphics g, Rectangle r)
-    {
-        var red = Color.FromArgb(0xB2, 0x22, 0x34);
-        var navy = Color.FromArgb(0x3C, 0x3B, 0x6E);
-        const int stripes = 7; // 4 red, 3 white — fewer than 13 so they read at 16px
-        int sh = r.Height / stripes;
-        for (int i = 0; i < stripes; i++)
-        {
-            int y = r.Y + i * sh;
-            int h = (i == stripes - 1) ? r.Bottom - y : sh;
-            using var b = new SolidBrush(i % 2 == 0 ? red : Color.White);
-            g.FillRectangle(b, r.X, y, r.Width, h);
-        }
-        int cw = (int)(r.Width * 0.42), ch = sh * 4; // canton over the top four stripes
-        using (var b = new SolidBrush(navy)) g.FillRectangle(b, r.X, r.Y, cw, ch);
-        using (var s = new SolidBrush(Color.White)) // suggested stars
-            for (int yy = 0; yy < 3; yy++)
-                for (int xx = 0; xx < 3; xx++)
-                    g.FillRectangle(s, r.X + 3 + xx * ((cw - 4) / 3), r.Y + 3 + yy * ((ch - 4) / 3), 1, 1);
-    }
+    private static readonly Dictionary<string, Bitmap?> FlagImages = new();
 
-    private static void Bands(Graphics g, Rectangle r, params Color[] colors)
+    private static Bitmap? FlagImage(string lang)
     {
-        int band = r.Height / colors.Length;
-        for (int i = 0; i < colors.Length; i++)
+        if (FlagImages.TryGetValue(lang, out var cached)) return cached;
+        Bitmap? img = null;
+        try
         {
-            int y = r.Y + i * band;
-            int h = (i == colors.Length - 1) ? r.Bottom - y : band; // last band fills remainder
-            using var b = new SolidBrush(colors[i]);
-            g.FillRectangle(b, r.X, y, r.Width, h);
+            using var s = typeof(TrayApp).Assembly.GetManifestResourceStream($"{lang}.png");
+            if (s is not null) img = new Bitmap(s);
         }
+        catch { /* no embedded flag for this language */ }
+        FlagImages[lang] = img;
+        return img;
     }
 
     public void Dispose()

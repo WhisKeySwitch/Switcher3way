@@ -22,6 +22,11 @@ internal sealed class KeyboardMonitor
     private Native.WinEventProc? _winEventProc;
     private IntPtr _bufferHwnd; // the foreground window the current buffer belongs to
 
+    // Double-tap trigger state (e.g. double Shift).
+    private bool _triggerHeld, _otherBetween;
+    private long _lastTapMs;
+    private const long DoubleTapMs = 350;
+
     /// <summary>A word finished at a boundary: the keys + the boundary char (' ', '\n', '\t').</summary>
     public event Action<IReadOnlyList<TypedKey>, char>? WordCompleted;
     /// <summary>Manual trigger (F9) pressed.</summary>
@@ -97,11 +102,18 @@ internal sealed class KeyboardMonitor
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && ((uint)wParam == Native.WM_KEYDOWN || (uint)wParam == Native.WM_SYSKEYDOWN))
+        if (nCode >= 0)
         {
+            uint msg = (uint)wParam;
             var data = Marshal.PtrToStructure<Native.KBDLLHOOKSTRUCT>(lParam);
             bool injected = (data.flags & Native.LLKHF_INJECTED) != 0; // ignore our own SendInput
-            if (!injected && HandleKeyDown(data)) return (IntPtr)1;     // swallow control keys
+            if (!injected)
+            {
+                if (msg == Native.WM_KEYDOWN || msg == Native.WM_SYSKEYDOWN)
+                { if (HandleKeyDown(data)) return (IntPtr)1; }          // swallow control keys
+                else if (msg == Native.WM_KEYUP || msg == Native.WM_SYSKEYUP)
+                { HandleKeyUp(data); }
+            }
         }
         return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
     }
@@ -110,7 +122,32 @@ internal sealed class KeyboardMonitor
     private bool HandleKeyDown(Native.KBDLLHOOKSTRUCT data)
     {
         uint vk = data.vkCode;
-        if (vk == (uint)_settings.TriggerKey) { TriggerPressed?.Invoke(); return true; }
+
+        if (_settings.TriggerDoubleTap)
+        {
+            if (NormVk(vk) == (uint)_settings.TriggerKey)
+            {
+                if (!_triggerHeld) // ignore auto-repeat while held
+                {
+                    _triggerHeld = true;
+                    long now = Environment.TickCount64;
+                    if (_lastTapMs != 0 && now - _lastTapMs <= DoubleTapMs && !_otherBetween)
+                    {
+                        _lastTapMs = 0;
+                        TriggerPressed?.Invoke();
+                    }
+                    else { _lastTapMs = now; }
+                    _otherBetween = false;
+                }
+                return false; // never swallow a modifier
+            }
+            _otherBetween = true; // any non-trigger key breaks the double-tap sequence
+        }
+        else if (vk == (uint)_settings.TriggerKey)
+        {
+            TriggerPressed?.Invoke();
+            return true; // swallow the dedicated trigger key
+        }
 
         var kind = KeyClassifier.Classify(vk);
         if (kind != KeyKind.Modifier) Typed?.Invoke(); // any real keystroke ends a manual cycle
@@ -137,6 +174,21 @@ internal sealed class KeyboardMonitor
         }
         return false;
     }
+
+    private void HandleKeyUp(Native.KBDLLHOOKSTRUCT data)
+    {
+        if (_settings.TriggerDoubleTap && NormVk(data.vkCode) == (uint)_settings.TriggerKey)
+            _triggerHeld = false;
+    }
+
+    /// <summary>Map left/right modifier virtual keys to their generic code (LShift/RShift → Shift, …).</summary>
+    private static uint NormVk(uint vk) => vk switch
+    {
+        0xA0 or 0xA1 => 0x10, // Shift
+        0xA2 or 0xA3 => 0x11, // Ctrl
+        0xA4 or 0xA5 => 0x12, // Alt
+        _ => vk,
+    };
 
     private void CompleteWord(uint boundaryVk)
     {
