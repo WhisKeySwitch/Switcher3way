@@ -38,6 +38,13 @@ internal static class SelfTest
         foreach (var l in layouts)
             Console.WriteLine($"  {l.Lang ?? "?",-4} => \"{catalog.Render(keys, l)}\"");
 
+        // Probe: the 's' key is where ru ('ы') and uk ('і') usually differ.
+        var keys2 = new[] { 'G', 'H', 'B', 'D', 'S', 'N' }
+            .Select(c => new TypedKey((int)c, Shift: false, Caps: false)).ToList();
+        Console.WriteLine("\nWin32 render of G,H,B,D,S,N (ghbdsn) through each layout:");
+        foreach (var l in layouts)
+            Console.WriteLine($"  {l.Lang ?? "?",-4} => \"{catalog.Render(keys2, l)}\"");
+
         Console.WriteLine($"\nCurrent layout id: {catalog.CurrentLayoutId()}");
         var d = resolver.Resolve(keys, capsLock: false);
         Console.WriteLine(d is null
