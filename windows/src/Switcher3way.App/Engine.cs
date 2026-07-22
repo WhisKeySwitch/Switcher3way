@@ -48,6 +48,11 @@ internal sealed class Engine
 
     private readonly SettingsManager _settings;
 
+    // Per-app layout memory: last-used layout per exe, and the app we're currently tracking.
+    private readonly Dictionary<string, IntPtr> _appLayouts = new(StringComparer.OrdinalIgnoreCase);
+    private string? _lastExe;
+    private uint _lastThread;
+
     public Engine(SettingsManager settings)
     {
         _settings = settings;
@@ -60,6 +65,29 @@ internal sealed class Engine
         };
         _monitor.TriggerPressed += OnTrigger;
         _monitor.Typed += () => { lock (_cycleLock) _cycle = null; };
+        _monitor.ForegroundChanged += hwnd => _work.Add(() => OnForegroundChanged(hwnd));
+    }
+
+    // ---- Per-app layout memory -------------------------------------------------------------
+    private void OnForegroundChanged(IntPtr hwnd)
+    {
+        uint newThread = Native.GetWindowThreadProcessId(hwnd, out uint pid);
+        string newExe = LayoutSwitcher.ExeName(pid);
+
+        // Remember the layout of the app we're leaving.
+        if (_lastThread != 0 && _lastExe is not null)
+            _appLayouts[_lastExe] = Native.GetKeyboardLayout(_lastThread);
+
+        // Restore the new app's remembered layout (if enabled and different from current).
+        if (_settings.EffectivelyEnabled && _settings.PerAppMemory
+            && _appLayouts.TryGetValue(newExe, out var hkl) && hkl != IntPtr.Zero
+            && Native.GetKeyboardLayout(newThread) != hkl)
+        {
+            LayoutSwitcher.SwitchForeground(Win32LayoutCatalog.HklToId(hkl));
+        }
+
+        _lastExe = newExe;
+        _lastThread = newThread;
     }
 
     /// <summary>Start the keyboard/mouse hook + conversion worker (both background). Non-blocking.</summary>
