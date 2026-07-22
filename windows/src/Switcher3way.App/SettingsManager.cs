@@ -14,6 +14,8 @@ public sealed class SettingsManager
     public bool AutoFix { get; set; } = true;
     public bool PerAppMemory { get; set; } = true;
     public bool DebugLog { get; set; }
+    /// <summary>Forced UI language 2-letter code (e.g. "uk"); empty/null = follow the system.</summary>
+    public string InterfaceLanguage { get; set; } = "";
     /// <summary>Virtual-key code of the manual-conversion trigger (default F9 = 0x78).</summary>
     public int TriggerKey { get; set; } = 0x78;
     /// <summary>If true, trigger on a quick DOUBLE tap of <see cref="TriggerKey"/> (e.g. double Shift).</summary>

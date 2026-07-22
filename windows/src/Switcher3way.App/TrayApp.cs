@@ -20,6 +20,7 @@ internal sealed class TrayApp : IDisposable
     private string _iconKey = "";
 
     private readonly ToolStripMenuItem _enabledItem, _autoFixItem, _perAppItem, _debugItem;
+    private HelpWindow? _help; // built-in help window (single instance)
     private readonly System.Windows.Forms.Timer _poll;
     private readonly System.Threading.SynchronizationContext? _ui;
 
@@ -27,20 +28,21 @@ internal sealed class TrayApp : IDisposable
     {
         _ui = System.Threading.SynchronizationContext.Current; // WinForms UI context (ctor runs on the UI thread)
         _settings = SettingsManager.Load();
+        Loc.Configure(_settings.InterfaceLanguage); // apply any forced UI language before building the menu
         _engine = new Engine(_settings);
         _engine.Notify += ShowBalloon;
 
-        _enabledItem = new ToolStripMenuItem("Enabled", null, (_, _) => Toggle(() => _settings.Enabled = !_settings.Enabled));
-        _autoFixItem = new ToolStripMenuItem("Auto-fix as you type", null, (_, _) => Toggle(() => _settings.AutoFix = !_settings.AutoFix));
-        _perAppItem = new ToolStripMenuItem("Remember layout per app", null, (_, _) => Toggle(() => _settings.PerAppMemory = !_settings.PerAppMemory));
-        _debugItem = new ToolStripMenuItem("Debug log", null, (_, _) => Toggle(() => _settings.DebugLog = !_settings.DebugLog));
+        _enabledItem = new ToolStripMenuItem(Loc.T("menu.autoSwitch"), null, (_, _) => Toggle(() => _settings.Enabled = !_settings.Enabled));
+        _autoFixItem = new ToolStripMenuItem(Loc.T("menu.autofix"), null, (_, _) => Toggle(() => _settings.AutoFix = !_settings.AutoFix));
+        _perAppItem = new ToolStripMenuItem(Loc.T("settings.perAppLayout"), null, (_, _) => Toggle(() => _settings.PerAppMemory = !_settings.PerAppMemory));
+        _debugItem = new ToolStripMenuItem(Loc.T("settings.debugLog"), null, (_, _) => Toggle(() => _settings.DebugLog = !_settings.DebugLog));
 
-        var pause = new ToolStripMenuItem("Pause");
-        pause.DropDownItems.Add(new ToolStripMenuItem("30 minutes", null, (_, _) => DoPause(TimeSpan.FromMinutes(30))));
-        pause.DropDownItems.Add(new ToolStripMenuItem("1 hour", null, (_, _) => DoPause(TimeSpan.FromHours(1))));
-        pause.DropDownItems.Add(new ToolStripMenuItem("Until restart", null, (_, _) => DoPause(null)));
+        var pause = new ToolStripMenuItem(Loc.T("menu.pause"));
+        pause.DropDownItems.Add(new ToolStripMenuItem(Loc.T("menu.pause.30m"), null, (_, _) => DoPause(TimeSpan.FromMinutes(30))));
+        pause.DropDownItems.Add(new ToolStripMenuItem(Loc.T("menu.pause.1h"), null, (_, _) => DoPause(TimeSpan.FromHours(1))));
+        pause.DropDownItems.Add(new ToolStripMenuItem(Loc.T("menu.pause.untilRestart"), null, (_, _) => DoPause(null)));
         pause.DropDownItems.Add(new ToolStripSeparator());
-        pause.DropDownItems.Add(new ToolStripMenuItem("Resume", null, (_, _) => { _settings.Resume(); UpdateUi(); }));
+        pause.DropDownItems.Add(new ToolStripMenuItem(Loc.T("menu.resume"), null, (_, _) => { _settings.Resume(); UpdateUi(); }));
 
         var menu = new ContextMenuStrip();
         menu.Items.Add(new ToolStripMenuItem("Switcher3way") { Enabled = false });
@@ -50,11 +52,12 @@ internal sealed class TrayApp : IDisposable
         menu.Items.Add(_perAppItem);
         menu.Items.Add(pause);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(new ToolStripMenuItem("Settings…", null, (_, _) => OpenSettings()));
+        menu.Items.Add(new ToolStripMenuItem(Loc.T("menu.settings"), null, (_, _) => OpenSettings()));
         menu.Items.Add(_debugItem);
-        menu.Items.Add(new ToolStripMenuItem("Open log folder", null, (_, _) => OpenLogFolder()));
+        menu.Items.Add(new ToolStripMenuItem(Loc.T("win.openLog"), null, (_, _) => OpenLogFolder()));
+        menu.Items.Add(new ToolStripMenuItem(Loc.T("menu.help"), null, (_, _) => OpenHelp()));
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(new ToolStripMenuItem("Quit", null, (_, _) => Quit()));
+        menu.Items.Add(new ToolStripMenuItem(Loc.T("menu.quit"), null, (_, _) => Quit()));
 
         _icon = new NotifyIcon { Text = "Switcher3way", ContextMenuStrip = menu };
         RefreshIcon();          // sets the initial flag icon
@@ -121,6 +124,19 @@ internal sealed class TrayApp : IDisposable
     {
         using var form = new SettingsForm(_settings);
         if (form.ShowDialog() == DialogResult.OK) UpdateUi();
+    }
+
+    /// <summary>Open the built-in Help window (single instance) in the current UI language.</summary>
+    private void OpenHelp()
+    {
+        if (_help is null || _help.IsDisposed)
+        {
+            _help = new HelpWindow(Loc.Language);
+            _help.FormClosed += (_, _) => _help = null;
+        }
+        _help.Show();
+        _help.WindowState = FormWindowState.Normal;
+        _help.Activate();
     }
 
     private static void OpenLogFolder()

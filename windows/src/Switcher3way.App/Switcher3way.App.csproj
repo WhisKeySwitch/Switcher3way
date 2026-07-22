@@ -12,6 +12,14 @@
     <EmbeddedResource Include="assets\uk.png"><LogicalName>uk.png</LogicalName></EmbeddedResource>
   </ItemGroup>
 
+  <!-- User guide (single source of truth), embedded and rendered offline in the in-app Help window.
+       WithCulture=false stops MSBuild reading ".uk"/".ru" as culture codes (→ satellite assemblies). -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\..\docs\user-guide.md" WithCulture="false"><LogicalName>user-guide.md</LogicalName></EmbeddedResource>
+    <EmbeddedResource Include="..\..\..\docs\user-guide.uk.md" WithCulture="false"><LogicalName>user-guide.uk.md</LogicalName></EmbeddedResource>
+    <EmbeddedResource Include="..\..\..\docs\user-guide.ru.md" WithCulture="false"><LogicalName>user-guide.ru.md</LogicalName></EmbeddedResource>
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
