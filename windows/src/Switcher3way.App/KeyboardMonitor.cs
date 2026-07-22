@@ -11,7 +11,6 @@ namespace Switcher3way.App;
 internal sealed class KeyboardMonitor
 {
     private const uint VK_TRIGGER = 0x78; // F9 (present on laptops; swallowed)
-    private const uint VK_QUIT = 0x23;    // End
 
     private readonly List<TypedKey> _current = new();
     private readonly List<TypedKey> _prev = new();
@@ -25,8 +24,6 @@ internal sealed class KeyboardMonitor
     public event Action<IReadOnlyList<TypedKey>, char>? WordCompleted;
     /// <summary>Manual trigger (F9) pressed.</summary>
     public event Action? TriggerPressed;
-    /// <summary>Quit key (End) pressed.</summary>
-    public event Action? QuitPressed;
     /// <summary>Any real keystroke (not the trigger) — used to reset an in-progress manual cycle.</summary>
     public event Action? Typed;
 
@@ -98,7 +95,6 @@ internal sealed class KeyboardMonitor
     private bool HandleKeyDown(Native.KBDLLHOOKSTRUCT data)
     {
         uint vk = data.vkCode;
-        if (vk == VK_QUIT) { QuitPressed?.Invoke(); Native.PostQuitMessage(0); return true; }
         if (vk == VK_TRIGGER) { TriggerPressed?.Invoke(); return true; }
 
         var kind = KeyClassifier.Classify(vk);

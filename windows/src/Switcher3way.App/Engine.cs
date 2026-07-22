@@ -4,10 +4,18 @@ using Switcher3way.Dictionaries;
 
 namespace Switcher3way.App;
 
-/// <summary>No user overrides yet (phase 5 wires real settings).</summary>
+/// <summary>Empty override list (used by the self-test).</summary>
 internal sealed class EmptyAlwaysConvert : IAlwaysConvertList
 {
     public bool IsAlwaysConvert(string converted) => false;
+}
+
+/// <summary>Always-convert list backed by user settings.</summary>
+internal sealed class SettingsAlwaysConvert : IAlwaysConvertList
+{
+    private readonly SettingsManager _s;
+    public SettingsAlwaysConvert(SettingsManager s) => _s = s;
+    public bool IsAlwaysConvert(string converted) => _s.IsAlwaysConvertWord(converted);
 }
 
 /// <summary>
@@ -38,23 +46,35 @@ internal sealed class Engine
         public int OnScreenLen;          // chars currently displayed for the token
     }
 
-    public Engine()
+    private readonly SettingsManager _settings;
+
+    public Engine(SettingsManager settings)
     {
-        _resolver = new NWayResolver(_catalog, _dict, new EmptyAlwaysConvert());
-        _monitor.WordCompleted += (word, boundary) => _work.Add(() => AutoConvert(word, boundary));
+        _settings = settings;
+        _resolver = new NWayResolver(_catalog, _dict, new SettingsAlwaysConvert(settings));
+        _monitor.WordCompleted += (word, boundary) =>
+        {
+            // Auto-fix gates on the master toggle, not-paused, AND the auto-fix setting.
+            if (_settings.EffectivelyEnabled && _settings.AutoFix)
+                _work.Add(() => AutoConvert(word, boundary));
+        };
         _monitor.TriggerPressed += OnTrigger;
-        _monitor.QuitPressed += () => _work.CompleteAdding();
         _monitor.Typed += () => { lock (_cycleLock) _cycle = null; };
     }
 
-    public void RunInteractive()
+    /// <summary>Start the keyboard/mouse hook + conversion worker (both background). Non-blocking.</summary>
+    public void Start()
     {
-        Console.WriteLine("=== Switcher3way (Windows) — live loop ===");
-        Console.WriteLine("Auto-fixes finished words; F9 = manual convert/cycle; End = quit.\n");
         var hookThread = new Thread(_monitor.Run) { IsBackground = true, Name = "hook" };
         hookThread.SetApartmentState(ApartmentState.STA);
         hookThread.Start();
+        new Thread(WorkerLoop) { IsBackground = true, Name = "worker" }.Start();
+    }
 
+    public void Stop() => _work.CompleteAdding();
+
+    private void WorkerLoop()
+    {
         foreach (var job in _work.GetConsumingEnumerable())
         {
             try { job(); }
@@ -65,9 +85,12 @@ internal sealed class Engine
     // ---- Auto path -------------------------------------------------------------------------
     private void AutoConvert(IReadOnlyList<TypedKey> word, char boundary)
     {
+        if (_settings.IsDeniedApp(LayoutSwitcher.Foreground().Exe)) return; // terminals / password managers / RDP
+
         bool caps = word.Any(k => k.Caps);
         var d = _resolver.Resolve(word, caps);
         if (d is null) return;
+        if (_settings.IsNeverConvert(d.Original, d.Converted)) return;
 
         var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
         // Same text in the target layout (e.g. Cyrillic that looks identical in uk vs ru): the
@@ -75,17 +98,22 @@ internal sealed class Engine
         // needless erase/retype).
         if (d.Converted == d.Original)
         {
-            Console.WriteLine($"  auto: layout -> [{d.TargetLayoutId}] (text \"{d.Original}\" unchanged) via {path}");
+            Console.WriteLine($"  auto: layout -> [{LangLabel(d.TargetLayoutId)}] (text \"{d.Original}\" unchanged) via {path}");
             return;
         }
         // The boundary char is already on screen; erase word+boundary and re-type converted+boundary.
         var res = TextRewriter.Rewrite(word.Count + 1, d.Converted + boundary);
-        Console.WriteLine($"  auto: \"{d.Original}\" -> \"{d.Converted}\" [{d.TargetLayoutId}] via {path} : {res}");
+        Console.WriteLine($"  auto: \"{d.Original}\" -> \"{d.Converted}\" [{LangLabel(d.TargetLayoutId)}] via {path} : {res}");
     }
+
+    /// <summary>Friendly language label (en/ru/uk) for a layout id, for logging.</summary>
+    private string LangLabel(string layoutId) =>
+        _catalog.InstalledLayouts().FirstOrDefault(l => l.Id == layoutId)?.Lang ?? layoutId;
 
     // ---- Manual N-way cycle ----------------------------------------------------------------
     private void OnTrigger()
     {
+        if (!_settings.EffectivelyEnabled) return; // manual works when enabled + not paused (even if auto-fix off)
         if (_converting) return;   // ignore F9 auto-repeat / re-entrancy
         _converting = true;
         _work.Add(() => { try { ManualStep(); } finally { _converting = false; } });
@@ -93,6 +121,7 @@ internal sealed class Engine
 
     private void ManualStep()
     {
+        if (_settings.IsDeniedApp(LayoutSwitcher.Foreground().Exe)) return; // safety: never touch text here
         Cycle cyc;
         lock (_cycleLock)
         {
@@ -114,7 +143,7 @@ internal sealed class Engine
 
         bool restore = cyc.Step >= cyc.Plan.Candidates.Count;
         string targetId = restore ? cyc.Plan.OriginalLayoutId : cyc.Plan.Candidates[cyc.Step].TargetLayoutId;
-        string label = restore ? "original" : cyc.Plan.Candidates[cyc.Step].TargetLayoutId;
+        string label = restore ? $"original:{LangLabel(cyc.Plan.OriginalLayoutId)}" : LangLabel(targetId);
         string text = (restore ? cyc.Plan.Original : cyc.Plan.Candidates[cyc.Step].Converted) + cyc.Suffix;
 
         var path = LayoutSwitcher.SwitchForeground(targetId);
