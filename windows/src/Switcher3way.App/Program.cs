@@ -14,6 +14,7 @@ internal static class Program
     {
         if (args.Length > 0 && args[0].Equals("selftest", StringComparison.OrdinalIgnoreCase))
         {
+            Native.AttachConsole(Native.ATTACH_PARENT_PROCESS); // WinExe has no console; reuse the launching terminal
             SelfTest.Run();
             return;
         }
