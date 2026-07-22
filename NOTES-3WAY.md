@@ -59,12 +59,32 @@ Regenerate: `swift icon-design/generate_icon_3way.swift icon-design` → then
 `Switcher3way.icns` into the bundle. After reinstalling, refresh the icon cache with
 `touch /Applications/Switcher3way.app && killall Dock Finder`.
 
-## Updates disabled
+## Updates
 
-The updater was deleted outright in the July 2026 cleanup (originally `UpdateChecker.check(silent:)`
-was short-circuited — returned before any network call) so the fork can
-never auto-update itself back to upstream stock RuSwitcher. Manual "Check for updates…" just shows
-"up to date". To re-enable, remove the early-return block at the top of `check(silent:)`.
+History: the upstream updater was deleted at fork time so the fork could never auto-update
+itself back to stock rashn/RuSwitcher. In July 2026 a new updater was built whose ONLY source
+is the fork's own public releases repo — `WhisKeySwitch/switcher3way-releases` — so that risk
+no longer exists.
+
+How it works (`UpdateChecker.swift` + `UpdateInstaller.swift`):
+
+- **Check**: GitHub Releases API (`releases/latest`), numeric semver compare against the
+  running bundle version. Automatic ~15 s after launch and daily (General-tab toggle,
+  default on), plus a "Check for Updates…" menu item. Background failures are silent
+  (rslog only); manual checks report every outcome.
+- **Offer**: one alert — Install and Relaunch / Later / Skip This Version (skip is
+  per-version, cleared by a newer release or a manual check).
+- **Verify**: DMG sha256 must match the `version.json` release asset (release-notes checksum
+  as fallback for pre-manifest releases), AND the new bundle's codesign leaf certificate must
+  equal the running app's (the stable self-signed cert). The identity gate is what keeps
+  Accessibility/Input Monitoring grants valid across updates.
+- **Install**: mount read-only → move the current bundle aside → `ditto` the new one in →
+  rollback on failure → strip quarantine → relaunch via `AppRelauncher`.
+
+**Release-flow requirement**: every release in the public downloads repo MUST attach
+`version.json` as an asset next to the DMG (`gh release create … Switcher3way-X.Y.Z.dmg
+version.json`) — it's the updater's checksum source of truth. Keep the sha256 in the release
+notes too (human verification + fallback).
 
 ## Known limitation
 

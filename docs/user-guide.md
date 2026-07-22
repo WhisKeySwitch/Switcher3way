@@ -173,13 +173,26 @@ While paused, nothing converts and the status icon shows **⏸**. Timed pauses r
 automatically — even if the app is relaunched in between; "until restart" ends when the app is
 restarted. Select **Resume** to end any pause immediately.
 
+## Updates
+
+Switcher3way checks its own [releases page](https://github.com/WhisKeySwitch/switcher3way-releases/releases)
+shortly after launch and once a day, and offers new versions in a dialog. **Install and
+Relaunch** downloads the update, verifies it (checksum and code-signing identity), replaces
+the app, and relaunches — your permissions are kept. **Later** asks again on the next check;
+**Skip This Version** stays quiet about that version until a newer one appears. Turn the
+automatic check off in **Settings → General → Check for updates automatically**; you can
+always check manually via **menu → Check for Updates…**. Update checks talk only to GitHub
+and send nothing about you or your typing.
+
 ## Privacy
 
-Everything happens **locally on your Mac**. Switcher3way makes **no network connections at
-all** — no update checks, no telemetry, no dictionaries downloaded (it uses the macOS system
-dictionaries). Keystrokes are held only in a short in-memory buffer for the current word, are
-never written to disk, and auto-fix is suppressed entirely while macOS signals secure input
-(password fields). The debug log is opt-in and contains decision traces, not your text.
+Detection and conversion happen **entirely locally on your Mac** — no telemetry, no
+dictionaries downloaded (it uses the macOS system dictionaries). The only network access is
+the **optional update check** (see above): a request to GitHub for the latest release
+version, which you can switch off in Settings → General. Keystrokes are held only in a short
+in-memory buffer for the current word, are never written to disk, and auto-fix is suppressed
+entirely while macOS signals secure input (password fields). The debug log is opt-in and
+contains decision traces, not your text.
 
 ## Troubleshooting & FAQ
 
