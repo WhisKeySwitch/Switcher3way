@@ -26,8 +26,8 @@
 
 ## 5. Parity features
 
-- [ ] 5.1 Tray UI: status (enabled/paused), enable/disable, auto-fix toggle, pause, open settings, quit
-- [ ] 5.2 Settings window (trigger config, auto-fix, feature toggles) persisted to per-user storage
+- [x] 5.1 Tray UI (`TrayApp`, WinForms `NotifyIcon`): status header, **Enabled** + **Auto-fix** toggles, **Pause** submenu (30 min / 1 h / until restart / resume), **Quit**; icon + tooltip reflect on/off/paused; a 30 s timer resumes a timed pause visually. `Engine` now gates auto on `EffectivelyEnabled && AutoFix` and manual (F9) on `EffectivelyEnabled`. (App runs as a tray app; End is a normal key again — no console-quit.)
+- [~] 5.2 Settings **persistence** done — `SettingsManager` reads/writes `%AppData%\Switcher3way\settings.json` (Enabled, AutoFix, PausedUntil); feature toggles live in the tray menu. A dedicated **settings window** (trigger-key config, etc.) is still to build.
 - [ ] 5.3 Exceptions: denied-apps list, never-convert / always-convert word lists, secure/password-field detection via UI Automation
 - [ ] 5.4 Per-app layout memory
 - [ ] 5.5 Interface localization parity (reuse the existing string set where possible)

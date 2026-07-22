@@ -38,23 +38,35 @@ internal sealed class Engine
         public int OnScreenLen;          // chars currently displayed for the token
     }
 
-    public Engine()
+    private readonly SettingsManager _settings;
+
+    public Engine(SettingsManager settings)
     {
+        _settings = settings;
         _resolver = new NWayResolver(_catalog, _dict, new EmptyAlwaysConvert());
-        _monitor.WordCompleted += (word, boundary) => _work.Add(() => AutoConvert(word, boundary));
+        _monitor.WordCompleted += (word, boundary) =>
+        {
+            // Auto-fix gates on the master toggle, not-paused, AND the auto-fix setting.
+            if (_settings.EffectivelyEnabled && _settings.AutoFix)
+                _work.Add(() => AutoConvert(word, boundary));
+        };
         _monitor.TriggerPressed += OnTrigger;
-        _monitor.QuitPressed += () => _work.CompleteAdding();
         _monitor.Typed += () => { lock (_cycleLock) _cycle = null; };
     }
 
-    public void RunInteractive()
+    /// <summary>Start the keyboard/mouse hook + conversion worker (both background). Non-blocking.</summary>
+    public void Start()
     {
-        Console.WriteLine("=== Switcher3way (Windows) — live loop ===");
-        Console.WriteLine("Auto-fixes finished words; F9 = manual convert/cycle; End = quit.\n");
         var hookThread = new Thread(_monitor.Run) { IsBackground = true, Name = "hook" };
         hookThread.SetApartmentState(ApartmentState.STA);
         hookThread.Start();
+        new Thread(WorkerLoop) { IsBackground = true, Name = "worker" }.Start();
+    }
 
+    public void Stop() => _work.CompleteAdding();
+
+    private void WorkerLoop()
+    {
         foreach (var job in _work.GetConsumingEnumerable())
         {
             try { job(); }
@@ -86,6 +98,7 @@ internal sealed class Engine
     // ---- Manual N-way cycle ----------------------------------------------------------------
     private void OnTrigger()
     {
+        if (!_settings.EffectivelyEnabled) return; // manual works when enabled + not paused (even if auto-fix off)
         if (_converting) return;   // ignore F9 auto-repeat / re-entrancy
         _converting = true;
         _work.Add(() => { try { ManualStep(); } finally { _converting = false; } });
