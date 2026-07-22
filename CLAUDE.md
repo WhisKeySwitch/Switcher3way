@@ -151,7 +151,7 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 - Feature-complete: 3-way auto + manual switching, renamed, custom icon, updater off,
   modernized UI (toolbar-tab Settings, onboarding checklist, status-first menu with Pause),
-  stable signing. Builds clean; installed at `/Applications/Switcher3way.app` (v1.0.1 — fork versioning restarted from 1.0).
+  stable signing. Builds clean; installed at `/Applications/Switcher3way.app` (v1.0.2 — fork versioning restarted from 1.0).
 - **Pending user action:** visual pass of the new UI against the W1–W4 wireframes
   (`openspec/changes/modernize-ui/`) — behavior is verified via debug log, pixels are not.
 
