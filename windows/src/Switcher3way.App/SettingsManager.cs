@@ -25,15 +25,23 @@ public sealed class SettingsManager
     /// <summary>Words to always convert (matched against the target/converted form).</summary>
     public List<string> AlwaysConvertWords { get; set; } = new();
 
-    /// <summary>Sensible defaults (exe names, lower-case): password managers, terminals, RDP.</summary>
-    public static readonly string[] DefaultDeniedApps =
+    /// <summary>Password managers — always denied, non-removable in the UI (security).</summary>
+    public static readonly string[] ProtectedApps =
     {
         "1password.exe", "bitwarden.exe", "keepass.exe", "keepassxc.exe", "lastpass.exe", "dashlane.exe",
+    };
+
+    /// <summary>Editable default denied apps (exe names, lower-case): terminals, RDP.</summary>
+    public static readonly string[] DefaultDeniedApps =
+    {
         "cmd.exe", "powershell.exe", "pwsh.exe", "windowsterminal.exe", "conhost.exe", "putty.exe", "mstsc.exe",
     };
 
+    public static bool IsProtectedApp(string exe) =>
+        ProtectedApps.Any(a => string.Equals(a, exe, StringComparison.OrdinalIgnoreCase));
+
     public bool IsDeniedApp(string? exe) =>
-        exe is not null && DeniedApps.Any(a => string.Equals(a, exe, StringComparison.OrdinalIgnoreCase));
+        exe is not null && (IsProtectedApp(exe) || DeniedApps.Any(a => string.Equals(a, exe, StringComparison.OrdinalIgnoreCase)));
 
     public bool IsNeverConvert(string typed, string converted)
     {
