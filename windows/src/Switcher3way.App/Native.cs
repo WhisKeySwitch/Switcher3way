@@ -62,6 +62,11 @@ internal static class Native
     [DllImport("user32.dll")] public static extern void PostQuitMessage(int nExitCode);
     [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
 
+    public const int ATTACH_PARENT_PROCESS = -1;
+    [DllImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool AttachConsole(int dwProcessId);
+
     // ---- Layout enumeration + rendering ----------------------------------------------------
     [DllImport("user32.dll")] public static extern int GetKeyboardLayoutList(int nBuff, [Out] IntPtr[]? lpList);
     [DllImport("user32.dll")] public static extern IntPtr GetKeyboardLayout(uint idThread);

@@ -31,7 +31,7 @@
 - [~] 5.3 Exceptions: **denied-apps** list (with defaults — password managers, terminals, RDP), **never-convert** / **always-convert** word lists — all persisted in `SettingsManager` and enforced in `Engine` (denied-app gate on auto AND manual; never-convert on auto; always-convert via Core `IAlwaysConvertList`). Secure/**password-field detection via UI Automation** still to add; exception editor UI pending the settings window.
 - [x] 5.4 Per-app layout memory: a `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` foreground watcher remembers each app's last-used layout (by exe) and restores it on focus return; gated on `EffectivelyEnabled` + a `PerAppMemory` setting with a tray toggle. Foreground change also clears the word buffer (app-switch safety).
 - [ ] 5.5 Interface localization parity (reuse the existing string set where possible)
-- [ ] 5.6 Diagnostics/debug log equivalent to the macOS `rslog` decision trace
+- [x] 5.6 Diagnostics: opt-in rotating file log (`Diagnostics`, `%AppData%\Switcher3way\Logs\switcher3way.log`, 5 MB cap + one backup), off by default, with tray **Debug log** toggle + **Open log folder**. App is now **`WinExe`** (no console window); the self-test attaches to the parent console (`AttachConsole`). Engine conversion trace routed to the log (mirrors macOS `rslog`).
 - [ ] 5.7 Elevated-window handling (R2): surface "can't act in this window" rather than silently failing; optionally offer an elevated mode
 
 ## 6. Packaging, distribution, docs

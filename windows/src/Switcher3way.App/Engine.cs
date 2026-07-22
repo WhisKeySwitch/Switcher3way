@@ -56,6 +56,7 @@ internal sealed class Engine
     public Engine(SettingsManager settings)
     {
         _settings = settings;
+        Diagnostics.Configure(settings);
         _resolver = new NWayResolver(_catalog, _dict, new SettingsAlwaysConvert(settings));
         _monitor.WordCompleted += (word, boundary) =>
         {
@@ -106,7 +107,7 @@ internal sealed class Engine
         foreach (var job in _work.GetConsumingEnumerable())
         {
             try { job(); }
-            catch (Exception ex) { Console.WriteLine($"  [error] {ex.Message}"); }
+            catch (Exception ex) { Diagnostics.Log($"  [error] {ex.Message}"); }
         }
     }
 
@@ -126,12 +127,12 @@ internal sealed class Engine
         // needless erase/retype).
         if (d.Converted == d.Original)
         {
-            Console.WriteLine($"  auto: layout -> [{LangLabel(d.TargetLayoutId)}] (text \"{d.Original}\" unchanged) via {path}");
+            Diagnostics.Log($"  auto: layout -> [{LangLabel(d.TargetLayoutId)}] (text \"{d.Original}\" unchanged) via {path}");
             return;
         }
         // The boundary char is already on screen; erase word+boundary and re-type converted+boundary.
         var res = TextRewriter.Rewrite(word.Count + 1, d.Converted + boundary);
-        Console.WriteLine($"  auto: \"{d.Original}\" -> \"{d.Converted}\" [{LangLabel(d.TargetLayoutId)}] via {path} : {res}");
+        Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" [{LangLabel(d.TargetLayoutId)}] via {path} : {res}");
     }
 
     /// <summary>Friendly language label (en/ru/uk) for a layout id, for logging.</summary>
@@ -160,10 +161,10 @@ internal sealed class Engine
                 string suffix;
                 if (cur.Count > 0) { word = cur; suffix = ""; }        // in-progress: caret after word
                 else if (prev.Count > 0) { word = prev; suffix = " "; } // finished with a space
-                else { Console.WriteLine("(type a word, then press F9)"); return; }
+                else { Diagnostics.Log("(type a word, then press F9)"); return; }
 
                 var plan = _resolver.ManualPlan(word, word.Any(k => k.Caps));
-                if (plan is null) { Console.WriteLine("(nothing to convert)"); return; }
+                if (plan is null) { Diagnostics.Log("(nothing to convert)"); return; }
                 _cycle = new Cycle { Plan = plan, Suffix = suffix, Step = 0, OnScreenLen = (plan.Original + suffix).Length };
             }
             cyc = _cycle;
@@ -176,7 +177,7 @@ internal sealed class Engine
 
         var path = LayoutSwitcher.SwitchForeground(targetId);
         var res = TextRewriter.Rewrite(cyc.OnScreenLen, text, waitForKeyUpVk: VK_F9);
-        Console.WriteLine($"  cycle[{cyc.Step}] -> [{label}] \"{text.TrimEnd()}\" via {path} : {res}");
+        Diagnostics.Log($"  cycle[{cyc.Step}] -> [{label}] \"{text.TrimEnd()}\" via {path} : {res}");
 
         cyc.OnScreenLen = text.Length;
         cyc.Step++;
