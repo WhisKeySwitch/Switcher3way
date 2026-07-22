@@ -20,6 +20,7 @@ internal sealed class TrayApp : IDisposable
     private string _iconKey = "";
 
     private readonly ToolStripMenuItem _enabledItem, _autoFixItem, _perAppItem, _debugItem;
+    private HelpWindow? _help; // built-in help window (single instance)
     private readonly System.Windows.Forms.Timer _poll;
     private readonly System.Threading.SynchronizationContext? _ui;
 
@@ -54,7 +55,7 @@ internal sealed class TrayApp : IDisposable
         menu.Items.Add(new ToolStripMenuItem(Loc.T("menu.settings"), null, (_, _) => OpenSettings()));
         menu.Items.Add(_debugItem);
         menu.Items.Add(new ToolStripMenuItem(Loc.T("win.openLog"), null, (_, _) => OpenLogFolder()));
-        menu.Items.Add(new ToolStripMenuItem(Loc.T("menu.help"), null, (_, _) => Open(HelpUrl())));
+        menu.Items.Add(new ToolStripMenuItem(Loc.T("menu.help"), null, (_, _) => OpenHelp()));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem(Loc.T("menu.quit"), null, (_, _) => Quit()));
 
@@ -125,17 +126,17 @@ internal sealed class TrayApp : IDisposable
         if (form.ShowDialog() == DialogResult.OK) UpdateUi();
     }
 
-    /// <summary>User guide URL in the UI language (uk/ru), else English — matches the macOS Help.</summary>
-    private static string HelpUrl()
+    /// <summary>Open the built-in Help window (single instance) in the current UI language.</summary>
+    private void OpenHelp()
     {
-        var suffix = Loc.Language switch { "uk" => ".uk", "ru" => ".ru", _ => "" };
-        return $"https://github.com/WhisKeySwitch/Switcher3way/blob/main/docs/user-guide{suffix}.md";
-    }
-
-    private static void Open(string target)
-    {
-        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(target) { UseShellExecute = true }); }
-        catch { /* best-effort */ }
+        if (_help is null || _help.IsDisposed)
+        {
+            _help = new HelpWindow(Loc.Language);
+            _help.FormClosed += (_, _) => _help = null;
+        }
+        _help.Show();
+        _help.WindowState = FormWindowState.Normal;
+        _help.Activate();
     }
 
     private static void OpenLogFolder()
