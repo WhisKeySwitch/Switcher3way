@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Switcher3way.App/Switcher3way.App.csproj" />
     <Project Path="src/Switcher3way.Core/Switcher3way.Core.csproj" />
     <Project Path="src/Switcher3way.Dictionaries/Switcher3way.Dictionaries.csproj" />
   </Folder>

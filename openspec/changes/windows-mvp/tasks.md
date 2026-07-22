@@ -19,10 +19,10 @@
 
 ## 4. Live detection loop (graduate the spike's proven patterns)
 
-- [ ] 4.1 Lift from `windows-spike/` into the production app: dead-key-safe `ToUnicodeEx` renderer, `GetKeyboardLayoutList` enumeration, `KeyClassifier` (letters+digits+OEM buffer; boundary; backspace-pop; reset), foreground switch with confirm + `AttachThreadInput` fallback, `LLKHF_INJECTED`-ignoring hook, and the release-wait/per-char `SendInput` rewrite
-- [ ] 4.2 Assemble the auto path: hook → boundary → render all layouts → validate (core + Hunspell) → switch + rewrite
-- [ ] 4.3 Implement the manual trigger: convert-on-demand + the N-way candidate cycle (…→ru→uk→original); pick a default trigger key present on laptops (spike showed Pause/Break is often absent; F9 worked)
-- [ ] 4.4 Delete the throwaway `windows-spike/` once its patterns have graduated
+- [x] 4.1 Graduated the spike's Win32 patterns into `windows/src/Switcher3way.App/`: `Win32LayoutCatalog` (`GetKeyboardLayoutList` enumeration + dead-key-safe `ToUnicodeEx` render, implementing Core `ILayoutCatalog`), `KeyClassifier`, `KeyboardMonitor` (`WH_KEYBOARD_LL` hook, `LLKHF_INJECTED`-ignoring, word buffer), `LayoutSwitcher` (switch + confirm + `AttachThreadInput` fallback), `TextRewriter` (release-wait/per-char `SendInput` + UIPI detect).
+- [x] 4.2 Auto path assembled in `Engine` (hook → boundary → `NWayResolver.Resolve` over Win32 renders + Hunspell → `SwitchForeground` + `Rewrite`, off the hook thread). **Operator-verified live**: real typing in Notepad auto-fixed many words correctly (ghbdsn→привіт, руддщ→hello, Цщкдв→World, Plhfdcndeqnt?→Здравствуйте,, …), left ambiguous (собака, valid uk+ru) and already-valid words alone, and preserved capitals/punctuation. Added a no-op guard: when the target render equals the original (identical-looking Cyrillic across uk/ru), switch the layout but skip the needless rewrite.
+- [x] 4.3 Manual trigger (F9, laptop-safe, swallowed) + N-way cycle via `NWayResolver.ManualPlan` (…→ru→uk→original), single-shot + re-entrancy guard. **Buffer-reset guard added** after an operator found F9 deleting selected text: a `WH_MOUSE_LL` hook clears the word buffer on any click, and a foreground-window check drops a stale buffer on focus change (implements the spec's "reset on mouse/app-switch" so F9 can't backspace over a selection). Live cycle still needs an operator run.
+- [x] 4.4 Removed the throwaway `windows-spike/` code (patterns graduated); kept `windows-spike/FINDINGS.md` as the record with a graduation note.
 
 ## 5. Parity features
 

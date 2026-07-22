@@ -6,7 +6,9 @@ DerivedData/
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .swiftpm/xcode/xcshareddata/
 *.xcodeproj
-*.app
+# macOS build bundle at repo root only — anchored so it doesn't match the Windows
+# `Switcher3way.App` project dir (git is case-insensitive on Windows: .App == .app).
+/Switcher3way.app
 *.dmg
 *.zip
 .vscode/
