@@ -21,13 +21,13 @@ internal sealed class SettingsForm : Form
 
     // Auto-fix
     private readonly CheckBox _autoFix = new() { Text = "Auto-fix wrong-layout words as you type", AutoSize = true, Location = new Point(16, 14) };
-    private readonly ComboBox _filter = new() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(62, 24), Width = 150 };
-    private readonly Label _count = new() { AutoSize = true, Location = new Point(224, 27), ForeColor = SystemColors.GrayText };
-    private readonly TextBox _search = new() { Location = new Point(300, 24), Width = 128, PlaceholderText = "Search" };
-    private readonly ListView _list = new() { Location = new Point(16, 56), Size = new Size(412, 250), View = View.Details, FullRowSelect = true, HeaderStyle = ColumnHeaderStyle.None };
-    private readonly TextBox _addBox = new() { Location = new Point(16, 318), Width = 300, PlaceholderText = "Add entry, then Add" };
-    private readonly Button _add = new() { Text = "Add", Location = new Point(322, 316), Size = new Size(60, 26) };
-    private readonly Button _remove = new() { Text = "Remove selected", Location = new Point(16, 350), Size = new Size(130, 26) };
+    private readonly ComboBox _filter = new() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(60, 22), Width = 140 };
+    private readonly Label _count = new() { AutoSize = true, Location = new Point(206, 25), ForeColor = SystemColors.GrayText };
+    private readonly TextBox _search = new() { Location = new Point(296, 22), Width = 104, PlaceholderText = "Search" };
+    private readonly ListView _list = new() { Location = new Point(16, 50), Size = new Size(388, 200), View = View.Details, FullRowSelect = true, HeaderStyle = ColumnHeaderStyle.None };
+    private readonly Button _remove = new() { Text = "Remove selected", Location = new Point(16, 258), Size = new Size(140, 26) };
+    private readonly TextBox _addBox = new() { Location = new Point(16, 292), Width = 300, PlaceholderText = "Add entry, then click Add" };
+    private readonly Button _add = new() { Text = "Add", Location = new Point(322, 290), Size = new Size(60, 26) };
 
     // Advanced
     private readonly CheckBox _debug = new() { Text = "Debug log", AutoSize = true, Location = new Point(16, 20) };
@@ -38,11 +38,12 @@ internal sealed class SettingsForm : Form
     private const string RepoUrl = "https://github.com/WhisKeySwitch/Switcher3way";
     private const string SiteUrl = "https://whiskeyswitch.github.io/Switcher3way/";
 
-    private sealed record KeyItem(string Name, int Vk) { public override string ToString() => Name; }
+    private sealed record KeyItem(string Name, int Vk, bool Double = false) { public override string ToString() => Name; }
     private static readonly KeyItem[] TriggerKeys =
     {
         new("F8", 0x77), new("F9", 0x78), new("F10", 0x79), new("F11", 0x7A), new("F12", 0x7B),
         new("Pause/Break", 0x13), new("Scroll Lock", 0x91), new("Right Ctrl", 0xA3),
+        new("Double Shift", 0x10, true), new("Double Ctrl", 0x11, true), new("Double Alt", 0x12, true),
     };
 
     public SettingsForm(SettingsManager s)
@@ -95,12 +96,12 @@ internal sealed class SettingsForm : Form
     {
         var p = new TabPage("Auto-fix");
         p.Controls.Add(_autoFix);
-        var box = new GroupBox { Text = "Exceptions", Location = new Point(12, 44), Size = new Size(444, 340) };
-        box.Controls.Add(new Label { Text = "Show:", AutoSize = true, Location = new Point(16, 27) });
+        var box = new GroupBox { Text = "Exceptions", Location = new Point(12, 42), Size = new Size(420, 328) };
+        box.Controls.Add(new Label { Text = "Show:", AutoSize = true, Location = new Point(16, 25) });
         _filter.Items.AddRange(new object[] { "Apps", "Never convert", "Always convert" });
         _filter.SelectedIndexChanged += (_, _) => RefreshList();
         _search.TextChanged += (_, _) => RefreshList();
-        _list.Columns.Add("", _list.Width - 4);
+        _list.Columns.Add("", 360);
         _list.SelectedIndexChanged += (_, _) => UpdateRemoveEnabled();
         _add.Click += (_, _) => AddEntry();
         _remove.Click += (_, _) => RemoveEntry();
@@ -173,6 +174,7 @@ internal sealed class SettingsForm : Form
             total++;
             if (Match(e)) _list.Items.Add(new ListViewItem(e) { Tag = "user" });
         }
+        _list.Columns[0].Width = -2; // fill the list width; no horizontal scrollbar
         _list.EndUpdate();
         _count.Text = $"({total})";
         UpdateRemoveEnabled();
@@ -209,7 +211,7 @@ internal sealed class SettingsForm : Form
         _perApp.Checked = _s.PerAppMemory;
         _debug.Checked = _s.DebugLog;
         _startup.Checked = StartupShortcut.IsEnabled;
-        _trigger.SelectedItem = TriggerKeys.FirstOrDefault(k => k.Vk == _s.TriggerKey) ?? TriggerKeys[1];
+        _trigger.SelectedItem = TriggerKeys.FirstOrDefault(k => k.Vk == _s.TriggerKey && k.Double == _s.TriggerDoubleTap) ?? TriggerKeys[1];
         _filter.SelectedIndex = 0;
         RefreshList();
     }
@@ -220,7 +222,7 @@ internal sealed class SettingsForm : Form
         _s.AutoFix = _autoFix.Checked;
         _s.PerAppMemory = _perApp.Checked;
         _s.DebugLog = _debug.Checked;
-        if (_trigger.SelectedItem is KeyItem k) _s.TriggerKey = k.Vk;
+        if (_trigger.SelectedItem is KeyItem k) { _s.TriggerKey = k.Vk; _s.TriggerDoubleTap = k.Double; }
         _s.DeniedApps = _apps;
         _s.NeverConvertWords = _never;
         _s.AlwaysConvertWords = _always;
