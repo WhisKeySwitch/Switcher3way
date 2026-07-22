@@ -38,6 +38,18 @@ internal sealed class Engine
 
     private const int VK_F9 = 0x78;
 
+    /// <summary>User-facing notification (e.g. "can't act in this window"), shown by the tray.</summary>
+    public event Action<string>? Notify;
+    private DateTime _lastNotify = DateTime.MinValue;
+
+    private void NotifyProtected()
+    {
+        var now = DateTime.Now;
+        if ((now - _lastNotify).TotalSeconds < 30) return; // throttle so an elevated window can't spam
+        _lastNotify = now;
+        Notify?.Invoke("Can't change text in this window — it may be running as administrator.");
+    }
+
     private sealed class Cycle
     {
         public required ManualPlan Plan;
@@ -133,6 +145,7 @@ internal sealed class Engine
         // The boundary char is already on screen; erase word+boundary and re-type converted+boundary.
         var res = TextRewriter.Rewrite(word.Count + 1, d.Converted + boundary);
         Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" [{LangLabel(d.TargetLayoutId)}] via {path} : {res}");
+        if (res != TextRewriter.Result.Ok) NotifyProtected();
     }
 
     /// <summary>Friendly language label (en/ru/uk) for a layout id, for logging.</summary>
@@ -178,6 +191,7 @@ internal sealed class Engine
         var path = LayoutSwitcher.SwitchForeground(targetId);
         var res = TextRewriter.Rewrite(cyc.OnScreenLen, text, waitForKeyUpVk: VK_F9);
         Diagnostics.Log($"  cycle[{cyc.Step}] -> [{label}] \"{text.TrimEnd()}\" via {path} : {res}");
+        if (res != TextRewriter.Result.Ok) NotifyProtected();
 
         cyc.OnScreenLen = text.Length;
         cyc.Step++;
