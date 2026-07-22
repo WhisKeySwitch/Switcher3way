@@ -150,7 +150,10 @@ internal sealed class TrayApp : IDisposable
                 case "uk":
                     Bands(g, r, Color.FromArgb(0x00, 0x57, 0xB7), Color.FromArgb(0xFF, 0xD5, 0x00));
                     break;
-                default: // en or unknown: a coloured badge with the 2-letter code
+                case "en":
+                    UsFlag(g, r);
+                    break;
+                default: // unknown language: a coloured badge with the 2-letter code
                     using (var b = new SolidBrush(Color.FromArgb(0x2B, 0x36, 0x52))) g.FillRectangle(b, r);
                     var code = (lang.Length >= 2 ? lang[..2] : lang).ToUpperInvariant();
                     using (var f = new Font("Segoe UI", 12, FontStyle.Bold, GraphicsUnit.Pixel))
@@ -177,6 +180,28 @@ internal sealed class TrayApp : IDisposable
         var icon = (Icon)Icon.FromHandle(h).Clone();
         Native.DestroyIcon(h);
         return icon;
+    }
+
+    /// <summary>A simplified US flag (7 stripes + blue canton with suggested stars) legible at tray size.</summary>
+    private static void UsFlag(Graphics g, Rectangle r)
+    {
+        var red = Color.FromArgb(0xB2, 0x22, 0x34);
+        var navy = Color.FromArgb(0x3C, 0x3B, 0x6E);
+        const int stripes = 7; // 4 red, 3 white — fewer than 13 so they read at 16px
+        int sh = r.Height / stripes;
+        for (int i = 0; i < stripes; i++)
+        {
+            int y = r.Y + i * sh;
+            int h = (i == stripes - 1) ? r.Bottom - y : sh;
+            using var b = new SolidBrush(i % 2 == 0 ? red : Color.White);
+            g.FillRectangle(b, r.X, y, r.Width, h);
+        }
+        int cw = (int)(r.Width * 0.42), ch = sh * 4; // canton over the top four stripes
+        using (var b = new SolidBrush(navy)) g.FillRectangle(b, r.X, r.Y, cw, ch);
+        using (var s = new SolidBrush(Color.White)) // suggested stars
+            for (int yy = 0; yy < 3; yy++)
+                for (int xx = 0; xx < 3; xx++)
+                    g.FillRectangle(s, r.X + 3 + xx * ((cw - 4) / 3), r.Y + 3 + yy * ((ch - 4) / 3), 1, 1);
     }
 
     private static void Bands(Graphics g, Rectangle r, params Color[] colors)
