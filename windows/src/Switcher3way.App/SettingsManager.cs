@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -13,6 +14,8 @@ public sealed class SettingsManager
     public bool AutoFix { get; set; } = true;
     public bool PerAppMemory { get; set; } = true;
     public bool DebugLog { get; set; }
+    /// <summary>Virtual-key code of the manual-conversion trigger (default F9 = 0x78).</summary>
+    public int TriggerKey { get; set; } = 0x78;
     public DateTime? PausedUntil { get; set; }
 
     /// <summary>Apps (exe names) where auto-conversion is suppressed — terminals, password managers, RDP.</summary>

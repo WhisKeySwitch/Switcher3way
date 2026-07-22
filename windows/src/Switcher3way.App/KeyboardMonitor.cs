@@ -10,7 +10,8 @@ namespace Switcher3way.App;
 /// </summary>
 internal sealed class KeyboardMonitor
 {
-    private const uint VK_TRIGGER = 0x78; // F9 (present on laptops; swallowed)
+    private readonly SettingsManager _settings;
+    public KeyboardMonitor(SettingsManager settings) => _settings = settings;
 
     private readonly List<TypedKey> _current = new();
     private readonly List<TypedKey> _prev = new();
@@ -109,7 +110,7 @@ internal sealed class KeyboardMonitor
     private bool HandleKeyDown(Native.KBDLLHOOKSTRUCT data)
     {
         uint vk = data.vkCode;
-        if (vk == VK_TRIGGER) { TriggerPressed?.Invoke(); return true; }
+        if (vk == (uint)_settings.TriggerKey) { TriggerPressed?.Invoke(); return true; }
 
         var kind = KeyClassifier.Classify(vk);
         if (kind != KeyKind.Modifier) Typed?.Invoke(); // any real keystroke ends a manual cycle
