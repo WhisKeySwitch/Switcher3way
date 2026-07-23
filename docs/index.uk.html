@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Switcher3way — автоматичне виправлення розкладки клавіатури (EN · UK · RU)</title>
+<meta name="description" content="Застосунок для macOS і Windows, який визначає мову, якою ви друкуєте, і виправляє розкладку клавіатури для англійської, української та російської. Точне N-way визначення.">
+<meta property="og:title" content="Switcher3way">
+<meta property="og:description" content="Визначає мову, якою ви друкуєте, і виправляє розкладку клавіатури — для англійської, української та російської.">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --bg:#ffffff; --fg:#16181d; --muted:#5b616e; --card:#f6f7f9; --line:#e6e8ec;
+    --accent:#3b5bdb; --accent-2:#7048e8; --good:#2b8a3e; --code-bg:#f1f3f5;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0d0f14; --fg:#e8eaed; --muted:#9aa2b1; --card:#161a22; --line:#242a35;
+      --accent:#748ffc; --accent-2:#b197fc; --good:#69db7c; --code-bg:#12151c; }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+  /* Hero */
+  header.hero{text-align:center;padding:72px 0 40px}
+  .icon{width:112px;height:112px;border-radius:24px;box-shadow:0 8px 30px rgba(0,0,0,.18)}
+  h1{font-size:clamp(2.2rem,6vw,3.4rem);margin:.5em 0 .1em;letter-spacing:-.02em}
+  .tag{font-size:clamp(1.05rem,2.6vw,1.35rem);color:var(--muted);max-width:640px;margin:0 auto 1.4em}
+  .badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:26px}
+  .badge{font-size:.8rem;color:var(--muted);background:var(--card);border:1px solid var(--line);
+    border-radius:999px;padding:4px 12px}
+  .cta{display:inline-flex;align-items:center;gap:9px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#fff;font-weight:600;font-size:1.05rem;padding:14px 26px;border-radius:12px;
+    box-shadow:0 6px 22px rgba(59,91,219,.35)}
+  .cta:hover{text-decoration:none;filter:brightness(1.06)}
+  .cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .cta.alt{background:transparent;color:var(--accent);border:1.5px solid var(--line);box-shadow:none}
+  .cta.alt:hover{filter:none;border-color:var(--accent);background:var(--card)}
+  .cta .pill{font-size:.68rem;font-weight:700;letter-spacing:.02em;background:rgba(255,255,255,.22);
+    padding:1px 8px;border-radius:999px}
+  .cta.alt .pill{background:var(--card);color:var(--muted)}
+  .subcta{display:block;margin-top:12px;font-size:.9rem;color:var(--muted)}
+  .langnav{font-size:.85rem;color:var(--muted);margin:0 0 14px}
+  .langnav a{color:var(--muted);text-decoration:underline}
+
+  /* Demo */
+  .demo{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;margin:48px 0;
+    text-align:center}
+  .demo h2{margin:0 0 6px;font-size:1.1rem;color:var(--muted);font-weight:600}
+  .flow{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;
+    font-size:clamp(1.3rem,4vw,2rem);margin-top:14px}
+  .chip{padding:8px 16px;border-radius:10px;border:1px solid var(--line);background:var(--bg)}
+  .chip.wrong{color:var(--muted);text-decoration:line-through;text-decoration-color:#e03131aa}
+  .chip.right{color:var(--good);border-color:var(--good)}
+  .arrow{color:var(--accent);font-size:1.4em}
+  .demo p{color:var(--muted);margin:16px auto 0;max-width:620px;font-size:.98rem}
+
+  /* Sections */
+  section{padding:26px 0}
+  h2.sec{font-size:1.5rem;letter-spacing:-.01em;margin:0 0 18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .feat h3{margin:0 0 6px;font-size:1.05rem}
+  .feat p{margin:0;color:var(--muted);font-size:.95rem}
+  ol.steps{padding-left:20px}
+  ol.steps li{margin:10px 0}
+  .note{background:var(--code-bg);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:12px 16px;color:var(--muted);font-size:.92rem;margin-top:14px}
+  kbd{font-family:inherit;background:var(--bg);border:1px solid var(--line);border-bottom-width:2px;
+    border-radius:6px;padding:1px 7px;font-size:.85em}
+
+  footer{border-top:1px solid var(--line);margin-top:40px;padding:30px 0 60px;color:var(--muted);
+    font-size:.9rem;text-align:center}
+  footer a{color:var(--muted);text-decoration:underline}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="langnav"><a href="index.html">English</a> · <b>Українська</b></p>
+    <img class="icon" src="icon.png" alt="Піктограма Switcher3way">
+    <h1>Switcher3way</h1>
+    <p class="tag">Застосунок для macOS і Windows, який помічає мову, якою ви друкуєте, і виправляє розкладку клавіатури — для <b>англійської</b>, <b>української</b> та <b>російської</b>.</p>
+    <div class="badges">
+      <span class="badge">macOS 13+</span>
+      <span class="badge">Windows 10/11 · попередня версія</span>
+      <span class="badge">Відкритий код · MIT</span>
+      <span class="badge">Безкоштовно</span>
+    </div>
+    <div class="cta-row">
+      <a class="cta" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">⬇&nbsp; Завантажити для macOS</a>
+      <a class="cta alt" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.1.0">⬇&nbsp; Завантажити для Windows&nbsp; <span class="pill">БЕТА</span></a>
+    </div>
+    <span class="subcta">Безкоштовно та з відкритим кодом · <a href="https://github.com/WhisKeySwitch/Switcher3way">Переглянути на GitHub</a></span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="demo">
+    <h2>Набрали правильне слово в неправильній розкладці?</h2>
+    <div class="flow">
+      <span class="chip wrong mono">ghbdtn</span>
+      <span class="arrow">→</span>
+      <span class="chip right mono">привет</span>
+    </div>
+    <p>Switcher3way пропускає ваші натискання клавіш через <em>кожну</em> встановлену розкладку, перевіряє кожен варіант за словником його мови й перемикає лише тоді, коли є єдиний однозначний переможець — автоматично під час набору або за натисканням клавіші.</p>
+  </div>
+
+  <section>
+    <h2 class="sec">Чим це відрізняється</h2>
+    <div class="grid">
+      <div class="feat"><h3>N-way, а не дві розкладки</h3><p>Більшість перемикачів чергують лише дві розкладки. Switcher3way враховує <em>всі</em> встановлені розкладки одразу й обирає правильну.</p></div>
+      <div class="feat"><h3>Спершу точність</h3><p>Слова, дійсні в кількох мовах (як-от <span class="mono">там</span> в українській і російській), залишаються незмінними — жодних хибних «виправлень».</p></div>
+      <div class="feat"><h3>Автоматично або вручну</h3><p>Виправляйте слова автоматично під час набору або натисніть клавішу-тригер, щоб перетворити останнє слово чи виділення — натисніть ще раз, щоб скасувати.</p></div>
+      <div class="feat"><h3>Не заважає</h3><p>Винятки для окремих застосунків, списки слів «ніколи / завжди перетворювати», захист менеджерів паролів і пауза (30 хв / 1 год / до перезапуску).</p></div>
+      <div class="feat"><h3>Приємні дрібниці</h3><p>Рядок стану в меню, запам'ятовування розкладки для кожного застосунку, необов'язковий прапор розкладки біля курсора та інтерфейс, локалізований 16 мовами.</p></div>
+      <div class="feat"><h3>Приватно та офлайн</h3><p>Усе працює локально на вашому пристрої. Жодних облікових записів, телеметрії чи мережі.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">Встановлення</h2>
+    <h3>macOS</h3>
+    <ol class="steps">
+      <li><a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">Завантажте DMG</a>, відкрийте його та перетягніть <b>Switcher3way.app</b> до <b>Програм</b> (Applications).</li>
+      <li>Перший запуск: застосунок не нотаризований, тож один раз клацніть правою кнопкою → <b>Відкрити</b> (подвійний клік блокує Gatekeeper). macOS запам'ятає вибір.</li>
+      <li>Надайте два дозволи, коли з'явиться запит, — <b>Універсальний доступ</b> (Accessibility, щоб перенабрати виправлене слово) та <b>Моніторинг введення</b> (Input Monitoring, щоб бачити натискання). Контрольний список під час налаштування виявляє надані дозволи наживо.</li>
+    </ol>
+    <h3>Windows <span style="font-size:.7em;color:var(--muted);font-weight:600">· попередня версія</span></h3>
+    <ol class="steps">
+      <li><a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.1.0">Завантажте MSI</a> і двічі клацніть його; підтвердіть запит <b>Контролю облікових записів</b> (UAC).</li>
+      <li>Ця попередня версія ще не підписана, тож SmartScreen може попередити — натисніть <b>Докладніше → Виконати в будь-якому разі</b>.</li>
+      <li>Запустіть <b>Switcher3way</b> з меню «Пуск»; він живе в системному лотку. Жодних діалогів дозволів і <b>не потрібно встановлювати .NET</b> — середовище виконання вбудоване.</li>
+    </ol>
+    <div class="note">Windows — це 64-бітна попередня версія (без підпису; поки без автооновлення). Волієте зібрати самостійно? <code class="mono">git clone</code> репозиторій — macOS: <code class="mono">bash build_app.sh</code>; Windows: <code class="mono">pwsh windows/build-msi.ps1</code>. Див. <a href="https://github.com/WhisKeySwitch/Switcher3way#build-it-yourself">README</a>.</div>
+  </section>
+
+  <section>
+    <h2 class="sec">Документація</h2>
+    <p>Посібник користувача:
+      <a href="https://github.com/WhisKeySwitch/Switcher3way/blob/main/docs/user-guide.uk.md">Українська</a> ·
+      <a href="https://github.com/WhisKeySwitch/Switcher3way/blob/main/docs/user-guide.md">English</a> ·
+      <a href="https://github.com/WhisKeySwitch/Switcher3way/blob/main/docs/user-guide.ru.md">Русский</a>
+    </p>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Switcher3way — безкоштовний застосунок з відкритим кодом за <a href="https://github.com/WhisKeySwitch/Switcher3way/blob/main/LICENSE">ліцензією MIT</a> — форк <a href="https://github.com/rashn/RuSwitcher">RuSwitcher</a>, узагальнений до N-way.</p>
+    <p><a href="https://github.com/WhisKeySwitch/Switcher3way">GitHub</a> · <a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">Завантажити</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
