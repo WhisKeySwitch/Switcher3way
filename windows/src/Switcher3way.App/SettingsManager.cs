@@ -14,6 +14,12 @@ public sealed class SettingsManager
     public bool AutoFix { get; set; } = true;
     public bool PerAppMemory { get; set; } = true;
     public bool DebugLog { get; set; }
+    /// <summary>Daily background update check against the fork's downloads repo (default on).</summary>
+    public bool CheckForUpdates { get; set; } = true;
+    /// <summary>Version the user chose to skip in the update prompt (not offered again in the background).</summary>
+    public string? SkippedVersion { get; set; }
+    /// <summary>Timestamp of the last successful update check (informational).</summary>
+    public DateTime? LastUpdateCheck { get; set; }
     /// <summary>Forced UI language 2-letter code (e.g. "uk"); empty/null = follow the system.</summary>
     public string InterfaceLanguage { get; set; } = "";
     /// <summary>Virtual-key code of the manual-conversion trigger (default F9 = 0x78).</summary>

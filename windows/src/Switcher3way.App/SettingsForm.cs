@@ -31,7 +31,8 @@ internal sealed class SettingsForm : Form
     private readonly Button _add = new() { Text = Loc.T("common.add"), Location = new Point(322, 290), Size = new Size(60, 26) };
 
     // Advanced
-    private readonly CheckBox _debug = new() { Text = Loc.T("settings.debugLog"), AutoSize = true, Location = new Point(16, 20) };
+    private readonly CheckBox _checkUpdates = new() { Text = Loc.T("settings.checkUpdates"), AutoSize = true, Location = new Point(16, 20) };
+    private readonly CheckBox _debug = new() { Text = Loc.T("settings.debugLog"), AutoSize = true, Location = new Point(16, 46) };
 
     // Working copies (applied on Save).
     private readonly List<string> _apps, _never, _always;
@@ -126,11 +127,12 @@ internal sealed class SettingsForm : Form
     private TabPage BuildAdvanced()
     {
         var p = new TabPage(Loc.T("settings.tab.advanced"));
+        p.Controls.Add(_checkUpdates);
         p.Controls.Add(_debug);
-        var open = new Button { Text = Loc.T("win.openLog"), Location = new Point(16, 48), Size = new Size(160, 26) };
+        var open = new Button { Text = Loc.T("win.openLog"), Location = new Point(16, 74), Size = new Size(160, 26) };
         open.Click += (_, _) => Open(Diagnostics.Dir);
         p.Controls.Add(open);
-        p.Controls.Add(new Label { Text = "The debug log is written only while enabled, at:\n" + Diagnostics.FilePath, AutoSize = true, Location = new Point(16, 84), ForeColor = SystemColors.GrayText });
+        p.Controls.Add(new Label { Text = "The debug log is written only while enabled, at:\n" + Diagnostics.FilePath, AutoSize = true, Location = new Point(16, 110), ForeColor = SystemColors.GrayText });
         return p;
     }
 
@@ -224,6 +226,7 @@ internal sealed class SettingsForm : Form
         _autoFix.Checked = _s.AutoFix;
         _perApp.Checked = _s.PerAppMemory;
         _debug.Checked = _s.DebugLog;
+        _checkUpdates.Checked = _s.CheckForUpdates;
         _startup.Checked = StartupShortcut.IsEnabled;
         _trigger.SelectedItem = TriggerKeys.FirstOrDefault(k => k.Vk == _s.TriggerKey && k.Double == _s.TriggerDoubleTap) ?? TriggerKeys[1];
         if (_language.Items.Count == 0)
@@ -242,6 +245,7 @@ internal sealed class SettingsForm : Form
         _s.AutoFix = _autoFix.Checked;
         _s.PerAppMemory = _perApp.Checked;
         _s.DebugLog = _debug.Checked;
+        _s.CheckForUpdates = _checkUpdates.Checked;
         if (_trigger.SelectedItem is KeyItem k) { _s.TriggerKey = k.Vk; _s.TriggerDoubleTap = k.Double; }
         if (_language.SelectedItem is LangItem lang) { _s.InterfaceLanguage = lang.Code; Loc.Configure(lang.Code); }
         _s.DeniedApps = _apps;

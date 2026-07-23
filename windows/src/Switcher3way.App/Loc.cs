@@ -1,7 +1,9 @@
+using System.Text.RegularExpressions;
+
 namespace Switcher3way.App;
 
 /// <summary>Interface strings in 16 languages (generated from the macOS Localization.swift).
-/// Language follows the system UI culture; falls back to English. win.* keys are Windows-only.</summary>
+/// Language follows the system UI culture (overridable via Configure); falls back to English.</summary>
 internal static class Loc
 {
     private static readonly Dictionary<string, Dictionary<string, string>> S = new()
@@ -9,6 +11,18 @@ internal static class Loc
         ["en"] = new()
         {
             ["menu.autoSwitch"] = "Enable Switcher3way",
+            ["menu.checkUpdates"] = "Check for Updates…",
+            ["menu.checkingUpdates"] = "Checking for updates…",
+            ["update.available.title"] = "Switcher3way %@ is available",
+            ["update.installed"] = "You have version %@.",
+            ["update.install"] = "Install and Relaunch",
+            ["update.later"] = "Later",
+            ["update.skip"] = "Skip This Version",
+            ["update.upToDate.title"] = "You're up to date",
+            ["update.upToDate.text"] = "Switcher3way %@ is the latest version.",
+            ["update.checkFailed.title"] = "Update check failed",
+            ["update.installFailed.title"] = "Update failed",
+            ["settings.checkUpdates"] = "Check for updates automatically",
             ["menu.settings"] = "Settings…",
             ["menu.quit"] = "Quit",
             ["settings.tab.general"] = "General",
@@ -51,6 +65,18 @@ internal static class Loc
         ["ru"] = new()
         {
             ["menu.autoSwitch"] = "Включить Switcher3way",
+            ["menu.checkUpdates"] = "Проверить обновления…",
+            ["menu.checkingUpdates"] = "Проверка обновлений…",
+            ["update.available.title"] = "Доступна версия Switcher3way %@",
+            ["update.installed"] = "У вас установлена версия %@.",
+            ["update.install"] = "Установить и перезапустить",
+            ["update.later"] = "Позже",
+            ["update.skip"] = "Пропустить эту версию",
+            ["update.upToDate.title"] = "У вас последняя версия",
+            ["update.upToDate.text"] = "Switcher3way %@ — последняя версия.",
+            ["update.checkFailed.title"] = "Не удалось проверить обновления",
+            ["update.installFailed.title"] = "Не удалось установить обновление",
+            ["settings.checkUpdates"] = "Проверять обновления автоматически",
             ["menu.settings"] = "Настройки…",
             ["menu.quit"] = "Выход",
             ["settings.tab.general"] = "Основные",
@@ -87,6 +113,18 @@ internal static class Loc
         ["de"] = new()
         {
             ["menu.autoSwitch"] = "Switcher3way aktivieren",
+            ["menu.checkUpdates"] = "Nach Updates suchen…",
+            ["menu.checkingUpdates"] = "Suche nach Updates…",
+            ["update.available.title"] = "Switcher3way %@ ist verfügbar",
+            ["update.installed"] = "Installiert ist Version %@.",
+            ["update.install"] = "Installieren und neu starten",
+            ["update.later"] = "Später",
+            ["update.skip"] = "Diese Version überspringen",
+            ["update.upToDate.title"] = "Sie sind auf dem neuesten Stand",
+            ["update.upToDate.text"] = "Switcher3way %@ ist die neueste Version.",
+            ["update.checkFailed.title"] = "Updateprüfung fehlgeschlagen",
+            ["update.installFailed.title"] = "Update fehlgeschlagen",
+            ["settings.checkUpdates"] = "Automatisch nach Updates suchen",
             ["menu.settings"] = "Einstellungen…",
             ["menu.quit"] = "Beenden",
             ["settings.tab.general"] = "Allgemein",
@@ -123,6 +161,18 @@ internal static class Loc
         ["fr"] = new()
         {
             ["menu.autoSwitch"] = "Activer Switcher3way",
+            ["menu.checkUpdates"] = "Rechercher des mises à jour…",
+            ["menu.checkingUpdates"] = "Recherche de mises à jour…",
+            ["update.available.title"] = "Switcher3way %@ est disponible",
+            ["update.installed"] = "Vous avez la version %@.",
+            ["update.install"] = "Installer et relancer",
+            ["update.later"] = "Plus tard",
+            ["update.skip"] = "Ignorer cette version",
+            ["update.upToDate.title"] = "Vous êtes à jour",
+            ["update.upToDate.text"] = "Switcher3way %@ est la dernière version.",
+            ["update.checkFailed.title"] = "Échec de la vérification des mises à jour",
+            ["update.installFailed.title"] = "Échec de la mise à jour",
+            ["settings.checkUpdates"] = "Rechercher automatiquement les mises à jour",
             ["menu.settings"] = "Préférences…",
             ["menu.quit"] = "Quitter",
             ["settings.tab.general"] = "Général",
@@ -159,6 +209,18 @@ internal static class Loc
         ["es"] = new()
         {
             ["menu.autoSwitch"] = "Activar Switcher3way",
+            ["menu.checkUpdates"] = "Buscar actualizaciones…",
+            ["menu.checkingUpdates"] = "Buscando actualizaciones…",
+            ["update.available.title"] = "Switcher3way %@ está disponible",
+            ["update.installed"] = "Tienes la versión %@.",
+            ["update.install"] = "Instalar y reiniciar",
+            ["update.later"] = "Más tarde",
+            ["update.skip"] = "Omitir esta versión",
+            ["update.upToDate.title"] = "Estás al día",
+            ["update.upToDate.text"] = "Switcher3way %@ es la última versión.",
+            ["update.checkFailed.title"] = "No se pudo comprobar si hay actualizaciones",
+            ["update.installFailed.title"] = "No se pudo instalar la actualización",
+            ["settings.checkUpdates"] = "Buscar actualizaciones automáticamente",
             ["menu.settings"] = "Ajustes…",
             ["menu.quit"] = "Salir",
             ["settings.tab.general"] = "General",
@@ -195,6 +257,18 @@ internal static class Loc
         ["pt"] = new()
         {
             ["menu.autoSwitch"] = "Ativar Switcher3way",
+            ["menu.checkUpdates"] = "Procurar atualizações…",
+            ["menu.checkingUpdates"] = "A procurar atualizações…",
+            ["update.available.title"] = "Switcher3way %@ está disponível",
+            ["update.installed"] = "Tem a versão %@.",
+            ["update.install"] = "Instalar e reiniciar",
+            ["update.later"] = "Mais tarde",
+            ["update.skip"] = "Ignorar esta versão",
+            ["update.upToDate.title"] = "Está atualizado",
+            ["update.upToDate.text"] = "Switcher3way %@ é a versão mais recente.",
+            ["update.checkFailed.title"] = "Falha ao procurar atualizações",
+            ["update.installFailed.title"] = "Falha na atualização",
+            ["settings.checkUpdates"] = "Procurar atualizações automaticamente",
             ["menu.settings"] = "Configurações…",
             ["menu.quit"] = "Sair",
             ["settings.tab.general"] = "Geral",
@@ -231,6 +305,18 @@ internal static class Loc
         ["zh"] = new()
         {
             ["menu.autoSwitch"] = "启用 Switcher3way",
+            ["menu.checkUpdates"] = "检查更新…",
+            ["menu.checkingUpdates"] = "正在检查更新…",
+            ["update.available.title"] = "Switcher3way %@ 可供更新",
+            ["update.installed"] = "当前版本为 %@。",
+            ["update.install"] = "安装并重新启动",
+            ["update.later"] = "稍后",
+            ["update.skip"] = "跳过此版本",
+            ["update.upToDate.title"] = "已是最新版本",
+            ["update.upToDate.text"] = "Switcher3way %@ 已是最新版本。",
+            ["update.checkFailed.title"] = "检查更新失败",
+            ["update.installFailed.title"] = "更新失败",
+            ["settings.checkUpdates"] = "自动检查更新",
             ["menu.settings"] = "设置…",
             ["menu.quit"] = "退出",
             ["settings.tab.general"] = "通用",
@@ -267,6 +353,18 @@ internal static class Loc
         ["ja"] = new()
         {
             ["menu.autoSwitch"] = "Switcher3way を有効にする",
+            ["menu.checkUpdates"] = "アップデートを確認…",
+            ["menu.checkingUpdates"] = "アップデートを確認中…",
+            ["update.available.title"] = "Switcher3way %@ が利用可能です",
+            ["update.installed"] = "現在のバージョンは %@ です。",
+            ["update.install"] = "インストールして再起動",
+            ["update.later"] = "後で",
+            ["update.skip"] = "このバージョンをスキップ",
+            ["update.upToDate.title"] = "最新の状態です",
+            ["update.upToDate.text"] = "Switcher3way %@ は最新バージョンです。",
+            ["update.checkFailed.title"] = "アップデートの確認に失敗しました",
+            ["update.installFailed.title"] = "アップデートに失敗しました",
+            ["settings.checkUpdates"] = "自動的にアップデートを確認",
             ["menu.settings"] = "設定…",
             ["menu.quit"] = "終了",
             ["settings.tab.general"] = "一般",
@@ -303,6 +401,18 @@ internal static class Loc
         ["ko"] = new()
         {
             ["menu.autoSwitch"] = "Switcher3way 사용",
+            ["menu.checkUpdates"] = "업데이트 확인…",
+            ["menu.checkingUpdates"] = "업데이트 확인 중…",
+            ["update.available.title"] = "Switcher3way %@ 사용 가능",
+            ["update.installed"] = "현재 버전은 %@입니다.",
+            ["update.install"] = "설치 후 재실행",
+            ["update.later"] = "나중에",
+            ["update.skip"] = "이 버전 건너뛰기",
+            ["update.upToDate.title"] = "최신 버전입니다",
+            ["update.upToDate.text"] = "Switcher3way %@이(가) 최신 버전입니다.",
+            ["update.checkFailed.title"] = "업데이트 확인 실패",
+            ["update.installFailed.title"] = "업데이트 실패",
+            ["settings.checkUpdates"] = "자동으로 업데이트 확인",
             ["menu.settings"] = "설정…",
             ["menu.quit"] = "종료",
             ["settings.tab.general"] = "일반",
@@ -339,6 +449,18 @@ internal static class Loc
         ["uk"] = new()
         {
             ["menu.autoSwitch"] = "Увімкнути Switcher3way",
+            ["menu.checkUpdates"] = "Перевірити оновлення…",
+            ["menu.checkingUpdates"] = "Перевірка оновлень…",
+            ["update.available.title"] = "Доступна версія Switcher3way %@",
+            ["update.installed"] = "У вас встановлено версію %@.",
+            ["update.install"] = "Установити й перезапустити",
+            ["update.later"] = "Пізніше",
+            ["update.skip"] = "Пропустити цю версію",
+            ["update.upToDate.title"] = "У вас остання версія",
+            ["update.upToDate.text"] = "Switcher3way %@ — остання версія.",
+            ["update.checkFailed.title"] = "Не вдалося перевірити оновлення",
+            ["update.installFailed.title"] = "Не вдалося встановити оновлення",
+            ["settings.checkUpdates"] = "Перевіряти оновлення автоматично",
             ["menu.settings"] = "Налаштування…",
             ["menu.quit"] = "Вихід",
             ["settings.tab.general"] = "Загальні",
@@ -375,6 +497,18 @@ internal static class Loc
         ["be"] = new()
         {
             ["menu.autoSwitch"] = "Уключыць Switcher3way",
+            ["menu.checkUpdates"] = "Праверыць абнаўленні…",
+            ["menu.checkingUpdates"] = "Праверка абнаўленняў…",
+            ["update.available.title"] = "Даступная версія Switcher3way %@",
+            ["update.installed"] = "У вас усталявана версія %@.",
+            ["update.install"] = "Усталяваць і перазапусціць",
+            ["update.later"] = "Пазней",
+            ["update.skip"] = "Прапусціць гэтую версію",
+            ["update.upToDate.title"] = "У вас апошняя версія",
+            ["update.upToDate.text"] = "Switcher3way %@ — апошняя версія.",
+            ["update.checkFailed.title"] = "Не ўдалося праверыць абнаўленні",
+            ["update.installFailed.title"] = "Не ўдалося ўсталяваць абнаўленне",
+            ["settings.checkUpdates"] = "Правяраць абнаўленні аўтаматычна",
             ["menu.settings"] = "Налады…",
             ["menu.quit"] = "Выхад",
             ["settings.tab.general"] = "Агульныя",
@@ -411,6 +545,18 @@ internal static class Loc
         ["pl"] = new()
         {
             ["menu.autoSwitch"] = "Włącz Switcher3way",
+            ["menu.checkUpdates"] = "Sprawdź uaktualnienia…",
+            ["menu.checkingUpdates"] = "Sprawdzanie uaktualnień…",
+            ["update.available.title"] = "Dostępna jest wersja Switcher3way %@",
+            ["update.installed"] = "Masz wersję %@.",
+            ["update.install"] = "Zainstaluj i uruchom ponownie",
+            ["update.later"] = "Później",
+            ["update.skip"] = "Pomiń tę wersję",
+            ["update.upToDate.title"] = "Masz najnowszą wersję",
+            ["update.upToDate.text"] = "Switcher3way %@ to najnowsza wersja.",
+            ["update.checkFailed.title"] = "Nie udało się sprawdzić uaktualnień",
+            ["update.installFailed.title"] = "Uaktualnienie nie powiodło się",
+            ["settings.checkUpdates"] = "Automatycznie sprawdzaj uaktualnienia",
             ["menu.settings"] = "Ustawienia…",
             ["menu.quit"] = "Zakończ",
             ["settings.tab.general"] = "Ogólne",
@@ -447,6 +593,18 @@ internal static class Loc
         ["el"] = new()
         {
             ["menu.autoSwitch"] = "Ενεργοποίηση Switcher3way",
+            ["menu.checkUpdates"] = "Έλεγχος για ενημερώσεις…",
+            ["menu.checkingUpdates"] = "Γίνεται έλεγχος για ενημερώσεις…",
+            ["update.available.title"] = "Η έκδοση Switcher3way %@ είναι διαθέσιμη",
+            ["update.installed"] = "Έχετε την έκδοση %@.",
+            ["update.install"] = "Εγκατάσταση και επανεκκίνηση",
+            ["update.later"] = "Αργότερα",
+            ["update.skip"] = "Παράλειψη αυτής της έκδοσης",
+            ["update.upToDate.title"] = "Είστε ενημερωμένοι",
+            ["update.upToDate.text"] = "Η έκδοση Switcher3way %@ είναι η πιο πρόσφατη.",
+            ["update.checkFailed.title"] = "Ο έλεγχος ενημερώσεων απέτυχε",
+            ["update.installFailed.title"] = "Η ενημέρωση απέτυχε",
+            ["settings.checkUpdates"] = "Αυτόματος έλεγχος για ενημερώσεις",
             ["menu.settings"] = "Ρυθμίσεις…",
             ["menu.quit"] = "Έξοδος",
             ["settings.tab.general"] = "Γενικά",
@@ -483,6 +641,18 @@ internal static class Loc
         ["bg"] = new()
         {
             ["menu.autoSwitch"] = "Включи Switcher3way",
+            ["menu.checkUpdates"] = "Проверка за обновления…",
+            ["menu.checkingUpdates"] = "Проверява се за обновления…",
+            ["update.available.title"] = "Налична е версия Switcher3way %@",
+            ["update.installed"] = "Имате версия %@.",
+            ["update.install"] = "Инсталирай и рестартирай",
+            ["update.later"] = "По-късно",
+            ["update.skip"] = "Пропусни тази версия",
+            ["update.upToDate.title"] = "Разполагате с последната версия",
+            ["update.upToDate.text"] = "Switcher3way %@ е най-новата версия.",
+            ["update.checkFailed.title"] = "Проверката за обновления е неуспешна",
+            ["update.installFailed.title"] = "Обновлението е неуспешно",
+            ["settings.checkUpdates"] = "Автоматична проверка за обновления",
             ["menu.settings"] = "Настройки…",
             ["menu.quit"] = "Изход",
             ["settings.tab.general"] = "Общи",
@@ -519,6 +689,18 @@ internal static class Loc
         ["hy"] = new()
         {
             ["menu.autoSwitch"] = "Միացնել Switcher3way",
+            ["menu.checkUpdates"] = "Ստուգել թարմացումները…",
+            ["menu.checkingUpdates"] = "Թարմացումների ստուգում…",
+            ["update.available.title"] = "Հասանելի է Switcher3way %@ տարբերակը",
+            ["update.installed"] = "Դուք ունեք %@ տարբերակը:",
+            ["update.install"] = "Տեղադրել և վերագործարկել",
+            ["update.later"] = "Ավելի ուշ",
+            ["update.skip"] = "Բաց թողնել այս տարբերակը",
+            ["update.upToDate.title"] = "Դուք ունեք վերջին տարբերակը",
+            ["update.upToDate.text"] = "Switcher3way %@-ը վերջին տարբերակն է:",
+            ["update.checkFailed.title"] = "Չհաջողվեց ստուգել թարմացումները",
+            ["update.installFailed.title"] = "Թարմացումը ձախողվեց",
+            ["settings.checkUpdates"] = "Ավտոմատ ստուգել թարմացումները",
             ["menu.settings"] = "Կարգավորումներ…",
             ["menu.quit"] = "Ելք",
             ["settings.tab.general"] = "Հիմնական",
@@ -555,6 +737,18 @@ internal static class Loc
         ["ka"] = new()
         {
             ["menu.autoSwitch"] = "Switcher3way-ის ჩართვა",
+            ["menu.checkUpdates"] = "განახლებების შემოწმება…",
+            ["menu.checkingUpdates"] = "მიმდინარეობს განახლებების შემოწმება…",
+            ["update.available.title"] = "ხელმისაწვდომია Switcher3way %@",
+            ["update.installed"] = "თქვენ გაქვთ ვერსია %@.",
+            ["update.install"] = "დაყენება და გადატვირთვა",
+            ["update.later"] = "მოგვიანებით",
+            ["update.skip"] = "ამ ვერსიის გამოტოვება",
+            ["update.upToDate.title"] = "თქვენ გაქვთ უახლესი ვერსია",
+            ["update.upToDate.text"] = "Switcher3way %@ უახლესი ვერსიაა.",
+            ["update.checkFailed.title"] = "განახლებების შემოწმება ვერ მოხერხდა",
+            ["update.installFailed.title"] = "განახლება ვერ მოხერხდა",
+            ["settings.checkUpdates"] = "განახლებების ავტომატური შემოწმება",
             ["menu.settings"] = "პარამეტრები…",
             ["menu.quit"] = "გასვლა",
             ["settings.tab.general"] = "ზოგადი",
@@ -591,11 +785,9 @@ internal static class Loc
     };
 
     private static string? _forced;
-
     /// <summary>Force a UI language (null/empty = follow the system UI culture).</summary>
     public static void Configure(string? forced) => _forced = string.IsNullOrEmpty(forced) ? null : forced;
 
-    /// <summary>Supported 2-letter language codes.</summary>
     public static IEnumerable<string> Supported => S.Keys;
 
     public static string Language
@@ -613,5 +805,12 @@ internal static class Loc
         var lang = Language;
         if (S.TryGetValue(lang, out var d) && d.TryGetValue(key, out var v)) return v;
         return S["en"].TryGetValue(key, out var e) ? e : key;
+    }
+
+    /// <summary>Localized string with positional args, filling %@/%d placeholders in order.</summary>
+    public static string Tf(string key, params object[] args)
+    {
+        int i = 0;
+        return Regex.Replace(T(key), "%@|%d", _ => i < args.Length ? (args[i++]?.ToString() ?? "") : "");
     }
 }
