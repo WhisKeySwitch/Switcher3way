@@ -1,0 +1,17 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <PropertyGroup>
+    <!-- Defaults let `dotnet build` work standalone if publish/ and license.rtf already exist;
+         build-msi.ps1 passes these explicitly (absolute) to keep everything in sync. -->
+    <AppVersion Condition="'$(AppVersion)' == ''">0.1.0</AppVersion>
+    <StageDir Condition="'$(StageDir)' == ''">$(MSBuildProjectDirectory)\..\publish\win-x64</StageDir>
+    <LicenseRtf Condition="'$(LicenseRtf)' == ''">$(MSBuildProjectDirectory)\license.rtf</LicenseRtf>
+    <OutputName>Switcher3way-$(AppVersion)-win-x64</OutputName>
+    <DefineConstants>AppVersion=$(AppVersion);StageDir=$(StageDir);LicenseRtf=$(LicenseRtf)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+</Project>

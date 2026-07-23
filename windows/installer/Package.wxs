@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Switcher3way MSI (self-contained, per-machine). Harvests the self-contained publish output
+  (app + .NET runtime + dictionaries) so the installer needs no .NET prerequisite on the target PC.
+  Build via windows/build-msi.ps1 (publishes, generates license.rtf, then builds this).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package Name="Switcher3way"
+           Manufacturer="Switcher3way"
+           Version="$(var.AppVersion)"
+           UpgradeCode="7C9E6A42-3B1D-4F8A-9E2C-5D6F7A8B9C01"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <SummaryInformation Description="Switcher3way — automatic keyboard-layout switcher (EN/UK/RU)" />
+
+    <!-- Any older version is removed before the new one installs. -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Switcher3way is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="AppIcon" SourceFile="$(var.StageDir)\Switcher3way.exe" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://whiskeyswitch.github.io/Switcher3way/" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/WhisKeySwitch/Switcher3way" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Switcher3way" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Main" Title="Switcher3way" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="AppShortcut" />
+    </Feature>
+
+    <!-- Auto-harvest the whole self-contained publish tree (runtime DLLs + dict/). -->
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.StageDir)\**" />
+    </ComponentGroup>
+
+    <!-- Start-menu shortcut (run-at-login stays the app's own General-tab toggle). -->
+    <Component Id="AppShortcut" Directory="ProgramMenuFolder" Guid="A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D">
+      <Shortcut Id="StartMenuShortcut"
+                Name="Switcher3way"
+                Description="Automatic keyboard-layout switcher (EN/UK/RU)"
+                Target="[INSTALLFOLDER]Switcher3way.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="CleanupShortcut" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\Switcher3way" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <!-- Minimal wizard: welcome → MIT license → progress → finish. -->
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+
+  </Package>
+</Wix>
