@@ -40,6 +40,12 @@
     color:#fff;font-weight:600;font-size:1.05rem;padding:14px 26px;border-radius:12px;
     box-shadow:0 6px 22px rgba(59,91,219,.35)}
   .cta:hover{text-decoration:none;filter:brightness(1.06)}
+  .cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .cta.alt{background:transparent;color:var(--accent);border:1.5px solid var(--line);box-shadow:none}
+  .cta.alt:hover{filter:none;border-color:var(--accent);background:var(--card)}
+  .cta .pill{font-size:.68rem;font-weight:700;letter-spacing:.02em;background:rgba(255,255,255,.22);
+    padding:1px 8px;border-radius:999px}
+  .cta.alt .pill{background:var(--card);color:var(--muted)}
   .subcta{display:block;margin-top:12px;font-size:.9rem;color:var(--muted)}
 
   /* Demo */
@@ -79,14 +85,17 @@
   <div class="wrap">
     <img class="icon" src="icon.png" alt="Switcher3way icon">
     <h1>Switcher3way</h1>
-    <p class="tag">The macOS menu-bar app that notices the language you're typing and fixes the keyboard layout — across <b>English</b>, <b>Ukrainian</b>, and <b>Russian</b>.</p>
+    <p class="tag">The macOS &amp; Windows app that notices the language you're typing and fixes the keyboard layout — across <b>English</b>, <b>Ukrainian</b>, and <b>Russian</b>.</p>
     <div class="badges">
       <span class="badge">macOS 13+</span>
-      <span class="badge">Universal (arm64 + Intel)</span>
+      <span class="badge">Windows 10/11 · preview</span>
       <span class="badge">Open source · MIT</span>
       <span class="badge">Free</span>
     </div>
-    <a class="cta" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">⬇&nbsp; Download for macOS</a>
+    <div class="cta-row">
+      <a class="cta" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">⬇&nbsp; Download for macOS</a>
+      <a class="cta alt" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.1.0">⬇&nbsp; Download for Windows&nbsp; <span class="pill">PREVIEW</span></a>
+    </div>
     <span class="subcta">Free &amp; open source · <a href="https://github.com/WhisKeySwitch/Switcher3way">View on GitHub</a></span>
   </div>
 </header>
@@ -111,18 +120,25 @@
       <div class="feat"><h3>Auto or manual</h3><p>Fix words automatically as you type, or tap a trigger key to convert the last word or selection — tap again to undo.</p></div>
       <div class="feat"><h3>Stays out of your way</h3><p>Per-app exceptions, never/always-convert word lists, password-manager safety, and pause (30 min / 1 h / until restart).</p></div>
       <div class="feat"><h3>Little touches</h3><p>Menu-bar status header, per-app layout memory, an optional layout flag at the cursor, and a UI localized in 16 languages.</p></div>
-      <div class="feat"><h3>Private &amp; offline</h3><p>Everything runs locally on your Mac. No accounts, no telemetry, no network.</p></div>
+      <div class="feat"><h3>Private &amp; offline</h3><p>Everything runs locally on your device. No accounts, no telemetry, no network.</p></div>
     </div>
   </section>
 
   <section>
     <h2 class="sec">Install</h2>
+    <h3>macOS</h3>
     <ol class="steps">
       <li><a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">Download the DMG</a>, open it, and drag <b>Switcher3way.app</b> into <b>Applications</b>.</li>
       <li>First launch: the app is unnotarized, so <b>right-click → Open</b> once (double-clicking is blocked by Gatekeeper). macOS remembers the choice.</li>
       <li>Grant two permissions when asked — <b>Accessibility</b> (retype the fixed word) and <b>Input Monitoring</b> (see keystrokes). The onboarding checklist detects grants live.</li>
     </ol>
-    <div class="note">Prefer to build it yourself? <code class="mono">git clone</code> the repo and run <code class="mono">bash build_app.sh</code> — see the <a href="https://github.com/WhisKeySwitch/Switcher3way#build-it-yourself">README</a>.</div>
+    <h3>Windows <span style="font-size:.7em;color:var(--muted);font-weight:600">· preview</span></h3>
+    <ol class="steps">
+      <li><a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.1.0">Download the MSI</a> and double-click it; approve the <b>User Account Control</b> prompt.</li>
+      <li>This preview isn't code-signed yet, so SmartScreen may warn — click <b>More info → Run anyway</b>.</li>
+      <li>Launch <b>Switcher3way</b> from the Start menu; it lives in the system tray. No permissions dialog and <b>no .NET install</b> needed — the runtime is bundled.</li>
+    </ol>
+    <div class="note">Windows is a 64-bit preview (unsigned; no auto-update yet). Prefer to build it yourself? <code class="mono">git clone</code> the repo — macOS: <code class="mono">bash build_app.sh</code>; Windows: <code class="mono">pwsh windows/build-msi.ps1</code>. See the <a href="https://github.com/WhisKeySwitch/Switcher3way#build-it-yourself">README</a>.</div>
   </section>
 
   <section>

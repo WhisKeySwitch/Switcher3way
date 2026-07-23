@@ -41,9 +41,17 @@ $rtf = "{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fnil Segoe UI;}}\fs18 $esc}"
 Set-Content -Path $licenseRtf -Value $rtf -Encoding ASCII -NoNewline
 
 Write-Host "==> Building MSI..." -ForegroundColor Cyan
-dotnet build $wixProj -c Release `
+# The WiX build can flake on its first invocation right after a publish (MSBuild node reuse);
+# a plain retry succeeds. Disable the build server for this step and retry once to be safe.
+$env:DOTNET_CLI_USE_MSBUILD_SERVER = "0"
+dotnet build $wixProj -c Release -nodeReuse:false `
     -p:AppVersion=$Version -p:StageDir=$stageDir -p:LicenseRtf=$licenseRtf
-if ($LASTEXITCODE -ne 0) { throw "MSI build failed" }
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "   first attempt failed; retrying..." -ForegroundColor Yellow
+    dotnet build $wixProj -c Release -nodeReuse:false `
+        -p:AppVersion=$Version -p:StageDir=$stageDir -p:LicenseRtf=$licenseRtf
+    if ($LASTEXITCODE -ne 0) { throw "MSI build failed" }
+}
 
 $msi = Get-ChildItem (Join-Path $root "installer\bin\Release") -Filter *.msi -Recurse |
        Sort-Object LastWriteTime -Descending | Select-Object -First 1
