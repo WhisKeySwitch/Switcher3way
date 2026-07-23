@@ -49,10 +49,14 @@ Windows releases live on the **downloads repo** with a **Windows-specific tag** 
 **pre-release**. This is load-bearing, not cosmetic:
 
 - `/releases/latest` (GitHub) **excludes pre-releases**, so the landing page's "Download for macOS"
-  button and the macOS **in-app updater** keep resolving to the latest macOS **DMG**.
-- The macOS updater (`Sources/Switcher3w/UpdateChecker.swift`) hits `/releases/latest` and requires
-  a `.dmg` asset — a pre-release MSI is invisible to it on both counts.
-- Tag scheme: **`windows-v<version>`** (e.g. `windows-v0.1.0`) — distinct from macOS `v<version>`.
+  button and the macOS **in-app updater** keep resolving to the latest macOS **DMG**. The macOS
+  updater (`Sources/Switcher3w/UpdateChecker.swift`) hits `/releases/latest` and requires a `.dmg`
+  asset — a pre-release MSI is invisible to it on both counts.
+- The **Windows** in-app updater (`windows/src/Switcher3way.App/UpdateChecker.cs`) does the opposite:
+  it lists releases and offers the highest **`windows-v*`** tag. So publishing this pre-release is
+  exactly what pushes the update to existing Windows users — make sure you bumped the app `Version`
+  (step 1) first, or the new build reports the same version and no update is offered.
+- Tag scheme: **`windows-v<version>`** (e.g. `windows-v0.1.1`) — distinct from macOS `v<version>`.
 
 ```powershell
 $ver = "0.1.0"
@@ -65,8 +69,8 @@ gh release create "windows-v$ver" "$msi" `
 ```
 
 Write the notes to include: install steps (MSI → UAC → SmartScreen *More info → Run anyway* because
-unsigned), "no .NET needed", the **SHA-256**, and known limitations (unsigned, x64 only, no
-auto-update, no rewrite inside elevated windows unless run as admin).
+unsigned), "no .NET needed", the **SHA-256**, and known limitations (unsigned, x64 only, no rewrite
+inside elevated windows unless run as admin).
 
 Verify afterwards:
 
@@ -77,15 +81,18 @@ gh release view -R WhisKeySwitch/switcher3way-releases --json tagName   # must s
 
 ## 4. Update the landing page
 
-The Windows **Download** button in [`../docs/index.html`](../docs/index.html) points at the specific
-release tag (**not** `/releases/latest`, which is macOS-only). Bump both the button `href` and the
-Install-step link to the new `windows-v<version>` tag, commit via a PR to `main`, and merge —
-GitHub Pages redeploys `whiskeyswitch.github.io/Switcher3way/` from `docs/`.
+The Windows **Download** buttons in [`../docs/index.html`](../docs/index.html) **and**
+[`../docs/index.uk.html`](../docs/index.uk.html) point at the specific release tag (**not**
+`/releases/latest`, which is macOS-only). Bump the button `href` and the Install-step link to the new
+`windows-v<version>` tag in **both** pages, commit via a PR to `main`, and merge — GitHub Pages
+redeploys `whiskeyswitch.github.io/Switcher3way/` from `docs/`. Existing Windows users also get the
+update in-app once the pre-release is published.
 
 ## Not done yet (roadmap)
 
 - **Code signing.** The MSI/exe are unsigned, so SmartScreen shows *"unknown publisher"*. This needs
   an **OV/EV certificate from a CA** (self-signed does not satisfy SmartScreen). Once available, wire
   `signtool sign` for the exe (before packaging) and the MSI (after) into `build-msi.ps1`.
-- **Auto-update on Windows.** The in-app updater is macOS-only; Windows users check this page/releases.
 - **arm64.** Only `win-x64` is built today.
+
+Done: in-app auto-update (ships in 0.1.1+ — see `UpdateChecker.cs` / `UpdateInstaller.cs`).
