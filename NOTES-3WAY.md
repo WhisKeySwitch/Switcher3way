@@ -6,6 +6,10 @@ Ships as **Switcher3way** (`com.switcher3way.app`). The internal SwiftPM target/
 layout detection from a **two-layout pair** to **N-way across every installed layout that has a
 macOS system dictionary** — so English + Ukrainian + Russian all participate in auto-switching.
 
+> **Windows port:** there's also a C#/.NET Windows build under [`windows/`](windows/). Its release
+> process (self-contained MSI, `windows-v<ver>` pre-release tag, download-page update) is documented
+> in [`windows/RELEASING.md`](windows/RELEASING.md) — this file covers macOS only.
+
 ## What changed vs upstream
 
 Summary (the `nway-3way.patch` full diff was removed in the July 2026 cleanup; use git history):
