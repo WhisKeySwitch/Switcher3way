@@ -22,6 +22,7 @@ final class SettingsManager: @unchecked Sendable {
         static let triggerRightOnly = "com.switcher3w.triggerRightOnly"
         static let triggerDoubleTap = "com.switcher3w.triggerDoubleTap"
         static let autoConvert = "com.switcher3w.autoConvert"
+        static let ambiguousLang = "com.switcher3w.ambiguousLang"
         static let remoteDesktopMode = "com.switcher3w.remoteDesktopMode"
         static let showRemoteDesktopBeta = "com.switcher3w.showRemoteDesktopBeta"
         static let autoConvertOffered = "com.switcher3w.autoConvertOffered"
@@ -193,6 +194,18 @@ final class SettingsManager: @unchecked Sendable {
     var autoConvert: Bool {
         get { defaults.bool(forKey: Keys.autoConvert) }
         set { defaults.set(newValue, forKey: Keys.autoConvert) }
+    }
+
+    /// Language used for wrong-layout words whose letter core is valid in MORE than one
+    /// other language (the uk/ru shared vocabulary — «добре», «там»): "uk"/"ru" — convert
+    /// to that language; "off" — leave such words alone (the pre-phrase behavior).
+    /// Default "uk". Read live on every evaluation — no restart needed.
+    var ambiguousLang: String {
+        get {
+            let v = defaults.string(forKey: Keys.ambiguousLang) ?? "uk"
+            return ["uk", "ru", "off"].contains(v) ? v : "uk"
+        }
+        set { defaults.set(newValue, forKey: Keys.ambiguousLang) }
     }
 
     /// issue #10: show the layout flag at the text caret (beta). OFF by default.

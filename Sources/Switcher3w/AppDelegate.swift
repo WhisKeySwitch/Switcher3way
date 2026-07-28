@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let keyboardMonitor = KeyboardMonitor()
     private let textConverter = TextConverter()
+    private let phraseTracker = PhraseTracker()
     private let settingsController = SettingsWindowController()
     private let onboardingController = OnboardingWindowController()
     private let helpController = HelpWindowController()
@@ -225,6 +226,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onAltTap: { [weak self] in
                 guard let self else { return }
                 guard SettingsManager.shared.effectivelyEnabled else { return }
+                // Manual control invalidates the phrase memory (its conversions/undos
+                // aren't tracked, so later corrections would erase the wrong segment).
+                self.phraseTracker.reset()
                 if AutoSwitchPolicy.shouldDeferToRemoteClient {
                     // Remote desktop: the office instance converts the text using the real forwarded characters
                     // (Fix #6). Here we change OUR layout — so further input goes in
@@ -243,14 +247,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // N-way manual cycle: iterate over every layout that renders the typed text differently.
                 // Explicit user action ⇒ convert even when ambiguous; a repeated
                 // trigger (RECONVERT) pages through candidates and cycles back to the original.
-                if !mkeys.isEmpty, let plan = NWayResolver.manualPlan(keys: mkeys, capsLock: mcaps) {
+                if !mkeys.isEmpty, let plan = NWayResolver.manualPlan(keys: mkeys, capsLock: mcaps),
+                   let firstTarget = plan.candidates.first?.targetLayoutID {
                     let spaces = String(repeating: " ", count: mtrailing)
                     let steps = plan.candidates.map { (text: $0.converted + spaces, layoutID: $0.targetLayoutID) }
-                    if let target = self.textConverter.beginCycle(home: plan.original + spaces, steps: steps,
-                                                                  eraseCount: mkeys.count + mtrailing,
-                                                                  previousLayoutID: plan.originalLayoutID) {
+                    // Bookkeeping only if the injection wasn't aborted by concurrent typing.
+                    _ = self.textConverter.beginCycle(home: plan.original + spaces, steps: steps,
+                                                      eraseCount: mkeys.count + mtrailing,
+                                                      previousLayoutID: plan.originalLayoutID) { [weak self] success in
+                        guard let self, success else { return }
                         self.keyboardMonitor.markConverted()
-                        LayoutSwitcher.switchTo(layoutID: target)
+                        LayoutSwitcher.switchTo(layoutID: firstTarget)
                         self.updateStatusIcon()
                         self.lastAutoConverted = nil
                     }
@@ -269,6 +276,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onAltReconvert: { [weak self] in
                 guard let self else { return }
                 guard SettingsManager.shared.effectivelyEnabled else { return }
+                self.phraseTracker.reset()   // manual control — see onAltTap
                 if AutoSwitchPolicy.shouldDeferToRemoteClient {
                     LayoutSwitcher.switchToNextInstalled()
                     self.updateStatusIcon()
@@ -277,11 +285,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 // Buffer cycle: next candidate, or a return to the original text AND the exact
                 // layout active before conversion (3-way undo fix). Selection — via the clipboard.
-                if let step = self.textConverter.cycleStep() {
+                // The layout switch runs in the completion — only if the retype wasn't aborted
+                // by concurrent typing.
+                let cycled = self.textConverter.cycleStep { [weak self] layoutID, restored in
+                    guard let self else { return }
                     self.keyboardMonitor.markConverted()
-                    LayoutSwitcher.switchTo(layoutID: step.layoutID)
+                    LayoutSwitcher.switchTo(layoutID: layoutID)
                     self.updateStatusIcon()
-                    if step.restored { self.offerExceptionAfterUndo() }
+                    if restored { self.offerExceptionAfterUndo() }
+                }
+                if cycled {
+                    // Scheduled (or aborted inside) — never fall through to the clipboard path.
                 } else if let step = self.textConverter.reconvert() {
                     self.keyboardMonitor.markConverted()
                     LayoutSwitcher.switchTo(layoutID: step.layoutID)
@@ -300,6 +314,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitoringActive = true
         keyboardMonitor.onWordBoundary = { [weak self] in
             self?.handleAutoConvert()
+        }
+        // Synchronous abort signal for the retype engine: any real keydown/click while an
+        // injection is in flight stops it before it can erase the user's fresh characters.
+        keyboardMonitor.onRealUserEvent = { [textConverter] in textConverter.noteRealUserEvent() }
+        // Phrase memory (phrase-aware-ambiguity): resets with the word buffer, tracks multi-space
+        // runs. Async main hop like onWordBoundary — order among these dispatches follows event
+        // order; races against retype completions are caught by the tracker's generation guard.
+        keyboardMonitor.onPhraseReset = { [weak self] in
+            DispatchQueue.main.async { self?.phraseTracker.reset() }
+        }
+        keyboardMonitor.onExtraSpace = { [weak self] in
+            DispatchQueue.main.async { self?.phraseTracker.noteExtraSpace() }
         }
         keyboardMonitor.onUserInput = { [weak self] in self?.caretIndicator?.userTyped() }  // issue #10
         updateStatusIcon()        // first set the menu bar flag while the indicator isn't there yet
@@ -342,25 +368,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rslog("auto: fired")
         guard SettingsManager.shared.effectivelyEnabled else { rslog("auto: bail master-off"); return }
         guard SettingsManager.shared.autoConvert else { rslog("auto: bail flag-off"); return }
-        guard !AutoSwitchPolicy.secureInputActive else { rslog("auto: bail secure-input"); return }
+        // Contexts where words go unevaluated make the phrase memory incomplete —
+        // reset it so a later correction can't be computed over a gap.
+        guard !AutoSwitchPolicy.secureInputActive else { phraseTracker.reset(); rslog("auto: bail secure-input"); return }
         let frontID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         // Remote desktop: do NOT bail immediately — run the detector over our own (clean) buffer, and on
         // "wrong layout" switch OUR layout (the instance on the other side does the conversion).
         let deferToRemote = SettingsManager.shared.remoteDesktopMode && AutoSwitchPolicy.isRemoteDesktopClient(frontID)
-        if AutoSwitchPolicy.isDeniedApp(frontID) { rslog("auto: bail denied-app \(frontID ?? "?")"); return }
+        if AutoSwitchPolicy.isDeniedApp(frontID) { phraseTracker.reset(); rslog("auto: bail denied-app \(frontID ?? "?")"); return }
         if let captured = keyboardMonitor.prevWordBundleID, captured != frontID {
+            phraseTracker.reset()
             rslog("auto: bail focus-changed"); return  // focus moved away between the space and now
         }
 
         let keys = keyboardMonitor.prevWordKeys
         let bc = keyboardMonitor.boundaryCount
-        guard !keys.isEmpty else { rslog("auto: bail empty-keys"); return }  // cursor moved away — unsafe
+        guard !keys.isEmpty else { phraseTracker.reset(); rslog("auto: bail empty-keys"); return }  // cursor moved away — unsafe
         let capsLock = keys.contains { $0.caps }
 
         // --- Text forwarded over remote desktop (all symbols are char): N-way is inapplicable,
         // since every layout would yield the same character. We keep the former 2-way path by SCRIPT
         // (RU↔EN), where the direction is decided by KeyMapping.convert, not the office layout. ---
         if keys.allSatisfy({ $0.char != nil }) {
+            phraseTracker.reset()   // phrase tracking is local-input only
             guard let pair = DynamicKeyMapping.convertKeys(keys) else { rslog("auto: bail convertKeys-nil"); return }
             if AutoSwitchPolicy.isDeniedWord(pair.original, pair.converted) { rslog("auto: bail denied-word"); return }
             let typedIsCyrillic = pair.original.unicodeScalars.contains { $0.value >= 0x0400 && $0.value <= 0x04FF }
@@ -377,33 +407,101 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // --- Local input: N-way detection across all installed layouts (EN/UK/RU/…). ---
-        guard let decision = NWayResolver.resolve(keys: keys, capsLock: capsLock) else {
-            rslog("auto: keep"); return
+        // Ambiguity (valid in several other languages, the uk/ru shared vocabulary) is resolved
+        // by the phrase lock, then the preference setting; "off" keeps the old precision-first keep.
+        let gen = phraseTracker.generation
+        var decision: NWayResolver.Decision?
+        var wordKind = PhraseTracker.WordKind.neutral
+        switch NWayResolver.evaluate(keys: keys, capsLock: capsLock) {
+        case .keep:
+            break
+        case .convert(let d):
+            decision = d
+            wordKind = .locked(lang: d.lang)
+        case .ambiguous(let original, let winners):
+            let pref = phraseTracker.lockedLang ?? SettingsManager.shared.ambiguousLang
+            if pref != "off", let w = winners.first(where: { $0.lang == pref }) {
+                decision = NWayResolver.Decision(targetLayoutID: w.layoutID, lang: w.lang,
+                                                 original: original, converted: w.converted)
+                wordKind = .defaulted(lang: w.lang)
+                rslog("auto: ambiguous → \(w.lang) (\(phraseTracker.lockedLang != nil ? "phrase lock" : "preference"))")
+            }
+        }
+
+        // Remembers an unconverted word so phrase corrections can reproduce the segment verbatim.
+        func recordAsNeutral() {
+            if let shown = NWayResolver.renderCurrent(keys: keys) {
+                phraseTracker.record(keys: keys, shownText: shown, spacesAfter: bc, kind: .neutral)
+            } else {
+                phraseTracker.reset()   // can't account for the on-screen text exactly
+            }
+        }
+
+        guard let decision else {
+            recordAsNeutral()
+            rslog("auto: keep")
+            return
         }
         if AutoSwitchPolicy.isDeniedWord(decision.original, decision.converted) {
-            rslog("auto: bail denied-word"); return
+            recordAsNeutral()
+            rslog("auto: bail denied-word")
+            return
         }
 
         if deferToRemote {
             // Remote desktop (controller): the instance on the other side converts the text, here — our own layout.
+            phraseTracker.reset()   // phrase tracking is local-input only
             LayoutSwitcher.switchTo(layoutID: decision.targetLayoutID)
             updateStatusIcon()
             rslog("auto: local layout switched, conversion handled by controlled instance")
             return
         }
 
-        rslog("auto: convert \(keys.count) keys (+\(bc) sp) → \(decision.targetLayoutID)")
+        // Phrase correction: a word valid in exactly one language re-converts the phrase's
+        // earlier ambiguity-defaulted words of OTHER languages together with itself — one
+        // replacement, one layout switch, one ⌥-undo for the whole segment.
+        var correction: PhraseTracker.Correction?
+        if case .locked(let lang) = wordKind {
+            correction = phraseTracker.correction(toLang: lang, layoutID: decision.targetLayoutID)
+        }
+
         // Single-step cycle: record the layout BEFORE switching, so ⌥-undo restores
         // exactly it (and not "the opposite of the pair" — the former 3-way undo bug).
         let prevLayout = LayoutSwitcher.currentLayoutID()
         let spaces = String(repeating: " ", count: bc)
-        let steps = [(text: decision.converted + spaces, layoutID: decision.targetLayoutID)]
-        if let target = textConverter.beginCycle(home: decision.original + spaces, steps: steps,
-                                                 eraseCount: keys.count + bc, previousLayoutID: prevLayout) {
-            keyboardMonitor.markConverted()
-            LayoutSwitcher.switchTo(layoutID: target)
-            updateStatusIcon()
-            lastAutoConverted = (decision.original, Date())
+        let home: String
+        let insert: String
+        if let correction {
+            home = correction.oldSegment + decision.original + spaces
+            insert = correction.newSegment + decision.converted + spaces
+            rslog("auto: convert \(keys.count) keys (+\(bc) sp) → \(decision.targetLayoutID)"
+                  + " + phrase correction (\(correction.correctedWords.count) word(s), erase \(home.count))")
+        } else {
+            home = decision.original + spaces
+            insert = decision.converted + spaces
+            rslog("auto: convert \(keys.count) keys (+\(bc) sp) → \(decision.targetLayoutID)")
+        }
+
+        let steps = [(text: insert, layoutID: decision.targetLayoutID)]
+        let kind = wordKind
+        // Layout switch + bookkeeping only after the replacement really happened: if the user
+        // kept typing, the injection aborts and both the text and the layout must stay theirs.
+        _ = textConverter.beginCycle(home: home, steps: steps,
+                                     eraseCount: home.count, previousLayoutID: prevLayout) { [weak self] success in
+            guard let self else { return }
+            guard success else {
+                // Aborted mid-injection: the erased tail was put back, but a keystroke may have
+                // interleaved — the exact on-screen segment is no longer certain. Precision-first.
+                self.phraseTracker.reset()
+                return
+            }
+            self.keyboardMonitor.markConverted()
+            LayoutSwitcher.switchTo(layoutID: decision.targetLayoutID)
+            self.updateStatusIcon()
+            self.lastAutoConverted = (decision.original, Date())
+            if let correction { self.phraseTracker.confirm(correction, ifGeneration: gen) }
+            self.phraseTracker.record(keys: keys, shownText: decision.converted,
+                                      spacesAfter: bc, kind: kind, ifGeneration: gen)
         }
     }
 

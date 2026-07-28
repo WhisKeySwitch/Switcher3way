@@ -115,6 +115,17 @@ final class KeyboardMonitor: @unchecked Sendable {
     var onWordBoundary: (() -> Void)?
     /// issue #10: any user input/click — to hide the caret flag while typing.
     var onUserInput: (() -> Void)?
+    /// Called SYNCHRONOUSLY for every real keydown/click (synthetic events are filtered out
+    /// before this by kSwitcher3wEventMarker) — aborts the retype engine's in-flight injection
+    /// so its backspaces never erase characters the user just typed. Must stay synchronous:
+    /// an async hop would widen the race window the callback exists to close.
+    var onRealUserEvent: (() -> Void)?
+    /// Phrase-aware ambiguity: the phrase memory resets on the same events that fully reset
+    /// the word buffer (Enter/Tab/arrows/click/Esc — fired from `fullReset`).
+    var onPhraseReset: (() -> Void)?
+    /// Phrase-aware ambiguity: a space arrived with no word before it (multi-space run) —
+    /// the phrase bookkeeping widens the gap after its last word.
+    var onExtraSpace: (() -> Void)?
     /// issue #10: whether the caret-flag feature is on. Gates the onUserInput dispatch on the hot path,
     /// so when the feature is off (the default) we don't wake the main queue on every keystroke.
     var caretFlagEnabled = false
@@ -218,6 +229,7 @@ final class KeyboardMonitor: @unchecked Sendable {
         boundaryCount = 0
         currentWordKeys = []
         prevWordKeys = []
+        onPhraseReset?()
     }
 
     /// A word ended on a space — if autoConvert is on, trigger the auto-path
@@ -231,6 +243,7 @@ final class KeyboardMonitor: @unchecked Sendable {
     /// Reset the buffer on a mouse click — otherwise the retype backspace erases the wrong
     /// thing (the cursor may have moved elsewhere).
     fileprivate func resetBuffersOnClick() {
+        onRealUserEvent?()
         triggerArmed = false
         lastTapTime = nil
         keysTypedSinceConversion = true
@@ -241,6 +254,7 @@ final class KeyboardMonitor: @unchecked Sendable {
     // MARK: - Event Handling
 
     fileprivate func handleKeyDown(keyCode: UInt16, flags: CGEventFlags, char: Character? = nil) {
+        onRealUserEvent?()
         triggerArmed = false
         lastTapTime = nil
         keysTypedSinceConversion = true
@@ -270,6 +284,7 @@ final class KeyboardMonitor: @unchecked Sendable {
                 fireWordBoundary()
             } else {
                 boundaryCount += 1
+                onExtraSpace?()
             }
             currentWordLength = 0
             currentWordKeys = []
