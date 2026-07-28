@@ -103,6 +103,17 @@ The Auto-fix tab's master toggle ("Fix layout automatically as I type") SHALL be
 - **THEN** the "Fix layout automatically as I type" row SHALL display its title and description without a "BETA" badge
 - **AND** toggling the switch SHALL persist the automatic-conversion preference and start/stop auto-conversion exactly as it did before
 
+### Requirement: Ambiguous-word language preference
+The system SHALL provide a persisted setting for the language used to convert wrong-layout words that are valid in more than one language, with the values Ukrainian, Russian, and "do not convert". The default SHALL be Ukrainian. The setting SHALL be presented on the Auto-fix tab of the Settings window as a labeled popup and take effect without an app restart.
+
+#### Scenario: Default value on first run
+- **WHEN** the app runs without a stored ambiguous-language preference
+- **THEN** the effective preference SHALL be Ukrainian
+
+#### Scenario: Changing the preference takes effect immediately
+- **WHEN** the user selects a different value in the Auto-fix tab popup
+- **THEN** the next ambiguous-word evaluation SHALL use the new value without restarting the app
+
 ### Requirement: Experimental toggles live at the top of the Advanced tab
 The "Show layout flag at the cursor" toggle and the "Remote Desktop mode" toggle SHALL be presented at the top of the Advanced tab, above the debug-logging controls, and SHALL NOT appear in the Auto-fix tab. Each SHALL keep its beta labeling, its persisted preference key, and its behavior. The remote-desktop toggle SHALL continue to appear only when its beta flag is enabled.
 
