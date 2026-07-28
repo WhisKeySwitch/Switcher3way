@@ -18,24 +18,47 @@ enum NWayResolver {
     /// Decision: which layout to switch to and what text to type. nil — leave as is.
     struct Decision {
         let targetLayoutID: String
+        let lang: String      // 2-letter code of the target language
         let original: String
         let converted: String
     }
 
-    /// Renders the input through all layouts-with-dictionary and picks the target.
-    /// Returns nil if: the layout/language can't be determined; the word is valid in the
-    /// current language; there are zero OR more than one matching other languages
-    /// (uk/ru ambiguity → leave it alone).
+    /// One language that validates the typed word (returned when more than one does).
+    struct Winner {
+        let lang: String
+        let layoutID: String
+        let converted: String
+    }
+
+    /// Full evaluation result. `.ambiguous` carries every validating language so the caller
+    /// can resolve it by the preferred-language setting / phrase lock (phrase-aware-ambiguity);
+    /// `resolve` collapses it to nil for callers that only care about the unambiguous case.
+    enum Outcome {
+        case keep
+        case convert(Decision)
+        case ambiguous(original: String, winners: [Winner])
+    }
+
+    /// Legacy single-winner view of `evaluate` — nil unless exactly one language matches.
     @MainActor
     static func resolve(keys: [TypedKey], capsLock: Bool) -> Decision? {
-        guard !keys.isEmpty else { return nil }
+        if case .convert(let d) = evaluate(keys: keys, capsLock: capsLock) { return d }
+        return nil
+    }
+
+    /// Renders the input through all layouts-with-dictionary and picks the target.
+    /// `.keep` if: the layout/language can't be determined; the word is valid in the
+    /// current language; no other language matches. `.ambiguous` when several do.
+    @MainActor
+    static func evaluate(keys: [TypedKey], capsLock: Bool) -> Outcome {
+        guard !keys.isEmpty else { return .keep }
 
         let layouts = LayoutSwitcher.installedLayouts()
         let currentID = LayoutSwitcher.currentLayoutID()
         guard let currentSource = layouts.first(where: { LayoutSwitcher.sourceID($0) == currentID }),
               let currentLangFull = LayoutSwitcher.languageCode(currentSource) else {
             rslog("nway: nil — current layout not resolvable (id=\(currentID.components(separatedBy: ".").last ?? "?"), installed=\(layouts.count))")
-            return nil
+            return .keep
         }
         let currentLang = String(currentLangFull.prefix(2))
 
@@ -68,40 +91,66 @@ enum NWayResolver {
 
         guard let current = byLang[currentLang] else {
             rslog("nway: nil — no candidate for current lang \(currentLang) [\(dump)]")
-            return nil
+            return .keep
         }
         // always-convert — an EXPLICIT user override: if some other language's letter core is in
         // the "always convert" list, switch there even bypassing the dictionary and vetoes.
         for cand in byLang.values where cand.lang != currentLang {
             if AutoSwitchPolicy.isAlwaysConvert(letterCore(Array(cand.string))) {
-                return Decision(targetLayoutID: cand.layoutID, original: current.string, converted: cand.string)
+                return .convert(Decision(targetLayoutID: cand.layoutID, lang: cand.lang,
+                                         original: current.string, converted: cand.string))
             }
         }
 
         // Typed correctly in the current language (its letter core is a real word) → do nothing.
         if current.isValid {
             rslog("nway: nil — '\(current.string)' is a valid \(currentLang) word [\(dump)]")
-            return nil
+            return .keep
         }
 
         // Other languages where the input's letter core is a real word. Only the LETTER core is
         // validated (edge punctuation/digits trimmed), but the whole token is re-rendered in the
         // target layout on output — punctuation keys convert too (the "/" key is "." on the RU/UK
         // PC layouts, the "," key is "б", etc.), because the keystrokes were meant for that layout.
-        var winners: [(layoutID: String, converted: String)] = []
+        var winners: [Winner] = []
         for cand in byLang.values where cand.lang != currentLang {
             let core = letterCore(Array(cand.string))
             guard LayoutDetector.passesSoftGates(core, capsLock: capsLock) else { continue }
             guard Dict.isValidWord(core.lowercased(), lang: cand.lang) else { continue }
-            winners.append((cand.layoutID, cand.string))
+            winners.append(Winner(lang: cand.lang, layoutID: cand.layoutID, converted: cand.string))
         }
-        // 0 — not wrong-layout; >1 — ambiguous (uk↔ru): precision-first, leave it alone.
-        guard winners.count == 1, let winner = winners.first else {
-            rslog("nway: nil — \(winners.isEmpty ? "no valid target language" : "ambiguous") [\(dump)]")
-            return nil
+        // 0 — not wrong-layout. >1 — ambiguous (uk↔ru): reported as such so the caller can
+        // apply the preferred-language / phrase-lock policy (phrase-aware-ambiguity).
+        if winners.isEmpty {
+            rslog("nway: nil — no valid target language [\(dump)]")
+            return .keep
         }
+        if winners.count > 1 {
+            rslog("nway: ambiguous (\(winners.map(\.lang).sorted().joined(separator: "/"))) [\(dump)]")
+            return .ambiguous(original: current.string, winners: winners)
+        }
+        let winner = winners[0]
+        return .convert(Decision(targetLayoutID: winner.layoutID, lang: winner.lang,
+                                 original: current.string, converted: winner.converted))
+    }
 
-        return Decision(targetLayoutID: winner.layoutID, original: current.string, converted: winner.converted)
+    /// Render of the typed keys in the CURRENT layout — what the word looks like on screen
+    /// when nothing was converted. Used by the phrase tracker's bookkeeping.
+    @MainActor
+    static func renderCurrent(keys: [TypedKey]) -> String? {
+        let layouts = LayoutSwitcher.installedLayouts()
+        let currentID = LayoutSwitcher.currentLayoutID()
+        guard let current = layouts.first(where: { LayoutSwitcher.sourceID($0) == currentID }) else { return nil }
+        return render(keys, layout: current)
+    }
+
+    /// Render of the typed keys in the layout with the given ID — used by phrase corrections
+    /// to re-render defaulted words into the newly established language.
+    @MainActor
+    static func render(keys: [TypedKey], layoutID: String) -> String? {
+        guard let layout = LayoutSwitcher.installedLayouts()
+            .first(where: { LayoutSwitcher.sourceID($0) == layoutID }) else { return nil }
+        return render(keys, layout: layout)
     }
 
     /// The contiguous range of `chars` with leading/trailing characters that satisfy `drop` removed.
@@ -157,13 +206,26 @@ enum NWayResolver {
         }
         guard !candidates.isEmpty else { return nil }
 
-        // The unambiguous dictionary winner (from the same punctuation-aware `resolve` the auto path
-        // uses — letter-core validation, edge punctuation trimmed) goes first, so one tap gives the
-        // "correct" layout in the typical case. Match by layout ID, falling back to the rendered
+        // The dictionary winner (from the same punctuation-aware evaluation the auto path uses)
+        // goes first, so one tap gives the "correct" layout in the typical case. Under uk/ru
+        // ambiguity the preferred ambiguity language takes that spot instead — one ⌥ tap gives
+        // the same answer auto-fix would. Match by layout ID, falling back to the rendered
         // string in case the winner's layout was collapsed during dedup (identical render).
-        if let winner = resolve(keys: keys, capsLock: capsLock),
-           let idx = candidates.firstIndex(where: { $0.targetLayoutID == winner.targetLayoutID })
-                  ?? candidates.firstIndex(where: { $0.converted == winner.converted }) {
+        var promoted: (layoutID: String, converted: String)?
+        switch evaluate(keys: keys, capsLock: capsLock) {
+        case .convert(let d):
+            promoted = (d.targetLayoutID, d.converted)
+        case .ambiguous(_, let winners):
+            let pref = SettingsManager.shared.ambiguousLang
+            if pref != "off", let w = winners.first(where: { $0.lang == pref }) {
+                promoted = (w.layoutID, w.converted)
+            }
+        case .keep:
+            break
+        }
+        if let promoted,
+           let idx = candidates.firstIndex(where: { $0.targetLayoutID == promoted.layoutID })
+                  ?? candidates.firstIndex(where: { $0.converted == promoted.converted }) {
             let w = candidates.remove(at: idx)
             candidates.insert(w, at: 0)
         }

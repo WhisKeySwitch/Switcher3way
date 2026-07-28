@@ -25,10 +25,16 @@ When you finish a word, Switcher3way renders the keystrokes you actually pressed
 candidate word against its own language's dictionary. Only when exactly **one** candidate is a
 valid word does it convert and switch the layout.
 
-This is deliberately **precision-first**. If a word is valid in more than one language (`там`
-exists in both Ukrainian and Russian), or looks like code, or is ALL-CAPS, or is very short,
-Switcher3way leaves it alone rather than guess. A missed fix costs you one trigger tap; a wrong
-fix costs you trust.
+This is deliberately **precision-first**: a word that looks like code, is ALL-CAPS, or is very
+short is left alone rather than guessed at. A missed fix costs you one trigger tap; a wrong fix
+costs you trust.
+
+Words valid in **both Ukrainian and Russian** (`там`, `добре`) get special treatment: they are
+converted to the **language for ambiguous words** (Settings → Auto-fix; Ukrainian by default).
+If the phrase you're typing later turns out to be the other language — a word appears that's
+valid **only** in it — the earlier ambiguous words are re-converted automatically, in one step
+you can undo with a single trigger tap. Set the option to *Do not convert* to keep such words
+untouched instead.
 
 ## First launch
 
@@ -120,6 +126,13 @@ holds back when:
 
 Words in **Always convert** are converted even if the dictionary doesn't know them.
 
+**Ambiguous words and phrases.** A word valid in both Ukrainian and Russian converts to the
+*language for ambiguous words* (default: Ukrainian). Auto-fix then remembers the phrase you're
+typing (until Enter, a click, an arrow key, or an app switch). If a later word is valid in only
+one language, the phrase's ambiguous words are re-converted to that language together with it —
+one replacement, one trigger-tap undo. Phrases that mix clearly-Ukrainian and clearly-Russian
+words are never touched retroactively.
+
 ## Exceptions
 
 **Settings → Auto-fix → Exceptions** manages all three lists in one place. Use the segmented
@@ -150,7 +163,8 @@ Open with **⌘,** from the menu. Four tabs:
 
 ### Auto-fix
 
-The automatic-conversion master switch and the exception lists.
+The automatic-conversion master switch, the **Language for ambiguous words** popup
+(Ukrainian / Russian / Do not convert — see *Auto-fix* above), and the exception lists.
 
 ### Advanced
 
@@ -202,9 +216,9 @@ it and follow the checklist. Verify the app isn't paused (⏸ in the menu bar) a
 card in Settings → General says *On*.
 
 **A specific word never auto-converts.**
-Most likely it's ambiguous (valid in two languages) or absent from the macOS dictionary of the
-target language. Add it to **Always convert**, or just use the trigger — manual conversion
-doesn't require dictionary confidence.
+Most likely it's absent from the macOS dictionary of the target language, or the *language for
+ambiguous words* is set to *Do not convert*. Add it to **Always convert**, or just use the
+trigger — manual conversion doesn't require dictionary confidence.
 
 **Auto-fix converted something it shouldn't have.**
 Tap the trigger to undo — you'll be offered to add the word to **Never convert**. If it happens

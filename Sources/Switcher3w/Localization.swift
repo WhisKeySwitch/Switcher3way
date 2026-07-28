@@ -88,6 +88,9 @@ enum L10n {
     static var settingsAutofixTitle: String { s("settings.autofix.title") }
     static var settingsAutofixSubtitle: String { s("settings.autofix.subtitle") }
     static var settingsAutofixCaretFlag: String { s("settings.autofix.caretFlag") }
+    static var settingsAmbiguousLang: String { s("settings.autofix.ambiguousLang") }
+    static var settingsAmbiguousLangHint: String { s("settings.autofix.ambiguousLang.hint") }
+    static var settingsAmbiguousOff: String { s("settings.autofix.ambiguousLang.off") }
     static var settingsSegApps: String { s("settings.exceptions.seg.apps") }
     static var settingsSegNever: String { s("settings.exceptions.seg.never") }
     static var settingsSegAlways: String { s("settings.exceptions.seg.always") }
@@ -268,6 +271,9 @@ enum L10n {
             "settings.pairToggles": "Trigger toggles between",
             "settings.autofix.title": "Fix layout automatically as I type",
             "settings.autofix.subtitle": "Checks finished words against system dictionaries. Precision-first — skips code, CAPS and short words.",
+            "settings.autofix.ambiguousLang": "Language for ambiguous words",
+            "settings.autofix.ambiguousLang.hint": "Used when a mistyped word is valid in both Ukrainian and Russian. If the phrase later proves to be the other language, it is corrected automatically.",
+            "settings.autofix.ambiguousLang.off": "Do not convert",
             "settings.autofix.caretFlag": "Show layout flag at the cursor",
             "settings.exceptions.seg.apps": "Apps",
             "settings.exceptions.seg.never": "Never convert",
@@ -385,6 +391,9 @@ enum L10n {
             "settings.pairToggles": "Триггер переключает между",
             "settings.autofix.title": "Исправлять раскладку автоматически при наборе",
             "settings.autofix.subtitle": "Проверяет законченные слова по системным словарям. Точность прежде всего — пропускает код, CAPS и короткие слова.",
+            "settings.autofix.ambiguousLang": "Язык для неоднозначных слов",
+            "settings.autofix.ambiguousLang.hint": "Используется, когда слово в неверной раскладке существует и в украинском, и в русском. Если фраза позже окажется на другом языке — она исправится автоматически.",
+            "settings.autofix.ambiguousLang.off": "Не преобразовывать",
             "settings.autofix.caretFlag": "Показывать флаг раскладки у курсора",
             "settings.exceptions.seg.apps": "Приложения",
             "settings.exceptions.seg.never": "Никогда",
@@ -1292,6 +1301,9 @@ enum L10n {
             "settings.pairToggles": "Тригер перемикає між",
             "settings.autofix.title": "Виправляти розкладку автоматично під час набору",
             "settings.autofix.subtitle": "Перевіряє завершені слова за системними словниками. Точність понад усе — пропускає код, CAPS і короткі слова.",
+            "settings.autofix.ambiguousLang": "Мова для неоднозначних слів",
+            "settings.autofix.ambiguousLang.hint": "Використовується, коли слово в неправильній розкладці існує і в українській, і в російській. Якщо фраза далі виявиться іншою мовою — вона виправиться автоматично.",
+            "settings.autofix.ambiguousLang.off": "Не конвертувати",
             "settings.autofix.caretFlag": "Показувати прапорець розкладки біля курсора",
             "settings.exceptions.seg.apps": "Програми",
             "settings.exceptions.seg.never": "Ніколи",

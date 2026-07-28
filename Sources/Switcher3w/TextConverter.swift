@@ -2,6 +2,7 @@ import AppKit
 import ApplicationServices
 import Carbon
 import CoreGraphics
+import os
 
 /// Text conversion between layouts
 @MainActor
@@ -14,6 +15,10 @@ final class TextConverter {
     /// Queue for injecting the buffer engine's keystrokes — so usleep doesn't block
     /// the main thread where the event tap sits (otherwise the tap starves → lag/lost keystrokes).
     nonisolated private let injectQueue = DispatchQueue(label: "com.switcher3w.inject", qos: .userInteractive)
+    /// Real user input observed since the current retype was scheduled. Written on the main
+    /// thread (event tap / scheduling), read on injectQueue between synthetic events — the
+    /// injection aborts instead of erasing characters the user just typed.
+    nonisolated private let realInputSinceSchedule = OSAllocatedUnfairLock(initialState: false)
 
     // State of the retype cycle (keystroke buffer → unicode insert). The manual trigger
     // cycles through the N-way candidates; auto-conversion is a single-step cycle. The cycle wraps
@@ -81,13 +86,28 @@ final class TextConverter {
 
     // MARK: - Public API
 
+    /// Called from the event tap for every real user event (keydown/click). Synthetic events
+    /// never reach this — they carry kSwitcher3wEventMarker and are filtered in the tap
+    /// callback. Makes an in-flight retype abort before its next synthetic event.
+    nonisolated func noteRealUserEvent() {
+        realInputSinceSchedule.withLock { $0 = true }
+    }
+
+    nonisolated private func realInputArrived() -> Bool {
+        realInputSinceSchedule.withLock { $0 }
+    }
+
     /// Starts the retype cycle: erases `eraseCount` typed characters and types
     /// the first candidate. `home` — original text (with trailing spaces) the cycle
     /// wraps back to; `previousLayoutID` — the layout BEFORE switching (for exact undo).
     /// Returns the target layout ID of the first candidate, or nil. Shared engine for auto-
     /// conversion (single-step cycle) and the manual trigger (cycling through all N-way candidates).
+    /// `completion` fires after the injection finishes: true — text replaced; false — aborted
+    /// because the user kept typing (the erased characters were restored, the cycle dropped).
+    /// Callers must do the layout switch and conversion bookkeeping only on success.
     func beginCycle(home: String, steps: [(text: String, layoutID: String)],
-                    eraseCount: Int, previousLayoutID: String) -> String? {
+                    eraseCount: Int, previousLayoutID: String,
+                    completion: @escaping @MainActor @Sendable (Bool) -> Void) -> String? {
         guard !isConverting, !steps.isEmpty, eraseCount > 0 else { return nil }
         isConverting = true
         cycleHome = home
@@ -97,32 +117,40 @@ final class TextConverter {
         cyclePreviousLayoutID = previousLayoutID
         lastWasBuffer = true
         rslog("cycle begin: \(steps.count) step(s), erase \(eraseCount) → \(steps[0].layoutID)")
-        retype(erase: eraseCount, insert: steps[0].text)
+        retype(erase: eraseCount, erasedText: home, insert: steps[0].text, completion: completion)
         return steps[0].layoutID
     }
 
     /// Next step of the cycle (second+ trigger with no input between them). Cycles through candidates,
-    /// wrapping back to the original text. Returns the target layout and the
-    /// `restored` flag (true — returned to the original text → switch to previousLayoutID).
-    /// nil — if there's no active buffer conversion (then the caller tries the clipboard).
-    func cycleStep() -> (layoutID: String, restored: Bool)? {
-        guard !isConverting, lastWasBuffer, !cycleSteps.isEmpty else { return nil }
+    /// wrapping back to the original text. Returns false if there's no active buffer conversion
+    /// (then the caller tries the clipboard). `onSuccess` fires only when the injection completed
+    /// (not aborted by concurrent typing) with the target layout and the `restored` flag
+    /// (true — returned to the original text → switch to the pre-conversion layout).
+    func cycleStep(onSuccess: @escaping @MainActor @Sendable (_ layoutID: String, _ restored: Bool) -> Void) -> Bool {
+        guard !isConverting, lastWasBuffer, !cycleSteps.isEmpty else { return false }
         isConverting = true
+        // What's on screen right now (= what the backspaces will erase): the previously
+        // shown candidate, or the original text after a full wrap.
+        let shownText = cycleIndex == -1 ? cycleHome : cycleSteps[cycleIndex].text
         let next = cycleIndex + 1
         if next < cycleSteps.count {
             let step = cycleSteps[next]
             rslog("cycle step \(next) → \(step.layoutID)")
-            retype(erase: cycleShownCount, insert: step.text)
+            retype(erase: cycleShownCount, erasedText: shownText, insert: step.text) { success in
+                if success { onSuccess(step.layoutID, false) }
+            }
             cycleIndex = next
             cycleShownCount = step.text.count
-            return (step.layoutID, false)
         } else {
-            rslog("cycle restore → \(cyclePreviousLayoutID)")
-            retype(erase: cycleShownCount, insert: cycleHome)
+            let previousLayout = cyclePreviousLayoutID
+            rslog("cycle restore → \(previousLayout)")
+            retype(erase: cycleShownCount, erasedText: shownText, insert: cycleHome) { success in
+                if success { onSuccess(previousLayout, true) }
+            }
             cycleIndex = -1
             cycleShownCount = cycleHome.count
-            return (cyclePreviousLayoutID, true)
         }
+        return true
     }
 
     /// Next step of the selection cycle (second+ trigger, no input between). The buffer
@@ -136,14 +164,54 @@ final class TextConverter {
 
     /// Erase `erase` characters and type `insert` — off the main thread, so usleep doesn't
     /// starve the event tap (which sits on the main run loop).
-    private func retype(erase: Int, insert: String) {
+    /// Aborts as soon as a real user event arrives (checked before every synthetic event, so
+    /// the race window is one ~3 ms step, not the whole injection): re-inserts the already-
+    /// erased suffix of `erasedText`, drops the cycle, and reports false to `completion`.
+    private func retype(erase: Int, erasedText: String, insert: String,
+                        completion: @escaping @MainActor @Sendable (Bool) -> Void) {
+        // Scheduling happens on the main thread — the same thread the event tap posts from —
+        // so every real keystroke after this line is guaranteed to set the flag.
+        realInputSinceSchedule.withLock { $0 = false }
         injectQueue.async { [weak self] in
             guard let self else { return }
-            self.backspace(erase)
-            usleep(20_000)
+            var erased = 0
+            var aborted = false
+            while erased < erase {
+                if self.realInputArrived() { aborted = true; break }
+                self.simKey(keyCode: KC.backspace, flags: [])
+                erased += 1
+                usleep(3_000)
+            }
+            if !aborted {
+                usleep(20_000)
+                aborted = self.realInputArrived()
+            }
+            guard !aborted else {
+                if erased > 0 { self.insertText(String(erasedText.suffix(erased))) }
+                rslog("cycle abort: user typed (erased \(erased)/\(erase), restored)")
+                Task { @MainActor in
+                    self.invalidateCycleAfterAbort()
+                    completion(false)
+                }
+                return
+            }
             self.insertText(insert)
-            Task { @MainActor in self.isConverting = false }
+            Task { @MainActor in
+                self.isConverting = false
+                completion(true)
+            }
         }
+    }
+
+    /// Abort cleanup: the on-screen text was put back, so the recorded cycle no longer
+    /// matches reality — drop it so a later ⌥ tap starts a fresh conversion instead of
+    /// "cycling" text that was never replaced.
+    private func invalidateCycleAfterAbort() {
+        isConverting = false
+        lastWasBuffer = false
+        cycleSteps = []
+        cycleIndex = -1
+        cycleShownCount = 0
     }
 
     /// Conversion via the clipboard (fallback: mouse-selected text etc.). First checks the
@@ -392,14 +460,6 @@ final class TextConverter {
     }
 
     // MARK: - Private
-
-    /// Erases n characters (Backspace × n) — for the retype engine.
-    nonisolated private func backspace(_ n: Int) {
-        for _ in 0..<n {
-            simKey(keyCode: KC.backspace, flags: [])
-            usleep(3_000)
-        }
-    }
 
     /// Types the string directly (unicode insert), without the clipboard.
     nonisolated private func insertText(_ text: String) {

@@ -190,8 +190,19 @@ final class SettingsWindowController {
                                     control: FormUI.makeSwitch(isOn: settings.autoConvert,
                                                                target: self, action: #selector(autoConvertChanged))))
 
+        // Language for uk/ru-ambiguous words (phrase-aware-ambiguity): Ukrainian (default) /
+        // Russian / do not convert. Read live — no restart needed.
+        let ambiguousBox = FormBox()
+        let ambiguousPopup = NSPopUpButton()
+        populateAmbiguousPopup(ambiguousPopup)
+        ambiguousPopup.target = self
+        ambiguousPopup.action = #selector(ambiguousLangChanged)
+        ambiguousBox.addRow(FormUI.row(title: L10n.settingsAmbiguousLang,
+                                       subtitle: L10n.settingsAmbiguousLangHint,
+                                       control: ambiguousPopup))
+
         // Experimental toggles (caret flag, remote desktop) moved to Advanced.
-        var sections: [NSView] = [masterBox]
+        var sections: [NSView] = [masterBox, ambiguousBox]
 
         // Unified exceptions list with a segmented filter
         let pane = ExceptionsPane()
@@ -267,6 +278,29 @@ final class SettingsWindowController {
         sections.append(pathLabel)
 
         return makeTabRoot(sections)
+    }
+
+    // MARK: - Ambiguous-language Popup (Auto-fix)
+
+    private func populateAmbiguousPopup(_ popup: NSPopUpButton) {
+        popup.removeAllItems()
+        // Own-language names, matching the interface-language dropdown convention.
+        let options: [(id: String, title: String)] = [
+            ("uk", "Українська"),
+            ("ru", "Русский"),
+            ("off", L10n.settingsAmbiguousOff),
+        ]
+        for option in options {
+            popup.addItem(withTitle: option.title)
+            popup.menu?.items.last?.representedObject = option.id as NSString
+        }
+        selectItem(in: popup, matching: SettingsManager.shared.ambiguousLang)
+    }
+
+    @objc private func ambiguousLangChanged(_ sender: NSPopUpButton) {
+        let id = (sender.selectedItem?.representedObject as? String) ?? "uk"
+        SettingsManager.shared.ambiguousLang = id
+        rslog("Settings: ambiguousLang = \(id)")
     }
 
     // MARK: - Language Popup
