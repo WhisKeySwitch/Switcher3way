@@ -51,10 +51,12 @@ earlier "it doesn't work".
 
 Rationale + detail: `NOTES-3WAY.md`. Summary:
 
-1. **N-way detection** — `NWayDetector.swift` (`NWayResolver.resolve`). Renders the typed
+1. **N-way detection** — `NWayDetector.swift` (`NWayResolver.evaluate`). Renders the typed
    keystrokes through *every* installed layout that has a macOS dictionary, validates each
-   candidate in its own language, switches to the single unambiguous winner. Precision-first:
-   words valid in **both** uk & ru (e.g. `там`) are left alone.
+   candidate in its own language, switches to the single unambiguous winner. Words valid in
+   **both** uk & ru (e.g. `там`, `добре`) convert to the preferred ambiguity language
+   (Auto-fix setting, default uk; "off" = leave alone); `PhraseTracker.swift` re-converts
+   them when a later word locks the phrase to the other language (July 2026).
 2. **Rename** to Switcher3way (Info.plist identity, `build_app.sh`, all UI strings, menu header).
 3. **Updater rebuilt for the fork** — the upstream updater was deleted at fork time (so
    stock 2-way upstream releases couldn't clobber the fork); July 2026 added a new one
@@ -163,15 +165,17 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 - Feature-complete: 3-way auto + manual switching, renamed, custom icon, in-app updates
   from the fork's own releases repo,
   modernized UI (toolbar-tab Settings, onboarding checklist, status-first menu with Pause),
-  stable signing. Builds clean; installed at `/Applications/Switcher3way.app` (v1.1.0 — fork versioning restarted from 1.0).
+  stable signing, abort-safe retype + phrase-aware ambiguity resolution (July 2026). Builds
+  clean; installed at `/Applications/Switcher3way.app` (v1.2.0 — fork versioning restarted from 1.0).
 - **Pending user action:** visual pass of the new UI against the W1–W4 wireframes
   (`openspec/changes/modernize-ui/`) — behavior is verified via debug log, pixels are not.
 
 ## Known issues / next steps
 
 - **Icon optical balance** — S/Э/Є are fine; could optically size-match if desired.
-- **Git:** all fork changes are committed on `main` (repo is a shallow clone of upstream; no
-  remote push). `signing/cert.p12` is git-ignored — keep it that way. Don't commit `Switcher3way.app`.
+- **Git:** work happens on feature branches merged into `main` via PRs on
+  `WhisKeySwitch/Switcher3way` (origin; the old `yaremenko2205/switcher3w` URL redirects there).
+  `signing/cert.p12` is git-ignored — keep it that way. Don't commit `Switcher3way.app`.
 
 ## Reference docs
 

@@ -30,7 +30,10 @@ Summary (the `nway-3way.patch` full diff was removed in the July 2026 cleanup; u
 
 Precision-first. Switch only when the typed word is invalid in the current language AND valid in
 **exactly one** other language. Words valid in **both** Ukrainian and Russian (same-script
-ambiguity, e.g. `там`) are **left alone** by design — fix those with a manual ⌥ tap.
+ambiguity, e.g. `там`, `добре`) convert to the **preferred ambiguity language** (Settings →
+Auto-fix; default Ukrainian, "Do not convert" restores the old keep). A `PhraseTracker` remembers
+the phrase: when a later word is valid in exactly one language, earlier ambiguity-defaulted words
+are re-converted to it in one segment replacement (single ⌥ undo; contradictory phrases untouched).
 
 ## Rebuild
 
