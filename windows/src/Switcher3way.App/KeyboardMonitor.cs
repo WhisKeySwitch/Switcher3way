@@ -35,6 +35,21 @@ internal sealed class KeyboardMonitor
     public event Action? Typed;
     /// <summary>The foreground window changed (for per-app layout memory). Carries the new hwnd.</summary>
     public event Action<IntPtr>? ForegroundChanged;
+    /// <summary>A hard reset of the phrase (arrows / click / app switch / backspace into a prior word).</summary>
+    public event Action? PhraseReset;
+    /// <summary>A boundary space arrived with no pending word (double space) — keeps phrase math exact.</summary>
+    public event Action? ExtraSpace;
+
+    // Abort guard for in-flight rewrites: a real keystroke while a rewrite is armed aborts it, so a
+    // longer multi-word correction can't be corrupted by concurrent typing.
+    private volatile bool _rewriting;
+    private volatile bool _aborted;
+    /// <summary>Arm the abort guard around a rewrite (clears the aborted flag).</summary>
+    public void ArmRewrite() { _aborted = false; _rewriting = true; }
+    /// <summary>Disarm the abort guard once the rewrite finished.</summary>
+    public void DisarmRewrite() => _rewriting = false;
+    /// <summary>True if a real keystroke arrived since the rewrite was armed.</summary>
+    public bool RewriteAborted => _aborted;
 
     /// <summary>Thread-safe snapshot of the current (in-progress) and previous (completed) words.</summary>
     public (IReadOnlyList<TypedKey> Current, IReadOnlyList<TypedKey> Prev) Snapshot()
@@ -97,7 +112,8 @@ internal sealed class KeyboardMonitor
     private void ClearBuffer()
     {
         lock (_lock) { _current.Clear(); _prev.Clear(); _bufferHwnd = IntPtr.Zero; }
-        Typed?.Invoke(); // also end any in-progress manual cycle
+        Typed?.Invoke();        // also end any in-progress manual cycle
+        PhraseReset?.Invoke();  // click / app switch ends the phrase
     }
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -150,7 +166,11 @@ internal sealed class KeyboardMonitor
         }
 
         var kind = KeyClassifier.Classify(vk);
-        if (kind != KeyKind.Modifier) Typed?.Invoke(); // any real keystroke ends a manual cycle
+        if (kind != KeyKind.Modifier)
+        {
+            Typed?.Invoke();              // any real keystroke ends a manual cycle
+            if (_rewriting) _aborted = true; // ...and aborts an in-flight rewrite
+        }
 
         switch (kind)
         {
@@ -164,12 +184,19 @@ internal sealed class KeyboardMonitor
                 CompleteWord(vk);
                 break;
             case KeyKind.Backspace:
-                lock (_lock) { if (_current.Count > 0) _current.RemoveAt(_current.Count - 1); }
+                bool intoPrev;
+                lock (_lock)
+                {
+                    if (_current.Count > 0) { _current.RemoveAt(_current.Count - 1); intoPrev = false; }
+                    else intoPrev = true;
+                }
+                if (intoPrev) PhraseReset?.Invoke(); // editing into an earlier word ends the phrase
                 break;
             case KeyKind.Modifier:
                 break;
             case KeyKind.Reset:
                 lock (_lock) _current.Clear();
+                PhraseReset?.Invoke();       // arrows move the caret → phrase ends
                 break;
         }
         return false;
@@ -192,16 +219,28 @@ internal sealed class KeyboardMonitor
 
     private void CompleteWord(uint boundaryVk)
     {
-        List<TypedKey> finished;
+        List<TypedKey>? finished = null;
+        bool extraSpace = false, focusMoved = false;
         lock (_lock)
         {
-            if (_current.Count == 0) return;
+            if (_current.Count == 0)
+            {
+                extraSpace = boundaryVk == 0x20; // double space → note it for phrase math
+            }
             // Focus moved since the word was typed → caret no longer matches the buffer; drop it.
-            if (_bufferHwnd != IntPtr.Zero && Native.GetForegroundWindow() != _bufferHwnd)
-            { _current.Clear(); _prev.Clear(); _bufferHwnd = IntPtr.Zero; return; }
-            finished = new List<TypedKey>(_current);
-            _prev.Clear(); _prev.AddRange(_current); _current.Clear();
+            else if (_bufferHwnd != IntPtr.Zero && Native.GetForegroundWindow() != _bufferHwnd)
+            {
+                _current.Clear(); _prev.Clear(); _bufferHwnd = IntPtr.Zero; focusMoved = true;
+            }
+            else
+            {
+                finished = new List<TypedKey>(_current);
+                _prev.Clear(); _prev.AddRange(_current); _current.Clear();
+            }
         }
+        // Fire outside the lock (handlers may re-enter the monitor's public surface).
+        if (extraSpace) { ExtraSpace?.Invoke(); return; }
+        if (focusMoved || finished is null) return;
         char boundary = boundaryVk switch { 0x0D => '\n', 0x09 => '\t', _ => ' ' };
         WordCompleted?.Invoke(finished, boundary);
     }

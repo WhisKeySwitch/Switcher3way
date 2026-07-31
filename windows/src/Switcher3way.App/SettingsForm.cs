@@ -21,14 +21,21 @@ internal sealed class SettingsForm : Form
     private readonly ComboBox _language = new() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(16, 132), Width = 300 };
 
     // Auto-fix
-    private readonly CheckBox _autoFix = new() { Text = Loc.T("settings.autofix.title"), AutoSize = true, Location = new Point(16, 14) };
+    private readonly CheckBox _autoFix = new() { Text = Loc.T("settings.autofix.title"), AutoSize = true, Location = new Point(16, 12) };
+    private readonly ComboBox _ambiguous = new() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(16, 64), Width = 220 };
     private readonly ComboBox _filter = new() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(60, 22), Width = 140 };
     private readonly Label _count = new() { AutoSize = true, Location = new Point(206, 25), ForeColor = SystemColors.GrayText };
     private readonly TextBox _search = new() { Location = new Point(296, 22), Width = 104, PlaceholderText = Loc.T("settings.exceptions.search") };
-    private readonly ListView _list = new() { Location = new Point(16, 50), Size = new Size(388, 200), View = View.Details, FullRowSelect = true, HeaderStyle = ColumnHeaderStyle.None };
-    private readonly Button _remove = new() { Text = Loc.T("win.remove"), Location = new Point(16, 258), Size = new Size(160, 26) };
-    private readonly TextBox _addBox = new() { Location = new Point(16, 292), Width = 300, PlaceholderText = Loc.T("win.addEntry") };
-    private readonly Button _add = new() { Text = Loc.T("common.add"), Location = new Point(322, 290), Size = new Size(60, 26) };
+    private readonly ListView _list = new() { Location = new Point(16, 50), Size = new Size(388, 150), View = View.Details, FullRowSelect = true, HeaderStyle = ColumnHeaderStyle.None };
+    private readonly Button _remove = new() { Text = Loc.T("win.remove"), Location = new Point(16, 208), Size = new Size(160, 26) };
+    private readonly TextBox _addBox = new() { Location = new Point(16, 240), Width = 300, PlaceholderText = Loc.T("win.addEntry") };
+    private readonly Button _add = new() { Text = Loc.T("common.add"), Location = new Point(322, 238), Size = new Size(60, 26) };
+
+    private sealed record AmbItem(string Value, string Name) { public override string ToString() => Name; }
+    private static readonly AmbItem[] AmbLangs =
+    {
+        new("uk", "Українська"), new("ru", "Русский"), new("off", Loc.T("settings.autofix.ambiguousLang.off")),
+    };
 
     // Advanced
     private readonly CheckBox _checkUpdates = new() { Text = Loc.T("settings.checkUpdates"), AutoSize = true, Location = new Point(16, 20) };
@@ -109,7 +116,14 @@ internal sealed class SettingsForm : Form
     {
         var p = new TabPage(Loc.T("settings.tab.autofix"));
         p.Controls.Add(_autoFix);
-        var box = new GroupBox { Text = Loc.T("settings.group.exceptions"), Location = new Point(12, 42), Size = new Size(420, 328) };
+
+        // Language for ambiguous words (uk↔ru) — the phrase-aware ambiguity preference.
+        p.Controls.Add(new Label { Text = Loc.T("settings.autofix.ambiguousLang"), AutoSize = true, Location = new Point(16, 42) });
+        _ambiguous.Items.AddRange(AmbLangs);
+        new ToolTip().SetToolTip(_ambiguous, Loc.T("settings.autofix.ambiguousLang.hint"));
+        p.Controls.Add(_ambiguous);
+
+        var box = new GroupBox { Text = Loc.T("settings.group.exceptions"), Location = new Point(12, 100), Size = new Size(420, 272) };
         box.Controls.Add(new Label { Text = Loc.T("win.show"), AutoSize = true, Location = new Point(16, 25) });
         _filter.Items.AddRange(new object[] { Loc.T("settings.exceptions.seg.apps"), Loc.T("settings.exceptions.seg.never"), Loc.T("settings.exceptions.seg.always") });
         _filter.SelectedIndexChanged += (_, _) => RefreshList();
@@ -227,6 +241,7 @@ internal sealed class SettingsForm : Form
         _perApp.Checked = _s.PerAppMemory;
         _debug.Checked = _s.DebugLog;
         _checkUpdates.Checked = _s.CheckForUpdates;
+        _ambiguous.SelectedItem = AmbLangs.FirstOrDefault(a => a.Value == _s.AmbiguousLang) ?? AmbLangs[0];
         _startup.Checked = StartupShortcut.IsEnabled;
         _trigger.SelectedItem = TriggerKeys.FirstOrDefault(k => k.Vk == _s.TriggerKey && k.Double == _s.TriggerDoubleTap) ?? TriggerKeys[1];
         if (_language.Items.Count == 0)
@@ -246,6 +261,7 @@ internal sealed class SettingsForm : Form
         _s.PerAppMemory = _perApp.Checked;
         _s.DebugLog = _debug.Checked;
         _s.CheckForUpdates = _checkUpdates.Checked;
+        _s.AmbiguousLang = (_ambiguous.SelectedItem as AmbItem)?.Value ?? "uk";
         if (_trigger.SelectedItem is KeyItem k) { _s.TriggerKey = k.Vk; _s.TriggerDoubleTap = k.Double; }
         if (_language.SelectedItem is LangItem lang) { _s.InterfaceLanguage = lang.Code; Loc.Configure(lang.Code); }
         _s.DeniedApps = _apps;

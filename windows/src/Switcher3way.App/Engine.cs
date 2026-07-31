@@ -29,6 +29,7 @@ internal sealed class Engine
     private readonly Win32LayoutCatalog _catalog = new();
     private readonly IDictionaryValidator _dict = new HunspellDictionaryValidator();
     private readonly NWayResolver _resolver;
+    private readonly PhraseTracker _phrase;
     private readonly KeyboardMonitor _monitor;
     private readonly BlockingCollection<Action> _work = new();
 
@@ -69,6 +70,7 @@ internal sealed class Engine
         Diagnostics.Configure(settings);
         _monitor = new KeyboardMonitor(settings);
         _resolver = new NWayResolver(_catalog, _dict, new SettingsAlwaysConvert(settings));
+        _phrase = new PhraseTracker((keys, layoutId) => _resolver.Render(keys, layoutId));
         _monitor.WordCompleted += (word, boundary) =>
         {
             // Auto-fix gates on the master toggle, not-paused, AND the auto-fix setting.
@@ -78,6 +80,9 @@ internal sealed class Engine
         _monitor.TriggerPressed += OnTrigger;
         _monitor.Typed += () => { lock (_cycleLock) _cycle = null; };
         _monitor.ForegroundChanged += hwnd => _work.Add(() => OnForegroundChanged(hwnd));
+        // Phrase resets/extra-spaces are marshaled onto the worker so all tracker mutation is single-threaded.
+        _monitor.PhraseReset += () => _work.Add(() => _phrase.Reset());
+        _monitor.ExtraSpace += () => _work.Add(() => _phrase.NoteExtraSpace());
     }
 
     // ---- Per-app layout memory -------------------------------------------------------------
@@ -122,35 +127,134 @@ internal sealed class Engine
         }
     }
 
-    // ---- Auto path -------------------------------------------------------------------------
+    // ---- Auto path (phrase-aware) ----------------------------------------------------------
     private void AutoConvert(IReadOnlyList<TypedKey> word, char boundary)
     {
-        if (_settings.IsDeniedApp(LayoutSwitcher.Foreground().Exe)) return; // terminals / password managers / RDP
-        if (SecureField.IsFocusedPassword()) return;                       // never touch a password field
+        if (_settings.IsDeniedApp(LayoutSwitcher.Foreground().Exe)) { _phrase.Reset(); return; } // terminals / RDP / pw
+        if (SecureField.IsFocusedPassword()) { _phrase.Reset(); return; }                         // never touch a password field
 
         bool caps = word.Any(k => k.Caps);
-        var d = _resolver.Resolve(word, caps);
-        if (d is null) return;
-        if (_settings.IsNeverConvert(d.Original, d.Converted)) return;
+        var outcome = _resolver.Evaluate(word, caps);
+        int gen = _phrase.Generation;
+        bool hardBoundary = boundary != ' '; // Enter/Tab ends the phrase after this word
 
-        var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
-        // Same text in the target layout (e.g. Cyrillic that looks identical in uk vs ru): the
-        // layout was wrong but the characters are already correct — switch, don't rewrite (avoids a
-        // needless erase/retype).
+        switch (outcome)
+        {
+            case Outcome.Keep:
+                _phrase.Record(word, _resolver.RenderCurrent(word) ?? "", 1, new PhraseTracker.WordKind.Neutral(), gen);
+                break;
+
+            case Outcome.Convert conv:
+            {
+                var d = conv.Decision;
+                if (_settings.IsNeverConvert(d.Original, d.Converted))
+                {
+                    _phrase.Record(word, d.Original, 1, new PhraseTracker.WordKind.Neutral(), gen);
+                    break;
+                }
+                var lang = LangOf(d.TargetLayoutId);
+                // A single-winner word locks the phrase. If earlier words were defaulted to a
+                // different language (and no conflicting lock), re-convert the whole segment as one.
+                var corr = _phrase.BuildCorrection(lang, d.TargetLayoutId);
+                if (corr is not null && corr.OldSegment.Length + d.Original.Length + 1 <= PhraseTracker.MaxCorrectionLength)
+                    ApplyCorrection(word, d, corr, boundary, lang, gen);
+                else
+                    ConvertSingle(word, d, boundary, new PhraseTracker.WordKind.Locked(lang), gen);
+                break;
+            }
+
+            case Outcome.Ambiguous amb:
+            {
+                // Prefer the phrase lock, else the setting. "off" or no matching winner → keep.
+                var target = _phrase.LockedLang ?? (_settings.AmbiguousLang == "off" ? null : _settings.AmbiguousLang);
+                var w = target is null ? null : amb.Winners.FirstOrDefault(x => x.Lang == target);
+                if (w is null || _settings.IsNeverConvert(amb.Original, w.Converted))
+                {
+                    _phrase.Record(word, amb.Original, 1, new PhraseTracker.WordKind.Neutral(), gen);
+                    break;
+                }
+                ConvertSingle(word, new Decision(w.LayoutId, amb.Original, w.Converted), boundary,
+                              new PhraseTracker.WordKind.Defaulted(w.Lang), gen);
+                break;
+            }
+        }
+
+        if (hardBoundary) _phrase.Reset();
+    }
+
+    /// <summary>Convert one word: rewrite while still in the source layout, switch only on success
+    /// (so an aborted/failed conversion leaves the layout the user was typing in), then record it.</summary>
+    private void ConvertSingle(IReadOnlyList<TypedKey> word, Decision d, char boundary,
+                               PhraseTracker.WordKind kind, int gen)
+    {
+        // Same text in the target layout (Cyrillic identical across uk/ru): switch only, no rewrite.
         if (d.Converted == d.Original)
         {
-            Diagnostics.Log($"  auto: layout -> [{LangLabel(d.TargetLayoutId)}] (text \"{d.Original}\" unchanged) via {path}");
+            var swPath = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
+            Diagnostics.Log($"  auto: layout -> [{LangLabel(d.TargetLayoutId)}] (text \"{d.Original}\" unchanged) via {swPath}");
+            _phrase.Record(word, d.Converted, 1, kind, gen);
             return;
         }
-        // The boundary char is already on screen; erase word+boundary and re-type converted+boundary.
-        var res = TextRewriter.Rewrite(word.Count + 1, d.Converted + boundary);
-        Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" [{LangLabel(d.TargetLayoutId)}] via {path} : {res}");
-        if (res != TextRewriter.Result.Ok) NotifyProtected();
+        // The boundary char is already on screen; erase word+boundary, re-type converted+boundary.
+        var res = ArmedRewrite(word.Count + 1, d.Converted + boundary, d.Original + boundary);
+        if (res == TextRewriter.Result.Ok)
+        {
+            var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
+            Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" [{LangLabel(d.TargetLayoutId)}] via {path} : {res}");
+            _phrase.Record(word, d.Converted, 1, kind, gen);
+        }
+        else if (res == TextRewriter.Result.Aborted)
+        {
+            Diagnostics.Log($"  auto: \"{d.Original}\" -> aborted (user typed)");
+            _phrase.Reset(); // screen state uncertain — drop phrase memory
+        }
+        else { Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" : {res}"); NotifyProtected(); }
+    }
+
+    /// <summary>Apply a phrase correction + the current word as one segment rewrite, then switch.</summary>
+    private void ApplyCorrection(IReadOnlyList<TypedKey> word, Decision d, PhraseTracker.Correction corr,
+                                 char boundary, string lang, int gen)
+    {
+        var oldSeg = corr.OldSegment + d.Original + boundary;
+        var newSeg = corr.NewSegment + d.Converted + boundary;
+        var res = ArmedRewrite(oldSeg.Length, newSeg, oldSeg);
+        if (res == TextRewriter.Result.Ok)
+        {
+            var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
+            Diagnostics.Log($"  auto: phrase -> [{LangLabel(d.TargetLayoutId)}] \"{newSeg.TrimEnd()}\" via {path} : {res}");
+            _phrase.Confirm(corr, gen);
+            _phrase.Record(word, d.Converted, 1, new PhraseTracker.WordKind.Locked(lang), gen);
+        }
+        else if (res == TextRewriter.Result.Aborted)
+        {
+            Diagnostics.Log("  auto: phrase correction aborted (user typed)");
+            _phrase.Reset();
+        }
+        else { Diagnostics.Log($"  auto: phrase correction : {res}"); NotifyProtected(); }
+    }
+
+    /// <summary>A rewrite guarded by the abort flag: a real keystroke mid-stream aborts and restores.</summary>
+    private TextRewriter.Result ArmedRewrite(int eraseCount, string replacement, string original)
+    {
+        _monitor.ArmRewrite();
+        try
+        {
+            return TextRewriter.Rewrite(eraseCount, replacement, original: original,
+                                        shouldAbort: () => _monitor.RewriteAborted);
+        }
+        finally { _monitor.DisarmRewrite(); }
     }
 
     /// <summary>Friendly language label (en/ru/uk) for a layout id, for logging.</summary>
     private string LangLabel(string layoutId) =>
         _catalog.InstalledLayouts().FirstOrDefault(l => l.Id == layoutId)?.Lang ?? layoutId;
+
+    /// <summary>The 2-letter language of a layout id (defaults to the id if unknown).</summary>
+    private string LangOf(string layoutId)
+    {
+        var lang = _catalog.InstalledLayouts().FirstOrDefault(l => l.Id == layoutId)?.Lang;
+        return lang is null ? layoutId : (lang.Length <= 2 ? lang : lang.Substring(0, 2));
+    }
 
     // ---- Manual N-way cycle ----------------------------------------------------------------
     private void OnTrigger()
@@ -177,7 +281,7 @@ internal sealed class Engine
                 else if (prev.Count > 0) { word = prev; suffix = " "; } // finished with a space
                 else { Diagnostics.Log("(type a word, then press F9)"); return; }
 
-                var plan = _resolver.ManualPlan(word, word.Any(k => k.Caps));
+                var plan = _resolver.ManualPlan(word, word.Any(k => k.Caps), _settings.AmbiguousLang);
                 if (plan is null) { Diagnostics.Log("(nothing to convert)"); return; }
                 _cycle = new Cycle { Plan = plan, Suffix = suffix, Step = 0, OnScreenLen = (plan.Original + suffix).Length };
             }
