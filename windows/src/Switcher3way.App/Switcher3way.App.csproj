@@ -25,6 +25,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.*" />
+    <PackageReference Include="H.NotifyIcon.WinUI" Version="2.1.0" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.*" />
   </ItemGroup>
 
   <ItemGroup>
