@@ -1,13 +1,14 @@
-using System.Windows.Forms;
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
+using Microsoft.Windows.ApplicationModel.DynamicDependency;
 using Switcher3way.App;
 using Switcher3way.Core;
 using Switcher3way.Dictionaries;
 
 internal static class Program
 {
-    // Switcher3way (Windows).
-    //   (no args)  Tray app: auto-fixes finished words; F9 = manual convert/cycle; menu = enable /
-    //              auto-fix / pause / quit.
+    // Switcher3way (Windows), WinUI 3.
+    //   (no args)  Tray app (WinUI). Auto-fixes finished words; manual trigger; settings.
     //   selftest   Non-interactive: real layout enumeration + Win32 render + Hunspell + resolver.
     [STAThread]
     private static void Main(string[] args)
@@ -23,9 +24,21 @@ internal static class Program
         using var mutex = new System.Threading.Mutex(initiallyOwned: true, "Switcher3way.SingleInstance", out bool createdNew);
         if (!createdNew) return;
 
-        ApplicationConfiguration.Initialize();
-        using var tray = new TrayApp();
-        Application.Run();
+        // Locate the (framework-dependent) Windows App SDK runtime before any WinUI type loads.
+        Bootstrap.TryInitialize(0x00010006, out _); // 1.6.x
+        try
+        {
+            Application.Start(p =>
+            {
+                var ctx = new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread());
+                System.Threading.SynchronizationContext.SetSynchronizationContext(ctx);
+                _ = new App();
+            });
+        }
+        finally
+        {
+            Bootstrap.Shutdown();
+        }
     }
 }
 

@@ -1,0 +1,12 @@
+<Project>
+
+  <!-- Dev-build convenience for the WinUI 3 migration (windows-winui3):
+       point the Windows App SDK's PRI/AppxPackage MSBuild tasks at the Visual Studio install when
+       building with the `dotnet` CLI (its SDK dir doesn't carry that tooling). Conditional on the
+       path existing, so it is harmless on machines/CI that resolve it another way or don't need it.
+       Finalized properly in the build/MSI phase. -->
+  <PropertyGroup>
+    <AppxMSBuildToolsPath Condition="'$(AppxMSBuildToolsPath)' == '' And Exists('$(ProgramW6432)\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\')">$(ProgramW6432)\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\</AppxMSBuildToolsPath>
+  </PropertyGroup>
+
+</Project>

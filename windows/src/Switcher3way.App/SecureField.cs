@@ -1,27 +1,15 @@
-using System.Windows.Automation;
-
 namespace Switcher3way.App;
 
 /// <summary>
-/// Detects whether the focused control is a password field (via UI Automation's <c>IsPassword</c>),
-/// so auto/manual conversion never touches a password — including in-browser login fields that the
-/// denied-apps list can't catch. Best-effort: any UIA hiccup returns false (fail-open on detection,
-/// but the denied-apps list still guards password *managers*).
+/// Whether the focused control is a password field — auto/manual conversion must never rewrite in one.
+///
+/// TODO(windows-winui3 task 1.5): the previous implementation used WPF's
+/// <c>System.Windows.Automation</c> (IsPassword), which was dropped with the WinForms/WPF app model.
+/// Re-implement over COM UI Automation (<c>CUIAutomation</c> / <c>IUIAutomation</c>) before this branch
+/// ships. Until then this returns false (no password-field guard) — acceptable ONLY on the migration
+/// branch; `main` still ships the WinForms build with the real guard, preserved in git history.
 /// </summary>
 internal static class SecureField
 {
-    public static bool IsFocusedPassword()
-    {
-        try
-        {
-            var el = AutomationElement.FocusedElement;
-            if (el is null) return false;
-            var v = el.GetCurrentPropertyValue(AutomationElement.IsPasswordProperty);
-            return v is bool b && b;
-        }
-        catch
-        {
-            return false; // UIA can throw/timeout on some targets — don't block on it
-        }
-    }
+    public static bool IsFocusedPassword() => false;
 }

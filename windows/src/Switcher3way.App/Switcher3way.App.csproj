@@ -1,8 +1,46 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <Platform>x64</Platform>
+    <Platforms>x64</Platforms>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <!-- Framework-dependent for dev/CI builds here. The release packaging (self-contained vs the
+         MSI installing the Windows App SDK runtime) is finalized in the build/MSI phase — it does
+         not affect app code. -->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>Switcher3way.App</RootNamespace>
+    <AssemblyName>Switcher3way</AssemblyName>
+    <Version>0.1.1</Version>
+    <ApplicationIcon>Switcher3way.ico</ApplicationIcon>
+    <!-- Custom entry point (mutex + selftest) instead of the generated WinUI Main. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.*" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Switcher3way.Core\Switcher3way.Core.csproj" />
     <ProjectReference Include="..\Switcher3way.Dictionaries\Switcher3way.Dictionaries.csproj" />
+  </ItemGroup>
+
+  <!-- WinForms UI still being ported to WinUI (phase 0+): temporarily excluded from the build.
+       Re-added surface by surface — tray, settings, help, update. -->
+  <ItemGroup>
+    <Compile Remove="TrayApp.cs" />
+    <Compile Remove="SettingsForm.cs" />
+    <Compile Remove="HelpWindow.cs" />
+    <Compile Remove="UpdatePromptForm.cs" />
+    <Compile Remove="UpdateChecker.cs" />
+    <Compile Remove="UpdateInstaller.cs" />
   </ItemGroup>
 
   <!-- Tray flag images (public-domain flags), embedded and drawn as the layout indicator. -->
@@ -19,24 +57,5 @@
     <EmbeddedResource Include="..\..\..\docs\user-guide.uk.md" WithCulture="false"><LogicalName>user-guide.uk.md</LogicalName></EmbeddedResource>
     <EmbeddedResource Include="..\..\..\docs\user-guide.ru.md" WithCulture="false"><LogicalName>user-guide.ru.md</LogicalName></EmbeddedResource>
   </ItemGroup>
-
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <UseWindowsForms>true</UseWindowsForms>
-    <UseWPF>true</UseWPF> <!-- for System.Windows.Automation (UIA) password-field detection -->
-    <RootNamespace>Switcher3way.App</RootNamespace>
-    <AssemblyName>Switcher3way</AssemblyName>
-    <!-- Windows-preview version; also drives the About tab and the MSI ProductVersion.
-         Override at publish time with -p:Version=x.y.z (build-msi.ps1 keeps them in sync). -->
-    <Version>0.1.1</Version>
-    <ApplicationIcon>Switcher3way.ico</ApplicationIcon>
-    <!-- No apphost for dev runs (use the managed dotnet host); the release build/installer sets
-         this true and signs the exe (windows-mvp decision M5). -->
-    <UseAppHost>false</UseAppHost>
-  </PropertyGroup>
 
 </Project>
