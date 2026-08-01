@@ -63,8 +63,8 @@ internal sealed class Tray : IDisposable
         m.Items.Add(pause);
 
         m.Items.Add(new MenuFlyoutSeparator());
-        // Settings / Help / Check for updates rejoin as those surfaces are ported (disabled for now).
-        m.Items.Add(new MenuFlyoutItem { Text = Loc.T("menu.settings"), IsEnabled = false });
+        m.Items.Add(Item(Loc.T("menu.settings"), OpenSettings));
+        // Help / Check for updates rejoin as those surfaces are ported (disabled for now).
         m.Items.Add(new MenuFlyoutItem { Text = Loc.T("menu.help"), IsEnabled = false });
         m.Items.Add(new MenuFlyoutItem { Text = Loc.T("menu.checkUpdates"), IsEnabled = false });
         m.Items.Add(new MenuFlyoutSeparator());
@@ -87,6 +87,17 @@ internal sealed class Tray : IDisposable
     }
 
     private void DoPause(TimeSpan? d) { _settings.Pause(d); UpdateUi(); }
+
+    private SettingsWindow? _settingsWindow;
+    private void OpenSettings()
+    {
+        if (_settingsWindow is null)
+        {
+            _settingsWindow = new SettingsWindow(_settings, UpdateUi);
+            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+        }
+        _settingsWindow.Activate();
+    }
 
     private void UpdateUi()
     {

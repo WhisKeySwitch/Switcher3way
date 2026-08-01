@@ -1,0 +1,132 @@
+<Window
+    x:Class="Switcher3way.App.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Switcher3way — Settings">
+
+    <Grid RowDefinitions="Auto,*,Auto" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.Resources>
+            <!-- Hand-built SettingsCard: title + description on the left, control on the right. -->
+            <Style x:Key="Card" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="Padding" Value="16,12" />
+            </Style>
+        </Grid.Resources>
+
+
+        <SelectorBar x:Name="Tabs" Grid.Row="0" Margin="20,12,20,0" SelectionChanged="Tabs_SelectionChanged">
+            <SelectorBarItem x:Name="TabGeneral" Text="General" IsSelected="True" />
+            <SelectorBarItem x:Name="TabAutoFix" Text="Auto-fix" />
+            <SelectorBarItem x:Name="TabAdvanced" Text="Advanced" />
+            <SelectorBarItem x:Name="TabAbout" Text="About" />
+        </SelectorBar>
+
+        <ScrollViewer Grid.Row="1" Padding="20,16,20,20">
+            <Grid>
+                <StackPanel x:Name="GeneralPanel" Spacing="14">
+                    <!-- Status card -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                            CornerRadius="6" Padding="14,10">
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Spacing="1">
+                                <TextBlock x:Name="StatusLine" Text="—" />
+                                <TextBlock x:Name="StatusSub" FontSize="12"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <Border x:Name="StatusPill" Grid.Column="1" CornerRadius="999" Padding="10,3"
+                                    Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}">
+                                <TextBlock x:Name="StatusPillText" Text="Active" FontSize="12"
+                                           Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Spacing="3">
+                        <Border Style="{StaticResource Card}">
+                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Enable Switcher3way" />
+                                    <TextBlock Text="Watch what you type and fix the layout when a word is clearly in the wrong one"
+                                               FontSize="12" TextWrapping="Wrap"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                                <ToggleSwitch x:Name="EnableToggle" Grid.Column="1" Toggled="EnableToggle_Toggled" />
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Remember layout per application" />
+                                    <TextBlock Text="Restore each app's last layout when you switch back to it"
+                                               FontSize="12" TextWrapping="Wrap"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                                <ToggleSwitch x:Name="PerAppToggle" Grid.Column="1" Toggled="PerAppToggle_Toggled" />
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Start with Windows" />
+                                    <TextBlock Text="Switcher3way runs in the notification area"
+                                               FontSize="12" TextWrapping="Wrap"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                                <ToggleSwitch x:Name="StartupToggle" Grid.Column="1" Toggled="StartupToggle_Toggled" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <TextBlock Text="Trigger" FontWeight="SemiBold" Margin="2,4,0,0" />
+                    <StackPanel Spacing="3">
+                        <Border Style="{StaticResource Card}">
+                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Trigger key" />
+                                    <TextBlock Text="Converts the last word or the selection. Tap again to undo."
+                                               FontSize="12" TextWrapping="Wrap"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                                <ComboBox x:Name="TriggerCombo" Grid.Column="1" MinWidth="170"
+                                          SelectionChanged="TriggerCombo_SelectionChanged" />
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Interface language" />
+                                    <TextBlock Text="16 languages available" FontSize="12"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                                <ComboBox x:Name="LanguageCombo" Grid.Column="1" MinWidth="200"
+                                          SelectionChanged="LanguageCombo_SelectionChanged" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock x:Name="AutoFixPanel" Visibility="Collapsed"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Text="Auto-fix &amp; exceptions — coming next." />
+                <TextBlock x:Name="AdvancedPanel" Visibility="Collapsed"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Text="Advanced — coming next." />
+                <TextBlock x:Name="AboutPanel" Visibility="Collapsed"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Text="About — coming next." />
+            </Grid>
+        </ScrollViewer>
+
+        <Grid Grid.Row="2" Padding="20,12" ColumnDefinitions="*,Auto"
+              Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}"
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
+            <TextBlock Text="Changes apply as you make them" VerticalAlignment="Center"
+                       FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Button Grid.Column="1" Content="Close" Click="Close_Click" MinWidth="90" />
+        </Grid>
+    </Grid>
+</Window>
