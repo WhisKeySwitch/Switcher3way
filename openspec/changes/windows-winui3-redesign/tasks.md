@@ -1,13 +1,17 @@
 # Tasks — Windows UI Redesign (WinUI 3)
 
-Land in phase order; each phase is independently shippable. Build the parallel WinUI project sharing
-`Core`/`Engine`/`SettingsManager`, cut over when at parity (confirm parallel-vs-in-place first).
+Land in phase order on a `windows-winui3` feature branch (keeps `main` shipping the WinForms MSI).
+Migrate the existing `Switcher3way.App` **in place**, skeleton-first: phase 0 stands up a running WinUI
+app model; every later phase adds real screens, so the branch builds and runs throughout the port.
+Merge to `main` at parity, then the WinForms UI is gone.
 
 ## 0. Walking skeleton (platform seams)
 
-- [ ] 0.1 Add a WinUI 3 app project (Windows App SDK, **unpackaged, self-contained**:
-  `WindowsPackageType=None`, `WindowsAppSDKSelfContained=true`, apphost `.exe`) referencing
-  `Switcher3way.Core` + `Switcher3way.Dictionaries`; keep `AssemblyName=Switcher3way`.
+- [ ] 0.1 Convert `Switcher3way.App` to WinUI 3 **in place** (Windows App SDK, **unpackaged,
+  self-contained**: `UseWinUI=true`, `WindowsPackageType=None`, `WindowsAppSDKSelfContained=true`,
+  apphost `.exe`; keep `AssemblyName=Switcher3way`, the Core/Dictionaries refs, and the single-instance
+  mutex). Replace the WinForms `Application.Run` entry with a WinUI `Application`; retire the
+  WinForms/WPF app model. On the `windows-winui3` branch so `main` keeps shipping WinForms.
 - [ ] 0.2 Single-instance + app lifecycle (reuse the existing mutex); theme = `Default` +
   `UISettings.ColorValuesChanged`; accent = system accent; no in-app theme switch.
 - [ ] 0.3 Tray host with `H.NotifyIcon.WinUI`: reuse `TrayApp.MakeFlag` + the 400 ms `RefreshIcon`
