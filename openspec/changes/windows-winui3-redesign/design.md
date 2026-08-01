@@ -100,6 +100,17 @@ icon, a click-through caret overlay, actionable toasts, and how all of that coex
     try-it runs the real `NWayResolver` on what the user types and shows the would-be conversion, then
     persists the chosen trigger and `Start with Windows`. Setting the flag on Finish gates future launches.
 
+12. **In-place migration on a feature branch, skeleton-first (no parallel project) — user decision.**
+    Convert the existing `Switcher3way.App` from WinForms to WinUI 3 **in place** — one project, one
+    build, one updater — rather than standing up a second project. Because WinForms and WinUI 3 can't
+    share an app model, phase 0 replaces the app model and stands up a **running** WinUI skeleton
+    (window + tray + one toast); every later phase adds real screens, so the app builds and runs
+    throughout the port, only missing not-yet-ported surfaces. Do the work on a `windows-winui3`
+    feature branch so `main` keeps shipping the WinForms 0.1.x MSI, and merge at parity. *Rejected:* a
+    parallel `Switcher3way.App.WinUI` — it avoids a broken branch mid-port but adds a second csproj,
+    duplicate wiring, and a shared-library extraction; the branch model gives the same "`main` stays
+    shippable" guarantee without them.
+
 ## Risks / Trade-offs
 
 - **WinUI-3-unpackaged + self-contained is the least-trodden path** (notifications/registration, tray
@@ -118,9 +129,9 @@ icon, a click-through caret overlay, actionable toasts, and how all of that coex
 
 ## Open Questions
 
-- **Migrate in place vs. a parallel WinUI project during transition?** Leaning parallel
-  (`Switcher3way.App.WinUI`) sharing `Core`/settings/engine, cut over when at parity — keeps `main`
-  shippable. To confirm with the user before implementation.
-- **Do we keep the current MSI toolchain unchanged, or does unpackaged WinUI require build-script
-  changes** (WindowsAppSDK runtime staging into the publish folder)? Expected: `build-msi.ps1` picks
-  up the extra runtime files automatically via `dotnet publish`, but verify during the skeleton phase.
+_Both prior questions are resolved by user decision: **in-place migration** (Decision 12) and
+**unpackaged self-contained** packaging (Decision 1)._
+
+- **Verify during the phase-0 skeleton:** whether `build-msi.ps1` needs any change to stage the
+  WindowsAppSDK self-contained runtime into the publish folder. Expected to be picked up automatically
+  by `dotnet publish`, but confirm before porting screens (a build-script tweak, not a design change).
