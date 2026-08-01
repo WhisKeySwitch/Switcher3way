@@ -89,14 +89,24 @@ internal sealed class Tray : IDisposable
     private void DoPause(TimeSpan? d) { _settings.Pause(d); UpdateUi(); }
 
     private SettingsWindow? _settingsWindow;
-    private void OpenSettings()
+    internal void OpenSettings()
     {
-        if (_settingsWindow is null)
+        try
         {
-            _settingsWindow = new SettingsWindow(_settings, UpdateUi);
-            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+            if (_settingsWindow is null)
+            {
+                _settingsWindow = new SettingsWindow(_settings, UpdateUi);
+                _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+            }
+            _settingsWindow.Activate();
+            // A window created from a tray-flyout click can't grab foreground on its own — force it,
+            // or it opens behind everything and looks like nothing happened.
+            Native.SetForegroundWindow(WinRT.Interop.WindowNative.GetWindowHandle(_settingsWindow));
         }
-        _settingsWindow.Activate();
+        catch (Exception ex)
+        {
+            Diagnostics.Log("settings open failed: " + ex);
+        }
     }
 
     private void UpdateUi()

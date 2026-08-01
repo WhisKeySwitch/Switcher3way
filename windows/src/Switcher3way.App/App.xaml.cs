@@ -1,3 +1,4 @@
+using System.IO;
 using Microsoft.UI.Xaml;
 
 namespace Switcher3way.App;
@@ -15,6 +16,20 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        _tray = new Tray();
+        this.UnhandledException += (_, e) => { Log("UnhandledException: " + e.Exception); e.Handled = true; };
+        try
+        {
+            _tray = new Tray();
+        }
+        catch (Exception ex)
+        {
+            Log("OnLaunched: " + ex);
+        }
+    }
+
+    private static void Log(string s)
+    {
+        try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "s3w-winui-error.log"), $"{DateTime.Now:HH:mm:ss} {s}\n\n"); }
+        catch { /* best-effort */ }
     }
 }
