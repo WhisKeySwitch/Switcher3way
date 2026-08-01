@@ -13,6 +13,29 @@ public sealed record Layout(string Id, string? Lang);
 /// <summary>An auto-conversion decision: switch to <see cref="TargetLayoutId"/> and rewrite the word.</summary>
 public sealed record Decision(string TargetLayoutId, string Original, string Converted);
 
+/// <summary>One language that validates the typed word (carried when more than one does).</summary>
+public sealed record Winner(string Lang, string LayoutId, string Converted);
+
+/// <summary>
+/// Full evaluation result of <see cref="NWayResolver.Evaluate"/>. <see cref="Ambiguous"/> carries
+/// every validating language so the caller can resolve it by the preferred-language setting / phrase
+/// lock (phrase-aware ambiguity); <see cref="NWayResolver.Resolve"/> collapses it for callers that
+/// only want the unambiguous case. A closed union — the three nested records are the only cases.
+/// </summary>
+public abstract record Outcome
+{
+    private Outcome() { }
+
+    /// <summary>Leave the text and layout as they are.</summary>
+    public sealed record Keep : Outcome;
+
+    /// <summary>Exactly one target language: switch and rewrite.</summary>
+    public sealed record Convert(Decision Decision) : Outcome;
+
+    /// <summary>More than one language validates the word (uk↔ru): the caller applies the policy.</summary>
+    public sealed record Ambiguous(string Original, IReadOnlyList<Winner> Winners) : Outcome;
+}
+
 /// <summary>One step of the manual cycle: a target layout and how the input looks in it.</summary>
 public sealed record ManualCandidate(string TargetLayoutId, string Converted);
 

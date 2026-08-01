@@ -12,6 +12,9 @@ public sealed class SettingsManager
 {
     public bool Enabled { get; set; } = true;
     public bool AutoFix { get; set; } = true;
+    /// <summary>Language for wrong-layout words valid in more than one language: "uk" (default),
+    /// "ru", or "off" (leave ambiguous words unchanged). Mirrors the macOS ambiguous-language setting.</summary>
+    public string AmbiguousLang { get; set; } = "uk";
     public bool PerAppMemory { get; set; } = true;
     public bool DebugLog { get; set; }
     /// <summary>Daily background update check against the fork's downloads repo (default on).</summary>
