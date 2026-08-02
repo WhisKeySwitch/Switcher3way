@@ -4,6 +4,9 @@ using Switcher3way.Dictionaries;
 
 namespace Switcher3way.App;
 
+/// <summary>A successful conversion, for the on-screen feedback (caret chip / toast).</summary>
+internal sealed record ConversionInfo(string Original, string Converted, string Lang);
+
 /// <summary>Empty override list (used by the self-test).</summary>
 internal sealed class EmptyAlwaysConvert : IAlwaysConvertList
 {
@@ -40,6 +43,11 @@ internal sealed class Engine
     /// <summary>User-facing notification (e.g. "can't act in this window"), shown by the tray.</summary>
     public event Action<string>? Notify;
     private DateTime _lastNotify = DateTime.MinValue;
+
+    /// <summary>A conversion that reached the screen: what was typed, what replaced it, target language.</summary>
+    public event Action<ConversionInfo>? Converted;
+    private void RaiseConverted(string original, string converted, string layoutId) =>
+        Converted?.Invoke(new ConversionInfo(original.TrimEnd(), converted.TrimEnd(), LangOf(layoutId)));
 
     private void NotifyProtected()
     {
@@ -203,6 +211,7 @@ internal sealed class Engine
             var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
             Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" [{LangLabel(d.TargetLayoutId)}] via {path} : {res}");
             _phrase.Record(word, d.Converted, 1, kind, gen);
+            RaiseConverted(d.Original, d.Converted, d.TargetLayoutId);
             SeedCancelCycle(d.Original, d.Converted, boundary, d.TargetLayoutId, prevLayout);
         }
         else if (res == TextRewriter.Result.Aborted)
@@ -227,6 +236,7 @@ internal sealed class Engine
             Diagnostics.Log($"  auto: phrase -> [{LangLabel(d.TargetLayoutId)}] \"{newSeg.TrimEnd()}\" via {path} : {res}");
             _phrase.Confirm(corr, gen);
             _phrase.Record(word, d.Converted, 1, new PhraseTracker.WordKind.Locked(lang), gen);
+            RaiseConverted(d.Original, d.Converted, d.TargetLayoutId);
             // One trigger tap cancels the whole segment, not just the last word.
             SeedCancelCycle(corr.OldSegment + d.Original, corr.NewSegment + d.Converted, boundary,
                             d.TargetLayoutId, prevLayout);
@@ -323,6 +333,8 @@ internal sealed class Engine
         var res = TextRewriter.Rewrite(cyc.OnScreenLen, text, waitForKeyUpVk: _settings.TriggerKey);
         Diagnostics.Log($"  cycle[{cyc.Step}] -> [{label}] \"{text.TrimEnd()}\" via {path} : {res}");
         if (res != TextRewriter.Result.Ok) NotifyProtected();
+        // Feedback on manual conversions too, but not on the final restore-to-original step.
+        else if (!restore) RaiseConverted(cyc.Plan.Original, text, targetId);
 
         cyc.OnScreenLen = text.Length;
         cyc.Step++;
