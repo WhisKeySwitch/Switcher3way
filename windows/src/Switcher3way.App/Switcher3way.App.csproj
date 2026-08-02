@@ -38,7 +38,6 @@
   <ItemGroup>
     <Compile Remove="TrayApp.cs" />
     <Compile Remove="SettingsForm.cs" />
-    <Compile Remove="HelpWindow.cs" />
     <Compile Remove="UpdatePromptForm.cs" />
   </ItemGroup>
 

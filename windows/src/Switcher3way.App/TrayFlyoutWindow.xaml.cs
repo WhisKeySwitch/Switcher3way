@@ -23,15 +23,18 @@ public sealed partial class TrayFlyoutWindow : Window
     private readonly Action _openSettings;
     private readonly Action _quit;
     private readonly Action _checkUpdates;
+    private readonly Action _openHelp;
     private bool _loading;
 
-    public TrayFlyoutWindow(SettingsManager s, Action changed, Action openSettings, Action quit, Action checkUpdates)
+    public TrayFlyoutWindow(SettingsManager s, Action changed, Action openSettings, Action quit,
+                            Action checkUpdates, Action openHelp)
     {
         _s = s;
         _changed = changed;
         _openSettings = openSettings;
         _quit = quit;
         _checkUpdates = checkUpdates;
+        _openHelp = openHelp;
         this.InitializeComponent();
 
         // Borderless, no taskbar entry, always on top — a context-menu-shaped window.
@@ -119,7 +122,7 @@ public sealed partial class TrayFlyoutWindow : Window
     private void Resume_Click(object s, RoutedEventArgs e) { _s.Resume(); _changed(); AppWindow.Hide(); }
 
     private void Settings_Click(object s, RoutedEventArgs e) { AppWindow.Hide(); _openSettings(); }
-    private void Help_Click(object s, RoutedEventArgs e) { /* enabled when Help is ported */ }
+    private void Help_Click(object s, RoutedEventArgs e) { AppWindow.Hide(); _openHelp(); }
     private void Updates_Click(object s, RoutedEventArgs e) { AppWindow.Hide(); _checkUpdates(); }
     private void Quit_Click(object s, RoutedEventArgs e) { AppWindow.Hide(); _quit(); }
 

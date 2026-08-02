@@ -77,7 +77,8 @@ internal sealed class Tray : IDisposable
     {
         try
         {
-            _flyout ??= new TrayFlyoutWindow(_settings, RefreshIcon, OpenSettings, Quit, _updater.CheckManually);
+            _flyout ??= new TrayFlyoutWindow(_settings, RefreshIcon, OpenSettings, Quit,
+                                             _updater.CheckManually, OpenHelp);
             _flyout.ShowNearTray();
             return true;
         }
@@ -90,6 +91,27 @@ internal sealed class Tray : IDisposable
     }
 
     private void DoPause(TimeSpan? d) { _settings.Pause(d); RefreshIcon(); }
+
+    private HelpWindow? _helpWindow;
+    /// <summary>Open the built-in help (single instance), in the current interface language.</summary>
+    internal void OpenHelp()
+    {
+        if (!_dispatcher.HasThreadAccess) { _dispatcher.TryEnqueue(OpenHelp); return; }
+        try
+        {
+            if (_helpWindow is null)
+            {
+                _helpWindow = new HelpWindow(Loc.Language);
+                _helpWindow.Closed += (_, _) => _helpWindow = null;
+            }
+            _helpWindow.Activate();
+            Native.SetForegroundWindow(WinRT.Interop.WindowNative.GetWindowHandle(_helpWindow));
+        }
+        catch (Exception ex)
+        {
+            Diagnostics.Log("help open failed: " + ex);
+        }
+    }
 
     private SettingsWindow? _settingsWindow;
     internal void OpenSettings()

@@ -38,6 +38,27 @@ internal static class HelpContent
         return Template(lang, Esc(title), body);
     }
 
+    /// <summary>
+    /// The guide's top-level sections (its <c>##</c> headings) with the anchors <see cref="Render"/>
+    /// generates for them — the Help window's table of contents.
+    /// </summary>
+    public static List<(string Title, string Anchor)> Sections(string lang)
+    {
+        if (!Resources.TryGetValue(lang, out var res)) res = Resources["en"];
+        var md = ReadResource(res) ?? "";
+        var list = new List<(string, string)>();
+        foreach (var raw in md.Replace("\r\n", "\n").Split('\n'))
+        {
+            var m = Regex.Match(raw.Trim(), @"^##\s+(.*)$");
+            if (m.Success)
+            {
+                var title = m.Groups[1].Value.Trim();
+                list.Add((title, Slugify(title)));
+            }
+        }
+        return list;
+    }
+
     private static string? ReadResource(string logicalName)
     {
         try
