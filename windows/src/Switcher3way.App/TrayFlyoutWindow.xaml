@@ -76,7 +76,7 @@
             <Button x:Name="HelpButton" Style="{StaticResource Row}" Click="Help_Click" IsEnabled="False">
                 <TextBlock x:Name="T_Help" VerticalAlignment="Center" />
             </Button>
-            <Button x:Name="UpdatesButton" Style="{StaticResource Row}" Click="Updates_Click" IsEnabled="False">
+            <Button x:Name="UpdatesButton" Style="{StaticResource Row}" Click="Updates_Click">
                 <TextBlock x:Name="T_Updates" VerticalAlignment="Center" />
             </Button>
 

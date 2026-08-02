@@ -14,6 +14,7 @@ internal sealed class Tray : IDisposable
     private readonly Engine _engine;
     private readonly Win32Tray _tray;
     private readonly CaretChip _chip;
+    private readonly UpdateChecker _updater;
     private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
     private readonly DispatcherQueueTimer _poll;
     private string _iconKey = "";
@@ -32,6 +33,9 @@ internal sealed class Tray : IDisposable
 
         _tray = new Win32Tray(BuildMenu) { CustomMenu = ShowFlyout };
         RefreshIcon();
+
+        _updater = new UpdateChecker(_settings, _dispatcher, Quit);
+        _updater.StartSchedule();
 
         _engine.Start();
 
@@ -73,7 +77,7 @@ internal sealed class Tray : IDisposable
     {
         try
         {
-            _flyout ??= new TrayFlyoutWindow(_settings, RefreshIcon, OpenSettings, Quit);
+            _flyout ??= new TrayFlyoutWindow(_settings, RefreshIcon, OpenSettings, Quit, _updater.CheckManually);
             _flyout.ShowNearTray();
             return true;
         }

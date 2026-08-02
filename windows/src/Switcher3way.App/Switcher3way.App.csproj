@@ -40,8 +40,6 @@
     <Compile Remove="SettingsForm.cs" />
     <Compile Remove="HelpWindow.cs" />
     <Compile Remove="UpdatePromptForm.cs" />
-    <Compile Remove="UpdateChecker.cs" />
-    <Compile Remove="UpdateInstaller.cs" />
   </ItemGroup>
 
   <!-- Tray flag images (public-domain flags), embedded and drawn as the layout indicator. -->

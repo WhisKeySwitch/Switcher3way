@@ -2,7 +2,8 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Windows.Forms;
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Dispatching;
 
 namespace Switcher3way.App;
 
@@ -23,21 +24,22 @@ internal sealed class UpdateChecker
     private static readonly TimeSpan Interval = TimeSpan.FromHours(24);
 
     private readonly SettingsManager _settings;
-    private readonly SynchronizationContext _ui;
+    private readonly DispatcherQueue _ui;
     private readonly Action _quit;
-    private readonly System.Windows.Forms.Timer _timer;
+    private readonly DispatcherQueueTimer _timer;
     private bool _busy;
 
     /// <summary>Raised (on the UI thread) when the busy state changes, so the menu can relabel.</summary>
     public event Action? StateChanged;
     public bool IsBusy => _busy;
 
-    public UpdateChecker(SettingsManager settings, SynchronizationContext ui, Action quit)
+    public UpdateChecker(SettingsManager settings, DispatcherQueue ui, Action quit)
     {
         _settings = settings;
         _ui = ui;
         _quit = quit;
-        _timer = new System.Windows.Forms.Timer { Interval = (int)Interval.TotalMilliseconds };
+        _timer = ui.CreateTimer();
+        _timer.Interval = Interval;
         _timer.Tick += (_, _) => Check(interactive: false);
     }
 
@@ -47,8 +49,9 @@ internal sealed class UpdateChecker
     {
         _timer.Stop();
         if (!_settings.CheckForUpdates) return;
-        var delay = new System.Windows.Forms.Timer { Interval = 15000 };
-        delay.Tick += (_, _) => { delay.Stop(); delay.Dispose(); if (_settings.CheckForUpdates) Check(interactive: false); };
+        var delay = _ui.CreateTimer();
+        delay.Interval = TimeSpan.FromSeconds(15);
+        delay.Tick += (t, _) => { t.Stop(); if (_settings.CheckForUpdates) Check(interactive: false); };
         delay.Start();
         _timer.Start();
     }
@@ -99,19 +102,16 @@ internal sealed class UpdateChecker
 
     private void Offer(UpdateInfo info)
     {
-        var choice = UpdatePromptForm.Ask(info, CurrentVersion());
-        switch (choice)
-        {
-            case UpdatePromptForm.Choice.Install:
-                Install(info);
-                break;
-            case UpdatePromptForm.Choice.Skip:
-                _settings.SkippedVersion = info.Version; _settings.Save();
+        // The prompt is a window, so it returns immediately; the outcome arrives via callbacks.
+        // "Later" needs no action — the next check offers it again.
+        UpdatePromptWindow.ShowUpdate(info, CurrentVersion(),
+            onInstall: () => Install(info),
+            onSkip: () =>
+            {
+                _settings.SkippedVersion = info.Version;
+                _settings.Save();
                 Diagnostics.Log($"update: user skipped {info.Version}");
-                break;
-            default:
-                break; // Later — offered again next check
-        }
+            });
     }
 
     private void Install(UpdateInfo info)
@@ -205,12 +205,11 @@ internal sealed class UpdateChecker
     // ---- UI plumbing -----------------------------------------------------------------------
 
     private void SetBusy(bool value) { _busy = value; StateChanged?.Invoke(); }
-    private void Post(Action a) => _ui.Post(_ => a(), null);
+    private void Post(Action a) => _ui.TryEnqueue(() => a());
 
     private static void ShowUpToDate(string current) =>
-        MessageBox.Show(Loc.Tf("update.upToDate.text", current), Loc.T("update.upToDate.title"),
-            MessageBoxButtons.OK, MessageBoxIcon.Information);
+        UpdatePromptWindow.ShowMessage(Loc.T("update.upToDate.title"), Loc.Tf("update.upToDate.text", current));
 
     private static void ShowError(string title, string message) =>
-        MessageBox.Show(message, title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        UpdatePromptWindow.ShowMessage(title, message);
 }
