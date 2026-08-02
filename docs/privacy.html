@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Switcher3way — Privacy Policy</title>
+<meta name="description" content="Switcher3way privacy policy: keystrokes are processed locally and never stored or transmitted.">
+<style>
+  :root{ --bg:#ffffff; --fg:#16181d; --muted:#5b616e; --card:#f6f7f9; --line:#e6e8ec; --accent:#3b5bdb; }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0d0f14; --fg:#e8eaed; --muted:#9aa2b1; --card:#161a22; --line:#242a35; --accent:#748ffc; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:56px 20px 80px}
+  h1{font-size:2rem;letter-spacing:-.02em;margin:0 0 .2em}
+  h2{font-size:1.15rem;margin:2em 0 .5em}
+  p,li{color:var(--fg)}
+  .lead{color:var(--muted);font-size:1.05rem}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 22px;margin:22px 0}
+  .box p{margin:0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+  a{color:var(--accent)}
+  footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Privacy Policy</h1>
+  <p class="lead">Switcher3way for Windows · last updated 2 August 2026</p>
+
+  <div class="box">
+    <p><strong>Switcher3way does not collect, store, or transmit anything you type.</strong> All
+    processing happens on your device, in memory, and nothing is written to disk or sent anywhere.</p>
+  </div>
+
+  <h2>What the app does with your keystrokes</h2>
+  <p>To fix a word typed in the wrong keyboard layout, Switcher3way has to see the keys you press. It
+  uses a system-wide keyboard hook for this. The keys of the <em>word you are currently typing</em>
+  are held in memory only, and are discarded as soon as the word ends, you move the caret, click, or
+  switch applications. No keystroke history is kept, no log of typed text is produced, and nothing is
+  uploaded.</p>
+
+  <h2>Places the app deliberately does not look</h2>
+  <ul>
+    <li><strong>Password fields are excluded.</strong> When the focused control is a password field —
+      including password boxes on web pages — the app does not process or rewrite what you type.</li>
+    <li><strong>Password managers and terminals are excluded</strong> by default, and you can exclude
+      any other application yourself in Settings.</li>
+  </ul>
+
+  <h2>Data stored on your device</h2>
+  <p>Your preferences (whether the app is enabled, the trigger key, interface language, and your
+  exception lists) are stored on your own PC. Nothing in them is shared.</p>
+  <p>An optional <strong>debug log</strong> is <em>off</em> by default. If you turn it on to
+  troubleshoot, it records what was detected and converted — so it may contain words you typed. It
+  stays on your PC, you can open its folder from Settings, and you can delete it at any time. Turning
+  the setting off stops it being written.</p>
+
+  <h2>Network use</h2>
+  <ul>
+    <li><strong>Microsoft Store version:</strong> the app makes no network connections. Updates are
+      handled by the Store.</li>
+    <li><strong>Direct-download version:</strong> if "check for updates automatically" is on (you can
+      turn it off), the app asks GitHub for the list of published releases. That request contains no
+      personal data beyond what any web request necessarily reveals to the server, and no analytics or
+      telemetry of any kind is sent.</li>
+  </ul>
+
+  <h2>Dictionaries</h2>
+  <p>Word checking uses dictionaries bundled inside the app, so validating what you type never
+  requires a network connection.</p>
+
+  <h2>Children</h2>
+  <p>The app is a keyboard utility, is not directed at children, and collects no personal information
+  from anyone.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, the updated version will be published on this page with a new date.</p>
+
+  <h2>Contact</h2>
+  <p>Questions or reports: open an issue at
+  <a href="https://github.com/WhisKeySwitch/Switcher3way">github.com/WhisKeySwitch/Switcher3way</a>.</p>
+
+  <footer>
+    <a href="index.html">← Switcher3way</a> · Free and open source under the MIT License — the source
+    can be read at <a href="https://github.com/WhisKeySwitch/Switcher3way">GitHub</a>, including
+    everything described above.
+  </footer>
+</div>
+</body>
+</html>

@@ -39,6 +39,38 @@ pwsh windows/build-msix.ps1                        # package for Partner Center
 pwsh windows/build-msix.ps1 -Sideload -Sign -Certify   # local install test + WACK (run elevated)
 ```
 
+### Submission pack (paste into Partner Center)
+
+**Privacy policy URL** — required, because a keyboard hook can access personal information:
+`https://whiskeyswitch.github.io/Switcher3way/privacy.html` (source: [`docs/privacy.html`](../docs/privacy.html)).
+
+**Restricted capability justification** (`runFullTrust`):
+
+> Switcher3way is a keyboard-layout utility. It installs a system-wide low-level keyboard hook
+> (`WH_KEYBOARD_LL`) to detect when a word has been typed in the wrong keyboard layout, and uses
+> `SendInput` to retype the corrected word in the right one. Neither a system-wide hook nor input
+> injection into other applications is possible inside the app container, so `runFullTrust` is
+> required. The app works entirely offline: keystrokes for the current word are held in memory only
+> and discarded at the next word boundary, nothing is stored or transmitted, and password fields are
+> explicitly excluded from processing.
+
+**Notes for certification** (reviewers must be told it is a tray app with no main window, or they
+report that nothing launches):
+
+> Switcher3way runs in the notification area — it has no main window. On first launch a short
+> welcome flow appears; finish it to reach the tray icon.
+>
+> To test: add both an English and a Ukrainian (or Russian) keyboard layout in Windows. With the
+> English layout active, open Notepad and type `ghbdsn` followed by a space — the text is replaced
+> with `привіт` and the layout switches. Alternatively select any wrong-layout text and press the
+> trigger key (F9 by default) to convert it; press it again to cycle or undo.
+>
+> The tray icon's menu provides enable/disable, pause, Settings and Help. The app makes no network
+> connections in this (Store) build.
+
+**Also needed for the listing:** screenshots (1366×768 or larger) — the tray flyout, the Settings
+window, and the conversion feedback chip are the useful three.
+
 > The macOS release flow is separate — see `NOTES-3WAY.md` / `build_app.sh`.
 
 ## Prerequisites
