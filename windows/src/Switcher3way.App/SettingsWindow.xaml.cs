@@ -34,12 +34,14 @@ public sealed partial class SettingsWindow : Window
 
     private readonly SettingsManager _s;
     private readonly Action _onChanged;
+    private readonly Action? _reopen;
     private bool _loading;
 
-    public SettingsWindow(SettingsManager s, Action onChanged)
+    public SettingsWindow(SettingsManager s, Action onChanged, Action? reopen = null)
     {
         _s = s;
         _onChanged = onChanged;
+        _reopen = reopen;
         this.InitializeComponent();
         AppWindow.Resize(new SizeInt32(620, 660));
 
@@ -111,6 +113,8 @@ public sealed partial class SettingsWindow : Window
         _s.InterfaceLanguage = l.Code;
         Loc.Configure(l.Code);
         Commit();
+        // Strings are resolved when the XAML loads, so reload the window in the new language.
+        if (_reopen is not null) { Close(); _reopen(); }
     }
 
     private void Tabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
@@ -162,9 +166,9 @@ public sealed partial class SettingsWindow : Window
     private void RefreshExceptions()
     {
         // Live counts on the segments.
-        SegApps.Text = $"Apps  {SettingsManager.ProtectedApps.Length + _s.DeniedApps.Count}";
-        SegNever.Text = $"Never convert  {_s.NeverConvertWords.Count}";
-        SegAlways.Text = $"Always convert  {_s.AlwaysConvertWords.Count}";
+        SegApps.Text = $"{Loc.T("settings.exceptions.seg.apps")}  {SettingsManager.ProtectedApps.Length + _s.DeniedApps.Count}";
+        SegNever.Text = $"{Loc.T("settings.exceptions.seg.never")}  {_s.NeverConvertWords.Count}";
+        SegAlways.Text = $"{Loc.T("settings.exceptions.seg.always")}  {_s.AlwaysConvertWords.Count}";
 
         string q = ExcSearch.Text.Trim();
         bool Match(string v) => q.Length == 0 || v.Contains(q, StringComparison.OrdinalIgnoreCase);

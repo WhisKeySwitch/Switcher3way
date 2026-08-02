@@ -78,7 +78,9 @@ internal sealed class Tray : IDisposable
         {
             if (_settingsWindow is null)
             {
-                _settingsWindow = new SettingsWindow(_settings, RefreshIcon);
+                // reopen: an interface-language change reloads the window in the new language.
+                _settingsWindow = new SettingsWindow(_settings, RefreshIcon,
+                    reopen: () => _dispatcher.TryEnqueue(OpenSettings));
                 _settingsWindow.Closed += (_, _) => _settingsWindow = null;
             }
             _settingsWindow.Activate();

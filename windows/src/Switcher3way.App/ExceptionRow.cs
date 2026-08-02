@@ -20,6 +20,9 @@ public sealed class ExceptionRow
     /// <summary>Built-in password managers: shown locked, never removable.</summary>
     public bool IsProtected { get; init; }
 
+    /// <summary>Localized "always off" marker shown on protected rows.</summary>
+    public string LockedText => Loc.T("settings.exceptions.alwaysOff");
+
     public Visibility LockedVisibility => IsProtected ? Visibility.Visible : Visibility.Collapsed;
     public Visibility RemoveVisibility => IsProtected ? Visibility.Collapsed : Visibility.Visible;
     public Visibility IconVisibility => Icon is null ? Visibility.Collapsed : Visibility.Visible;
