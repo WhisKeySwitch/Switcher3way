@@ -39,6 +39,9 @@ internal sealed class Tray : IDisposable
 
         _engine.Start();
 
+        // First run: explain the app and get the trigger chosen before anything else happens.
+        if (!_settings.HasCompletedOnboarding) ShowOnboarding();
+
         // Poll the foreground layout so the flag follows it live (also picks up pause expiry).
         _poll = _dispatcher.CreateTimer();
         _poll.Interval = TimeSpan.FromMilliseconds(400);
@@ -91,6 +94,25 @@ internal sealed class Tray : IDisposable
     }
 
     private void DoPause(TimeSpan? d) { _settings.Pause(d); RefreshIcon(); }
+
+    private OnboardingWindow? _onboarding;
+    private void ShowOnboarding()
+    {
+        try
+        {
+            _onboarding = new OnboardingWindow(_settings, RefreshIcon);
+            _onboarding.Closed += (_, _) => _onboarding = null;
+            _onboarding.Activate();
+            Native.SetForegroundWindow(WinRT.Interop.WindowNative.GetWindowHandle(_onboarding));
+        }
+        catch (Exception ex)
+        {
+            // Never let the welcome flow stop the app from running.
+            Diagnostics.Log("onboarding failed: " + ex);
+            _settings.HasCompletedOnboarding = true;
+            _settings.Save();
+        }
+    }
 
     private HelpWindow? _helpWindow;
     /// <summary>Open the built-in help (single instance), in the current interface language.</summary>
