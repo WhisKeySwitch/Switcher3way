@@ -14,6 +14,38 @@
                 <Setter Property="CornerRadius" Value="4" />
                 <Setter Property="Padding" Value="16,12" />
             </Style>
+
+            <!-- One exceptions row: icon + name + .exe, then Locked or a remove button. -->
+            <DataTemplate x:Key="RowTemplate">
+                <Grid ColumnSpacing="10" Padding="12,0" Height="40"
+                      ColumnDefinitions="Auto,Auto,*,Auto">
+                    <Image Width="20" Height="20" Source="{Binding Icon}"
+                           Visibility="{Binding IconVisibility}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Display}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="2" Text="{Binding Sub}" FontSize="12" VerticalAlignment="Center"
+                               Visibility="{Binding SubVisibility}" TextTrimming="CharacterEllipsis"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <TextBlock Grid.Column="3" Text="Locked" FontSize="12" VerticalAlignment="Center"
+                               Visibility="{Binding LockedVisibility}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <Button Grid.Column="3" Content="&#xE711;" FontFamily="Segoe Fluent Icons" FontSize="12"
+                            Padding="8,4" Tag="{Binding Value}" Click="RemoveRow_Click"
+                            Visibility="{Binding RemoveVisibility}" />
+                </Grid>
+            </DataTemplate>
+
+            <!-- One row in the Add-an-app picker. -->
+            <DataTemplate x:Key="PickerTemplate">
+                <Grid ColumnSpacing="10" Height="36" ColumnDefinitions="Auto,*,Auto">
+                    <Image Width="20" Height="20" VerticalAlignment="Center"
+                           Source="{Binding Icon}" Visibility="{Binding IconVisibility}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Display}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="2" Text="{Binding Sub}" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                </Grid>
+            </DataTemplate>
         </Grid.Resources>
 
 
@@ -109,9 +141,97 @@
                     </StackPanel>
                 </StackPanel>
 
-                <TextBlock x:Name="AutoFixPanel" Visibility="Collapsed"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                           Text="Auto-fix &amp; exceptions — coming next." />
+                <!-- Auto-fix -->
+                <StackPanel x:Name="AutoFixPanel" Visibility="Collapsed" Spacing="14">
+                    <StackPanel Spacing="3">
+                        <Border Style="{StaticResource Card}">
+                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Fix layout automatically as I type" />
+                                    <TextBlock Text="Only for finished words that pass their language's dictionary"
+                                               FontSize="12" TextWrapping="Wrap"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                                <ToggleSwitch x:Name="AutoFixToggle" Grid.Column="1" Toggled="AutoFixToggle_Toggled" />
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                <StackPanel Spacing="2" MaxWidth="330">
+                                    <TextBlock Text="Language for ambiguous words" />
+                                    <TextBlock FontSize="12" TextWrapping="Wrap"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               Text="Used when a word is valid in both Ukrainian and Russian. If the phrase later proves to be the other language, it is corrected automatically." />
+                                </StackPanel>
+                                <ComboBox x:Name="AmbiguousCombo" Grid.Column="1" MinWidth="150"
+                                          SelectionChanged="AmbiguousCombo_SelectionChanged" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Exceptions" FontWeight="SemiBold" />
+                            <TextBlock Text="Where auto-fix stays off, and words to never or always convert"
+                                       FontSize="12" VerticalAlignment="Center"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                CornerRadius="6">
+                            <Grid RowDefinitions="Auto,*,Auto">
+                                <!-- Toolbar: segments + search -->
+                                <Grid Grid.Row="0" Padding="12,10" ColumnDefinitions="*,Auto"
+                                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <SelectorBar x:Name="ExcSeg" SelectionChanged="ExcSeg_SelectionChanged">
+                                        <SelectorBarItem x:Name="SegApps" Text="Apps" IsSelected="True" />
+                                        <SelectorBarItem x:Name="SegNever" Text="Never convert" />
+                                        <SelectorBarItem x:Name="SegAlways" Text="Always convert" />
+                                    </SelectorBar>
+                                    <TextBox x:Name="ExcSearch" Grid.Column="1" Width="150" PlaceholderText="Search"
+                                             TextChanged="ExcSearch_TextChanged" />
+                                </Grid>
+
+                                <!-- List -->
+                                <ScrollViewer Grid.Row="1" MaxHeight="240">
+                                    <StackPanel>
+                                        <!-- TextBlock has no Background in WinUI — headers are wrapped. -->
+                                        <Border x:Name="ProtectedHeader" Padding="12,8"
+                                                Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
+                                            <TextBlock FontSize="12" Text="Always off — password managers, not removable"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </Border>
+                                        <ItemsControl x:Name="ProtectedList" ItemTemplate="{StaticResource RowTemplate}" />
+                                        <Border x:Name="UserHeader" Padding="12,8"
+                                                Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
+                                            <TextBlock FontSize="12" Text="Added by you"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </Border>
+                                        <ItemsControl x:Name="UserList" ItemTemplate="{StaticResource RowTemplate}" />
+                                        <TextBlock x:Name="EmptyNote" Padding="12,10" FontSize="13"
+                                                   Visibility="Collapsed" TextWrapping="Wrap"
+                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                    </StackPanel>
+                                </ScrollViewer>
+
+                                <!-- Footer: add app, or add word -->
+                                <Grid Grid.Row="2" Padding="12,10" ColumnSpacing="8" ColumnDefinitions="Auto,*"
+                                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
+                                    <Button x:Name="AddAppButton" Content="+ Add app…" Style="{StaticResource AccentButtonStyle}"
+                                            Click="AddApp_Click" />
+                                    <TextBlock x:Name="AddAppHint" Grid.Column="1" VerticalAlignment="Center" FontSize="12"
+                                               Text="Pick from running apps"
+                                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                    <TextBox x:Name="AddWordBox" Grid.Column="0" Width="280" Visibility="Collapsed"
+                                             PlaceholderText="Add a word, then click Add" KeyDown="AddWordBox_KeyDown" />
+                                    <Button x:Name="AddWordButton" Grid.Column="1" Content="Add" Visibility="Collapsed"
+                                            HorizontalAlignment="Left" Click="AddWord_Click" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
                 <TextBlock x:Name="AdvancedPanel" Visibility="Collapsed"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                            Text="Advanced — coming next." />

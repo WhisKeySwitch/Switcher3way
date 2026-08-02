@@ -1,6 +1,7 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Windows.Graphics;
 
 namespace Switcher3way.App;
@@ -51,10 +52,21 @@ public sealed partial class SettingsWindow : Window
         TriggerCombo.SelectedItem = Triggers.FirstOrDefault(t => t.Vk == _s.TriggerKey && t.Double == _s.TriggerDoubleTap) ?? Triggers[1];
         foreach (var l in Languages) LanguageCombo.Items.Add(l);
         LanguageCombo.SelectedItem = Languages.FirstOrDefault(l => l.Code == _s.InterfaceLanguage) ?? Languages[0];
+
+        AutoFixToggle.IsOn = _s.AutoFix;
+        foreach (var a in AmbLangs) AmbiguousCombo.Items.Add(a);
+        AmbiguousCombo.SelectedItem = AmbLangs.FirstOrDefault(a => a.Value == _s.AmbiguousLang) ?? AmbLangs[0];
         _loading = false;
 
         RefreshStatus();
+        RefreshExceptions();
     }
+
+    private sealed record AmbLang(string Value, string Name) { public override string ToString() => Name; }
+    private static readonly AmbLang[] AmbLangs =
+    {
+        new("uk", "Українська"), new("ru", "Русский"), new("off", "Do not convert"),
+    };
 
     private void RefreshStatus()
     {
@@ -103,4 +115,167 @@ public sealed partial class SettingsWindow : Window
     }
 
     private void Close_Click(object s, RoutedEventArgs e) => this.Close();
+
+    // ---- Auto-fix ---------------------------------------------------------------------------
+    private void AutoFixToggle_Toggled(object s, RoutedEventArgs e) { if (_loading) return; _s.AutoFix = AutoFixToggle.IsOn; Commit(); }
+
+    private void AmbiguousCombo_SelectionChanged(object s, SelectionChangedEventArgs e)
+    {
+        if (_loading || AmbiguousCombo.SelectedItem is not AmbLang a) return;
+        _s.AmbiguousLang = a.Value;
+        Commit();
+    }
+
+    // ---- Exceptions ------------------------------------------------------------------------
+    /// <summary>0 = Apps, 1 = Never convert, 2 = Always convert.</summary>
+    private int SegIndex =>
+        ExcSeg.SelectedItem == SegNever ? 1 : ExcSeg.SelectedItem == SegAlways ? 2 : 0;
+
+    private List<string> CurrentList => SegIndex switch
+    {
+        1 => _s.NeverConvertWords,
+        2 => _s.AlwaysConvertWords,
+        _ => _s.DeniedApps,
+    };
+
+    private void RefreshExceptions()
+    {
+        // Live counts on the segments.
+        SegApps.Text = $"Apps  {SettingsManager.ProtectedApps.Length + _s.DeniedApps.Count}";
+        SegNever.Text = $"Never convert  {_s.NeverConvertWords.Count}";
+        SegAlways.Text = $"Always convert  {_s.AlwaysConvertWords.Count}";
+
+        string q = ExcSearch.Text.Trim();
+        bool Match(string v) => q.Length == 0 || v.Contains(q, StringComparison.OrdinalIgnoreCase);
+
+        bool apps = SegIndex == 0;
+        var protectedRows = new List<ExceptionRow>();
+        var userRows = new List<ExceptionRow>();
+
+        if (apps)
+        {
+            foreach (var exe in SettingsManager.ProtectedApps.Where(Match))
+                protectedRows.Add(AppRow(exe, isProtected: true));
+            foreach (var exe in _s.DeniedApps.Where(Match))
+                userRows.Add(AppRow(exe, isProtected: false));
+        }
+        else
+        {
+            foreach (var w in CurrentList.Where(Match))
+                userRows.Add(new ExceptionRow { Value = w, Display = w });
+        }
+
+        ProtectedHeader.Visibility = apps && protectedRows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        ProtectedList.ItemsSource = protectedRows;
+        UserHeader.Visibility = apps && userRows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        UserList.ItemsSource = userRows;
+
+        // Empty states.
+        if (userRows.Count == 0)
+        {
+            EmptyNote.Visibility = Visibility.Visible;
+            EmptyNote.Text = apps
+                ? "No apps added yet."
+                : "Nothing here yet — undo a fix with the trigger key to add a word.";
+        }
+        else EmptyNote.Visibility = Visibility.Collapsed;
+
+        // Footer swaps between "add app" and "add word".
+        AddAppButton.Visibility = apps ? Visibility.Visible : Visibility.Collapsed;
+        AddAppHint.Visibility = apps ? Visibility.Visible : Visibility.Collapsed;
+        AddWordBox.Visibility = apps ? Visibility.Collapsed : Visibility.Visible;
+        AddWordButton.Visibility = apps ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    /// <summary>A row for an excluded app — real icon and friendly name when the app is running.</summary>
+    private static ExceptionRow AppRow(string exe, bool isProtected)
+    {
+        var path = AppInfo.PathForExeName(exe);
+        return new ExceptionRow
+        {
+            Value = exe,
+            Display = path is null ? System.IO.Path.GetFileNameWithoutExtension(exe) : AppInfo.FriendlyName(path),
+            Sub = exe,
+            Icon = path is null ? null : AppInfo.Icon(path),
+            IsProtected = isProtected,
+        };
+    }
+
+    private void ExcSeg_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args) => RefreshExceptions();
+    private void ExcSearch_TextChanged(object s, TextChangedEventArgs e) => RefreshExceptions();
+
+    private void RemoveRow_Click(object s, RoutedEventArgs e)
+    {
+        if (s is not Button b || b.Tag is not string value) return;
+        CurrentList.RemoveAll(x => string.Equals(x, value, StringComparison.OrdinalIgnoreCase));
+        Commit();
+        RefreshExceptions();
+    }
+
+    private void AddWord_Click(object s, RoutedEventArgs e) => AddWord();
+    private void AddWordBox_KeyDown(object s, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter) { AddWord(); e.Handled = true; }
+    }
+
+    private void AddWord()
+    {
+        var v = AddWordBox.Text.Trim();
+        if (v.Length == 0) return;
+        if (!CurrentList.Any(x => string.Equals(x, v, StringComparison.OrdinalIgnoreCase))) CurrentList.Add(v);
+        AddWordBox.Text = "";
+        Commit();
+        RefreshExceptions();
+    }
+
+    /// <summary>The Add-an-app picker: pick from running apps instead of typing an .exe name.</summary>
+    private async void AddApp_Click(object s, RoutedEventArgs e)
+    {
+        var listed = SettingsManager.ProtectedApps.Concat(_s.DeniedApps);
+        var rows = AppInfo.RunningApps(listed)
+            .Select(a => new ExceptionRow { Value = a.ExeName, Display = a.FriendlyName, Sub = a.ExeName, Icon = AppInfo.Icon(a.Path) })
+            .ToList();
+
+        var list = new ListView
+        {
+            ItemsSource = rows,
+            SelectionMode = ListViewSelectionMode.Multiple,
+            ItemTemplate = (DataTemplate)((FrameworkElement)Content).Resources["PickerTemplate"],
+            MaxHeight = 320,
+        };
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Content.XamlRoot,
+            Title = "Add an app",
+            Content = new StackPanel
+            {
+                Spacing = 10,
+                Children =
+                {
+                    new TextBlock { Text = "Auto-fix stays off in the apps you pick.", FontSize = 13, Opacity = 0.8 },
+                    list,
+                },
+            },
+            PrimaryButtonText = "Add",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+        };
+        list.SelectionChanged += (_, _) =>
+            dialog.PrimaryButtonText = list.SelectedItems.Count switch
+            {
+                0 => "Add",
+                1 => "Add 1 app",
+                var n => $"Add {n} apps",
+            };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        foreach (var row in list.SelectedItems.OfType<ExceptionRow>())
+        {
+            var exe = row.Value.ToLowerInvariant();
+            if (!_s.DeniedApps.Any(x => string.Equals(x, exe, StringComparison.OrdinalIgnoreCase)))
+                _s.DeniedApps.Add(exe);
+        }
+        Commit();
+        RefreshExceptions();
+    }
 }
