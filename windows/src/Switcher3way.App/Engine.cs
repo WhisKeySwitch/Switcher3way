@@ -141,7 +141,8 @@ internal sealed class Engine
     private void AutoConvert(IReadOnlyList<TypedKey> word, char boundary)
     {
         if (_settings.IsDeniedApp(LayoutSwitcher.Foreground().Exe)) { _phrase.Reset(); return; } // terminals / RDP / pw
-        if (SecureField.IsFocusedPassword()) { _phrase.Reset(); return; }                         // never touch a password field
+        if (SecureField.IsFocusedPassword())                                 // never touch a password field
+        { Diagnostics.Log("  auto: suppressed — password field"); _phrase.Reset(); return; }
 
         bool caps = word.Any(k => k.Caps);
         var outcome = _resolver.Evaluate(word, caps);
@@ -392,7 +393,8 @@ internal sealed class Engine
     private void ManualStep()
     {
         if (_settings.IsDeniedApp(LayoutSwitcher.Foreground().Exe)) return; // safety: never touch text here
-        if (SecureField.IsFocusedPassword()) return;                       // never touch a password field
+        if (SecureField.IsFocusedPassword())                                // never touch a password field
+        { Diagnostics.Log("  manual: suppressed — password field"); return; }
         Cycle? cyc;
         lock (_cycleLock) cyc = _cycle;
         if (cyc is null)
