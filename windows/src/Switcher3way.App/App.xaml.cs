@@ -16,7 +16,10 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // Diagnostics for the migration: catch everything we can so a crash leaves a trace.
         this.UnhandledException += (_, e) => { Log("UnhandledException: " + e.Exception); e.Handled = true; };
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => Log("AppDomain: " + e.ExceptionObject);
+        TaskScheduler.UnobservedTaskException += (_, e) => { Log("Task: " + e.Exception); e.SetObserved(); };
         try
         {
             _tray = new Tray();

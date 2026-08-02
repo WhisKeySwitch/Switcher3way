@@ -113,8 +113,16 @@ public sealed partial class SettingsWindow : Window
         _s.InterfaceLanguage = l.Code;
         Loc.Configure(l.Code);
         Commit();
-        // Strings are resolved when the XAML loads, so reload the window in the new language.
-        if (_reopen is not null) { Close(); _reopen(); }
+        // Strings resolve when the XAML loads, so the window is reloaded in the new language — but
+        // never from inside this event: closing a window while its own control is still raising
+        // events crashes WinUI. Defer to the dispatcher so the event completes first.
+        if (_reopen is null) return;
+        var reopen = _reopen;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            try { Close(); reopen(); }
+            catch (Exception ex) { Diagnostics.Log("settings reload failed: " + ex); }
+        });
     }
 
     private void Tabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
