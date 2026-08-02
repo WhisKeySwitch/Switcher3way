@@ -311,7 +311,7 @@ internal sealed class Engine
                 string suffix;
                 if (cur.Count > 0) { word = cur; suffix = ""; }        // in-progress: caret after word
                 else if (prev.Count > 0) { word = prev; suffix = " "; } // finished with a space
-                else { Diagnostics.Log("(type a word, then press F9)"); return; }
+                else { Diagnostics.Log($"(type a word, then press {_settings.TriggerLabel})"); return; }
 
                 var plan = _resolver.ManualPlan(word, word.Any(k => k.Caps), _settings.AmbiguousLang);
                 if (plan is null) { Diagnostics.Log("(nothing to convert)"); return; }

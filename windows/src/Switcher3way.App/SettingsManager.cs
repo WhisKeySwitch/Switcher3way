@@ -66,6 +66,27 @@ public sealed class SettingsManager
     public bool IsAlwaysConvertWord(string converted) =>
         AlwaysConvertWords.Any(w => string.Equals(w, converted, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>
+    /// Human label for the configured trigger ("F9", "Shift Shift", …) — used by the feedback chip's
+    /// keycap, log messages and UI hints so they always name the key the user actually chose.
+    /// </summary>
+    [JsonIgnore]
+    public string TriggerLabel => (TriggerKey, TriggerDoubleTap) switch
+    {
+        (0x10, true) => "Shift Shift",
+        (0x11, true) => "Ctrl Ctrl",
+        (0x12, true) => "Alt Alt",
+        (0x77, _) => "F8",
+        (0x78, _) => "F9",
+        (0x79, _) => "F10",
+        (0x7A, _) => "F11",
+        (0x7B, _) => "F12",
+        (0x13, _) => "Pause/Break",
+        (0x91, _) => "Scroll Lock",
+        (0xA3, _) => "Right Ctrl",
+        _ => "the trigger",
+    };
+
     /// <summary>Session-only "pause until restart" (not persisted).</summary>
     [JsonIgnore] public bool PausedUntilRestart { get; set; }
 

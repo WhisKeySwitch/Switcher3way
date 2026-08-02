@@ -28,7 +28,7 @@ internal sealed class Tray : IDisposable
         _engine.Notify += m => Diagnostics.Log($"notify: {m}"); // TODO: error toast (1g)
         // Conversions are raised from the engine's worker thread — marshal to the UI thread.
         _engine.Converted += info => _dispatcher.TryEnqueue(() =>
-            _chip.Show(info.Original, info.Converted, TriggerLabel()));
+            _chip.Show(info.Original, info.Converted, _settings.TriggerLabel));
 
         _tray = new Win32Tray(BuildMenu);
         RefreshIcon();
@@ -67,22 +67,6 @@ internal sealed class Tray : IDisposable
 
     private void Toggle(Action mutate) { mutate(); _settings.Save(); RefreshIcon(); }
 
-    /// <summary>Label for the configured trigger, shown on the feedback chip's keycap.</summary>
-    private string TriggerLabel() => (_settings.TriggerKey, _settings.TriggerDoubleTap) switch
-    {
-        (0x10, true) => "Shift Shift",
-        (0x11, true) => "Ctrl Ctrl",
-        (0x12, true) => "Alt Alt",
-        (0x77, _) => "F8",
-        (0x78, _) => "F9",
-        (0x79, _) => "F10",
-        (0x7A, _) => "F11",
-        (0x7B, _) => "F12",
-        (0x13, _) => "Pause",
-        (0x91, _) => "Scroll Lock",
-        (0xA3, _) => "Right Ctrl",
-        _ => "trigger",
-    };
     private void DoPause(TimeSpan? d) { _settings.Pause(d); RefreshIcon(); }
 
     private SettingsWindow? _settingsWindow;
