@@ -25,7 +25,17 @@ internal static class Program
         if (!createdNew) return;
 
         // Locate the (framework-dependent) Windows App SDK runtime before any WinUI type loads.
-        Bootstrap.TryInitialize(0x00010006, out _); // 1.6.x
+        // Unpackaged builds depend on it being installed; without this check the process would just
+        // vanish, which is what happened before the runtime was present on this machine.
+        if (!Bootstrap.TryInitialize(0x00010006, out _)) // 1.6.x
+        {
+            MessageBoxW(IntPtr.Zero,
+                "Switcher3way needs the Windows App Runtime 1.6, which isn't installed.\n\n" +
+                "Install \"Windows App Runtime 1.6\" from Microsoft (or get Switcher3way from the " +
+                "Microsoft Store, which installs it for you), then start Switcher3way again.",
+                "Switcher3way", MB_ICONERROR);
+            return;
+        }
         try
         {
             Application.Start(p =>
@@ -40,6 +50,10 @@ internal static class Program
             Bootstrap.Shutdown();
         }
     }
+
+    private const uint MB_ICONERROR = 0x00000010;
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
 }
 
 internal static class SelfTest
