@@ -22,6 +22,9 @@ internal sealed class Win32Tray : IDisposable
         public static Row Separator => new("-");
     }
 
+    /// <summary>Set to show a custom (Fluent) menu instead of the native popup; return true if handled.</summary>
+    public Func<bool>? CustomMenu { get; set; }
+
     private readonly Func<Row[]> _build;
     private readonly WndProcDelegate _proc;   // keep alive: the OS holds a raw pointer
     private readonly IntPtr _hwnd;
@@ -81,6 +84,9 @@ internal sealed class Win32Tray : IDisposable
 
     private void ShowMenu()
     {
+        // Prefer the Fluent flyout; the native popup remains as a fallback.
+        if (CustomMenu is not null && CustomMenu()) return;
+
         _actions.Clear();
         _actions.Add(null); // id 0 = "nothing chosen"
         IntPtr menu = CreatePopupMenu();

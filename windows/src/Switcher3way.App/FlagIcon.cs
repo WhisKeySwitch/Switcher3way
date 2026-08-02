@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 
 namespace Switcher3way.App;
 
@@ -62,6 +63,46 @@ internal static class FlagIcon
         var icon = (Icon)Icon.FromHandle(h).Clone();
         Native.DestroyIcon(h);
         return icon;
+    }
+
+    // ---- WinUI image source (for the tray flyout / status card) -----------------------------
+    private static readonly Dictionary<string, Microsoft.UI.Xaml.Media.Imaging.BitmapImage?> _xamlFlags = new();
+
+    /// <summary>The layout's flag as a XAML image source, or null when we have no flag for it.</summary>
+    public static Microsoft.UI.Xaml.Media.Imaging.BitmapImage? Image(string lang)
+    {
+        if (_xamlFlags.TryGetValue(lang, out var cached)) return cached;
+        Microsoft.UI.Xaml.Media.Imaging.BitmapImage? img = null;
+        try
+        {
+            using var s = typeof(FlagIcon).Assembly.GetManifestResourceStream($"{lang}.png");
+            if (s is not null)
+            {
+                using var ms = new MemoryStream();
+                s.CopyTo(ms);
+                img = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage();
+                _ = FillAsync(img, ms.ToArray()); // fills in asynchronously; safe to bind immediately
+            }
+        }
+        catch { /* no flag for this language */ }
+        _xamlFlags[lang] = img;
+        return img;
+    }
+
+    private static async Task FillAsync(Microsoft.UI.Xaml.Media.Imaging.BitmapImage img, byte[] bytes)
+    {
+        try
+        {
+            var ras = new Windows.Storage.Streams.InMemoryRandomAccessStream();
+            using (var w = new Windows.Storage.Streams.DataWriter(ras.GetOutputStreamAt(0)))
+            {
+                w.WriteBytes(bytes);
+                await w.StoreAsync();
+            }
+            ras.Seek(0);
+            await img.SetSourceAsync(ras);
+        }
+        catch { /* leave blank */ }
     }
 
     private static Bitmap? FlagImage(string lang)

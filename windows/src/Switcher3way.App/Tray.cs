@@ -30,7 +30,7 @@ internal sealed class Tray : IDisposable
         _engine.Converted += info => _dispatcher.TryEnqueue(() =>
             _chip.Show(info.Original, info.Converted, _settings.TriggerLabel));
 
-        _tray = new Win32Tray(BuildMenu);
+        _tray = new Win32Tray(BuildMenu) { CustomMenu = ShowFlyout };
         RefreshIcon();
 
         _engine.Start();
@@ -66,6 +66,24 @@ internal sealed class Tray : IDisposable
     };
 
     private void Toggle(Action mutate) { mutate(); _settings.Save(); RefreshIcon(); }
+
+    private TrayFlyoutWindow? _flyout;
+    /// <summary>Show the Fluent tray flyout. False → fall back to the native popup menu.</summary>
+    private bool ShowFlyout()
+    {
+        try
+        {
+            _flyout ??= new TrayFlyoutWindow(_settings, RefreshIcon, OpenSettings, Quit);
+            _flyout.ShowNearTray();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Diagnostics.Log("tray flyout failed, using native menu: " + ex);
+            _flyout = null;
+            return false;
+        }
+    }
 
     private void DoPause(TimeSpan? d) { _settings.Pause(d); RefreshIcon(); }
 
