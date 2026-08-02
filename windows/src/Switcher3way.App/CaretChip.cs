@@ -30,8 +30,13 @@ internal sealed class CaretChip : IDisposable
     private Phase _phase = Phase.Hidden;
     private enum Phase { Hidden, FadeIn, Hold, FadeOut }
 
-    // Layout metrics (design 1f).
-    private const int PadX = 11, PadY = 7, Gap = 9, Radius = 6;
+    // Layout metrics (design 1f) at 100% scale; multiplied by the monitor's DPI scale.
+    private const int BasePadX = 11, BasePadY = 7, BaseGap = 9, BaseRadius = 6;
+    private float _scale = 1f;
+    private int PadX => (int)(BasePadX * _scale);
+    private int PadY => (int)(BasePadY * _scale);
+    private int Gap => (int)(BaseGap * _scale);
+    private int Radius => (int)(BaseRadius * _scale);
 
     public CaretChip()
     {
@@ -62,8 +67,15 @@ internal sealed class CaretChip : IDisposable
         _converted = converted;
         _trigger = triggerLabel;
 
+        // Match the DPI of the monitor we're about to appear on (the app being typed into).
+        IntPtr target = GetForegroundWindow();
+        uint dpi = target != IntPtr.Zero ? GetDpiForWindow(target) : 96;
+        _scale = dpi <= 0 ? 1f : dpi / 96f;
+
         var size = Measure();
-        var (x, y) = PositionFor(size);
+        // The caret sits after the corrected word, so shift left by roughly the word's on-screen
+        // width to sit under its start rather than trailing off to the right.
+        var (x, y) = PositionFor(size, LeftShiftForWord());
         SetWindowPos(_hwnd, HWND_TOPMOST, x, y, size.Width, size.Height, SWP_NOACTIVATE);
 
         // Rounded corners via a window region (recreated when the size changes).
@@ -111,11 +123,12 @@ internal sealed class CaretChip : IDisposable
     private void SetAlpha(byte a) => SetLayeredWindowAttributes(_hwnd, 0, a, LWA_ALPHA);
 
     // ---- layout & drawing -------------------------------------------------------------------
-    private static Font TextFont => new("Segoe UI", 9.75f);                       // ~13px
-    private static Font MonoFont => new("Consolas", 9.75f);
-    private static Font MonoStrike => new("Consolas", 9.75f, FontStyle.Strikeout);
-    private static Font HintFont => new("Segoe UI", 8.25f);                       // ~11px
-    private static Font KeyFont => new("Consolas", 8.25f);
+    // Pixel-unit fonts scaled by the monitor DPI, so the chip is the designed physical size.
+    private Font TextFont => new("Segoe UI", 13 * _scale, GraphicsUnit.Pixel);
+    private Font MonoFont => new("Consolas", 13 * _scale, GraphicsUnit.Pixel);
+    private Font MonoStrike => new("Consolas", 13 * _scale, FontStyle.Strikeout, GraphicsUnit.Pixel);
+    private Font HintFont => new("Segoe UI", 11 * _scale, GraphicsUnit.Pixel);
+    private Font KeyFont => new("Consolas", 11 * _scale, GraphicsUnit.Pixel);
 
     private Size Measure()
     {
@@ -124,31 +137,69 @@ internal sealed class CaretChip : IDisposable
         using var mono = MonoFont; using var hint = HintFont; using var key = KeyFont;
 
         int w = PadX
-              + 12 + Gap                                                   // tick
+              + S(12) + Gap                                                 // tick
               + Ceil(g.MeasureString(_original, mono).Width) + Gap          // struck-through original
-              + 10 + Gap                                                    // arrow
+              + S(12) + Gap                                                 // arrow
               + Ceil(g.MeasureString(_converted, mono).Width) + Gap         // converted
-              + 1 + Gap                                                     // divider
-              + Ceil(g.MeasureString(_trigger, key).Width) + 12             // keycap (+ padding)
+              + S(1) + Gap                                                  // divider
+              + Ceil(g.MeasureString(_trigger, key).Width) + S(12)          // keycap (+ padding)
               + Ceil(g.MeasureString(" undo", hint).Width)
               + PadX;
         int h = Ceil(g.MeasureString("Ay", mono).Height) + PadY * 2;
-        return new Size(w, Math.Max(h, 30));
+        return new Size(w, Math.Max(h, (int)(30 * _scale)));
     }
 
     private static int Ceil(float f) => (int)Math.Ceiling(f);
+    /// <summary>Scale a design-pixel value to the current monitor's DPI.</summary>
+    private int S(float v) => (int)Math.Round(v * _scale);
 
-    /// <summary>Just below the caret; falls back to the mouse pointer when no caret is exposed.</summary>
-    private static (int X, int Y) PositionFor(Size size)
+    /// <summary>
+    /// How far left of the caret to start the chip: about the corrected word's on-screen width (the
+    /// caret is just past it), measured in our own font as a proxy for the target app's, plus a
+    /// little slack. Capped so a long word can't push the chip off to the left.
+    /// </summary>
+    private int LeftShiftForWord()
+    {
+        using var bmp = new Bitmap(1, 1);
+        using var g = Graphics.FromImage(bmp);
+        using var mono = MonoFont;
+        int wordWidth = Ceil(g.MeasureString(_converted, mono).Width);
+        return Math.Min(wordWidth + S(16), S(260));
+    }
+
+    /// <summary>
+    /// Just below the caret. Many modern apps (WinUI/Electron/browser text boxes) expose no classic
+    /// caret, so the fallback anchors to the focused window's bottom-left — over the app you are
+    /// typing in — rather than the mouse pointer, which is unrelated to where the text went.
+    /// (A UIA-based caret rect, which would be accurate everywhere, is a later milestone.)
+    /// </summary>
+    private static (int X, int Y) PositionFor(Size size, int leftShift)
     {
         var gti = new GUITHREADINFO { cbSize = (uint)Marshal.SizeOf<GUITHREADINFO>() };
-        if (GetGUIThreadInfo(0, ref gti) && gti.hwndCaret != IntPtr.Zero)
+        if (GetGUIThreadInfo(0, ref gti) && gti.hwndCaret != IntPtr.Zero
+            && (gti.rcCaret.right - gti.rcCaret.left) >= 0 && gti.rcCaret.bottom > 0)
         {
             var pt = new POINT { x = gti.rcCaret.left, y = gti.rcCaret.bottom };
-            if (ClientToScreen(gti.hwndCaret, ref pt)) return Clamp(pt.x, pt.y + 6, size);
+            if (ClientToScreen(gti.hwndCaret, ref pt))
+            {
+                var placed = Clamp(pt.x - leftShift, pt.y + 6, size);
+                Diagnostics.Log($"chip: caret screen=({pt.x},{pt.y}) rcCaret=({gti.rcCaret.left},{gti.rcCaret.top},{gti.rcCaret.right},{gti.rcCaret.bottom}) " +
+                                $"shift={leftShift} size={size.Width}x{size.Height} placed=({placed.X},{placed.Y})");
+                return placed;
+            }
         }
-        GetCursorPos(out POINT cur);
-        return Clamp(cur.x + 12, cur.y + 20, size);
+
+        _ = leftShift; // only meaningful relative to a caret
+        IntPtr fg = GetForegroundWindow();
+        if (fg != IntPtr.Zero && GetWindowRect(fg, out RECT wr))
+        {
+            Diagnostics.Log("chip: no caret — anchored to the focused window");
+            return Clamp(wr.left + 24, wr.bottom - size.Height - 24, size);
+        }
+
+        Diagnostics.Log("chip: no caret or window — anchored bottom-right");
+        return Clamp(GetSystemMetrics(SM_CXSCREEN) - size.Width - 24,
+                     GetSystemMetrics(SM_CYSCREEN) - size.Height - 64, size);
     }
 
     /// <summary>Keep the chip on screen.</summary>
@@ -179,18 +230,19 @@ internal sealed class CaretChip : IDisposable
         float x = PadX;
 
         // success tick
+        float tick = S(12);
         using (var green = new SolidBrush(Color.FromArgb(0x6C, 0xCB, 0x5F)))
-            g.FillEllipse(green, x, mid - 6, 12, 12);
-        using (var pen = new Pen(Color.FromArgb(0x14, 0x32, 0x0F), 1.6f))
+            g.FillEllipse(green, x, mid - tick / 2, tick, tick);
+        using (var pen = new Pen(Color.FromArgb(0x14, 0x32, 0x0F), 1.6f * _scale))
         {
             g.DrawLines(pen, new[]
             {
-                new PointF(x + 3.2f, mid),
-                new PointF(x + 5.2f, mid + 2.2f),
-                new PointF(x + 8.8f, mid - 2.4f),
+                new PointF(x + tick * 0.27f, mid),
+                new PointF(x + tick * 0.43f, mid + tick * 0.18f),
+                new PointF(x + tick * 0.73f, mid - tick * 0.20f),
             });
         }
-        x += 12 + Gap;
+        x += tick + Gap;
 
         void Draw(string s, Font f, Brush b)
         {
@@ -199,28 +251,27 @@ internal sealed class CaretChip : IDisposable
             x += Ceil(sz.Width);
         }
 
+        using var text = TextFont;
         Draw(_original, strike, grayB);
         x += Gap;
-        Draw("→", TextFontCached(), arrowB);
+        Draw("→", text, arrowB);
         x += Gap;
         Draw(_converted, mono, whiteB);
         x += Gap;
 
         using (var div = new SolidBrush(Color.FromArgb(0x4A, 0x4A, 0x4A)))
-            g.FillRectangle(div, x, mid - 7, 1, 14);
-        x += 1 + Gap;
+            g.FillRectangle(div, x, mid - S(7), S(1), S(14));
+        x += S(1) + Gap;
 
         // keycap for the configured trigger, then " undo"
         var keySize = g.MeasureString(_trigger, key);
         using (var cap = new SolidBrush(Color.FromArgb(0x3D, 0x3D, 0x3D)))
-            FillRounded(g, cap, new RectangleF(x, mid - keySize.Height / 2f - 2, keySize.Width + 10, keySize.Height + 4), 3);
-        g.DrawString(_trigger, key, keyB, x + 5, mid - keySize.Height / 2f);
-        x += Ceil(keySize.Width) + 12;
+            FillRounded(g, cap, new RectangleF(x, mid - keySize.Height / 2f - S(2),
+                                               keySize.Width + S(10), keySize.Height + S(4)), S(3));
+        g.DrawString(_trigger, key, keyB, x + S(5), mid - keySize.Height / 2f);
+        x += Ceil(keySize.Width) + S(12);
         Draw(" undo", hint, hintB);
     }
-
-    private Font? _textFont;
-    private Font TextFontCached() => _textFont ??= TextFont;
 
     private static void FillRounded(Graphics g, Brush b, RectangleF r, float radius)
     {
@@ -254,7 +305,6 @@ internal sealed class CaretChip : IDisposable
     public void Dispose()
     {
         _timer.Stop();
-        _textFont?.Dispose();
         if (_hwnd != IntPtr.Zero) DestroyWindow(_hwnd);
     }
 
@@ -316,8 +366,10 @@ internal sealed class CaretChip : IDisposable
     [DllImport("user32.dll")] private static extern bool GetClientRect(IntPtr h, out RECT r);
     [DllImport("user32.dll")] private static extern bool GetGUIThreadInfo(uint thread, ref GUITHREADINFO gti);
     [DllImport("user32.dll")] private static extern bool ClientToScreen(IntPtr h, ref POINT p);
-    [DllImport("user32.dll")] private static extern bool GetCursorPos(out POINT p);
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr h, out RECT r);
     [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
+    [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hWnd);
     [DllImport("gdi32.dll")] private static extern IntPtr CreateRoundRectRgn(int l, int t, int r, int b, int w, int h);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr GetModuleHandleW(string? n);
 }
