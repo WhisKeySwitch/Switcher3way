@@ -105,6 +105,10 @@ explicit request it acts even on words that Auto-fix would leave alone (for exam
 valid in more than one language) — just tap again to move to the next candidate if the first
 guess wasn't what you wanted. There is no layout pair to configure.
 
+**Canceling an Auto-fix:** the same trigger also undoes an automatic conversion. If Auto-fix
+just converted a word, one tap — with no typing in between — brings back exactly what you typed
+and the layout you were in before the conversion.
+
 **Learning from undo:** if Auto-fix converted a word and you immediately undo it with the
 trigger, Switcher3way offers to add that word to the **Never convert** list so it won't be
 touched again.

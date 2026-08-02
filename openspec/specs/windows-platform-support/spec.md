@@ -119,7 +119,9 @@ The Windows build SHALL let the user convert the last word or selection on deman
 trigger, cycle through candidate layouts on repeated invocations, and restore the original text and
 pre-conversion layout when the cycle completes. When the word is ambiguous, the first candidate
 offered SHALL be the preferred ambiguity language (when it is one of the candidates), so a single
-trigger invocation yields the same result automatic conversion would.
+trigger invocation yields the same result automatic conversion would. The same trigger SHALL also
+cancel an automatic conversion: an auto-fix seeds a single-candidate cycle whose candidate is
+already on screen, so the first trigger invocation after it restores the original text and layout.
 
 #### Scenario: Convert on explicit trigger
 - **WHEN** the user invokes the manual trigger after typing a word
@@ -132,6 +134,10 @@ trigger invocation yields the same result automatic conversion would.
 #### Scenario: Cycle and restore
 - **WHEN** the user repeatedly invokes the trigger with no typing in between
 - **THEN** the system SHALL advance through the remaining candidate layouts and, after the last one, restore the original text and the layout active before the first conversion
+
+#### Scenario: Cancel an automatic conversion with the trigger
+- **WHEN** the user invokes the trigger immediately after an automatic conversion, with no typing in between
+- **THEN** the system SHALL restore the original text and the layout that was active before the automatic conversion
 
 ### Requirement: Apply exclusion and exception policy
 The Windows build SHALL suppress automatic conversion in excluded applications and secure input contexts, and SHALL honor user-configured never-convert and always-convert word lists.
