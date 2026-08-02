@@ -63,6 +63,8 @@ internal sealed class Engine
         public required string Suffix;   // trailing boundary char to preserve (" " if word was finished)
         public int Step;                 // 0..Candidates.Count; == Count → restore original
         public int OnScreenLen;          // chars currently displayed for the token
+        /// <summary>Started from a selection: the first replacement erases it with one backspace.</summary>
+        public bool FromSelection;
     }
 
     private readonly SettingsManager _settings;
@@ -297,27 +299,107 @@ internal sealed class Engine
         _work.Add(() => { try { ManualStep(); } finally { _converting = false; } });
     }
 
+    /// <summary>
+    /// Begin a manual cycle: from the recorded keystrokes when we have them, otherwise from the
+    /// current selection (selecting with the mouse or Shift+arrows clears the buffer, so the
+    /// selection path is what makes "convert what I highlighted" work). Null — nothing to convert.
+    /// </summary>
+    private Cycle? StartCycle()
+    {
+        var (cur, prev) = _monitor.Snapshot();
+        if (cur.Count > 0 || prev.Count > 0)
+        {
+            var word = cur.Count > 0 ? cur : prev;
+            var suffix = cur.Count > 0 ? "" : " ";       // finished word: the boundary space is on screen
+            var plan = _resolver.ManualPlan(word, word.Any(k => k.Caps), _settings.AmbiguousLang);
+            if (plan is null) { Diagnostics.Log("(nothing to convert)"); return null; }
+            return new Cycle { Plan = plan, Suffix = suffix, Step = 0, OnScreenLen = (plan.Original + suffix).Length };
+        }
+
+        var selected = Selection.Read();
+        if (selected is null)
+        {
+            Diagnostics.Log($"(type a word or select text, then press {_settings.TriggerLabel})");
+            return null;
+        }
+        if (selected.Length > Selection.MaxChars)
+        {
+            Diagnostics.Log($"  selection: {selected.Length} chars — too long, skipped");
+            return null;
+        }
+        var selPlan = SelectionPlan(selected);
+        if (selPlan is null) { Diagnostics.Log($"  selection: \"{selected}\" — no other layout renders it differently"); return null; }
+        Diagnostics.Log($"  selection: \"{selected}\" → {selPlan.Candidates.Count} candidate(s)");
+        return new Cycle { Plan = selPlan, Suffix = "", Step = 0, OnScreenLen = selected.Length, FromSelection = true };
+    }
+
+    /// <summary>
+    /// Build a manual plan from on-screen text: map each character back to the keystroke that
+    /// produced it (in whichever installed layout can represent the whole string), then render those
+    /// keystrokes through the other layouts. A dictionary-valid candidate is offered first, preferring
+    /// the ambiguity language, so one tap gives the expected result.
+    /// </summary>
+    private ManualPlan? SelectionPlan(string text)
+    {
+        var layouts = _catalog.InstalledLayouts();
+        var currentId = _catalog.CurrentLayoutId();
+
+        // Source layout: the active one if it can type this text, else any layout that can.
+        var ordered = layouts.OrderByDescending(l => l.Id == currentId);
+        Layout? source = null;
+        List<TypedKey>? keys = null;
+        foreach (var l in ordered)
+        {
+            var map = _catalog.ReverseMap(l);
+            var mapped = new List<TypedKey>(text.Length);
+            bool ok = true;
+            foreach (var ch in text)
+            {
+                if (map.TryGetValue(ch, out var k)) mapped.Add(k);
+                else { ok = false; break; }
+            }
+            if (ok) { source = l; keys = mapped; break; }
+        }
+        if (source is null || keys is null) return null;
+
+        var candidates = new List<ManualCandidate>();
+        var seen = new HashSet<string> { text };
+        foreach (var l in layouts)
+        {
+            if (l.Id == source.Id) continue;
+            var rendered = _catalog.Render(keys, l);
+            if (rendered is null || !seen.Add(rendered)) continue;
+            candidates.Add(new ManualCandidate(l.Id, rendered));
+        }
+        if (candidates.Count == 0) return null;
+
+        // Promote a dictionary-valid candidate (preferring the ambiguity language).
+        var valid = candidates.Where(c =>
+        {
+            var lang = LangOf(c.TargetLayoutId);
+            var core = SoftGates.LetterCore(c.Converted).ToLowerInvariant();
+            return core.Length > 0 && _dict.IsAvailable(lang) && _dict.IsValidWord(core, lang);
+        }).ToList();
+        var pick = valid.FirstOrDefault(c => LangOf(c.TargetLayoutId) == _settings.AmbiguousLang) ?? valid.FirstOrDefault();
+        if (pick is not null)
+        {
+            candidates.Remove(pick);
+            candidates.Insert(0, pick);
+        }
+        return new ManualPlan(text, source.Id, candidates);
+    }
+
     private void ManualStep()
     {
         if (_settings.IsDeniedApp(LayoutSwitcher.Foreground().Exe)) return; // safety: never touch text here
         if (SecureField.IsFocusedPassword()) return;                       // never touch a password field
-        Cycle cyc;
-        lock (_cycleLock)
+        Cycle? cyc;
+        lock (_cycleLock) cyc = _cycle;
+        if (cyc is null)
         {
-            if (_cycle is null)
-            {
-                var (cur, prev) = _monitor.Snapshot();
-                IReadOnlyList<TypedKey> word;
-                string suffix;
-                if (cur.Count > 0) { word = cur; suffix = ""; }        // in-progress: caret after word
-                else if (prev.Count > 0) { word = prev; suffix = " "; } // finished with a space
-                else { Diagnostics.Log($"(type a word, then press {_settings.TriggerLabel})"); return; }
-
-                var plan = _resolver.ManualPlan(word, word.Any(k => k.Caps), _settings.AmbiguousLang);
-                if (plan is null) { Diagnostics.Log("(nothing to convert)"); return; }
-                _cycle = new Cycle { Plan = plan, Suffix = suffix, Step = 0, OnScreenLen = (plan.Original + suffix).Length };
-            }
-            cyc = _cycle;
+            cyc = StartCycle();                       // may read the selection (no lock held: it blocks)
+            if (cyc is null) return;
+            lock (_cycleLock) _cycle = cyc;
         }
 
         // Manual control invalidates the phrase memory: its rewrites aren't tracked, so a later
@@ -330,7 +412,9 @@ internal sealed class Engine
         string text = (restore ? cyc.Plan.Original : cyc.Plan.Candidates[cyc.Step].Converted) + cyc.Suffix;
 
         var path = LayoutSwitcher.SwitchForeground(targetId);
-        var res = TextRewriter.Rewrite(cyc.OnScreenLen, text, waitForKeyUpVk: _settings.TriggerKey);
+        // A live selection is erased by a single backspace; afterwards we erase what we typed.
+        int erase = cyc.FromSelection && cyc.Step == 0 ? 1 : cyc.OnScreenLen;
+        var res = TextRewriter.Rewrite(erase, text, waitForKeyUpVk: _settings.TriggerKey);
         Diagnostics.Log($"  cycle[{cyc.Step}] -> [{label}] \"{text.TrimEnd()}\" via {path} : {res}");
         if (res != TextRewriter.Result.Ok) NotifyProtected();
         // Feedback on manual conversions too, but not on the final restore-to-original step.
