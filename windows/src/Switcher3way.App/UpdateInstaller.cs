@@ -48,7 +48,7 @@ internal static class UpdateInstaller
         {
             FileName = "powershell.exe",
             Arguments = $"-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \"{script}\" " +
-                        $"-ProcId {Environment.ProcessId} -Msi \"{msi}\" -Exe \"{exe}\"",
+                        $"-ProcId {Environment.ProcessId} -Msi \"{msi}\" -Exe \"{exe}\" -Log \"{Diagnostics.FilePath}\"",
             UseShellExecute = true,
             WindowStyle = ProcessWindowStyle.Hidden,
         });
@@ -61,17 +61,35 @@ internal static class UpdateInstaller
         return Convert.ToHexString(sha.ComputeHash(stream)).ToLowerInvariant();
     }
 
-    /// <summary>Write the self-deleting relauncher script to a temp file and return its path.</summary>
+    /// <summary>
+    /// Write the self-deleting relauncher script and return its path. It waits for the app to exit (so
+    /// the MSI can replace the in-use executable), installs, then restarts the app.
+    ///
+    /// <b>msiexec must be started with -Verb RunAs.</b> Our per-machine MSI cannot install from the
+    /// app's unelevated token: msiexec fails with 1925 ("insufficient privileges"), and because the
+    /// script then relaunched the *unchanged* app, the updater re-offered the same version on the next
+    /// check — an endless update loop. RunAs raises the UAC prompt the upgrade actually needs.
+    /// </summary>
     private static string WriteRelauncher()
     {
         var path = Path.Combine(Path.GetTempPath(), "switcher3way-update.ps1");
-        // Wait for the app to exit (so the MSI can replace the in-use exe), run the installer with a
-        // basic progress UI (UAC will prompt for the per-machine upgrade), relaunch, then clean up.
         const string ps = """
-            param([int]$ProcId, [string]$Msi, [string]$Exe)
+            param([int]$ProcId, [string]$Msi, [string]$Exe, [string]$Log)
+            function Note($m) {
+              try { Add-Content -Path $Log -Value ("{0}  update: {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff'), $m) } catch {}
+            }
             try { Wait-Process -Id $ProcId -Timeout 120 -ErrorAction SilentlyContinue } catch {}
             Start-Sleep -Milliseconds 400
-            Start-Process msiexec.exe -ArgumentList '/i', ('"' + $Msi + '"'), '/qb', '/norestart' -Wait
+            $code = 1603
+            try {
+              # -Verb RunAs: a per-machine MSI needs elevation, or it fails with 1925 and nothing changes.
+              $p = Start-Process msiexec.exe -ArgumentList '/i', ('"' + $Msi + '"'), '/qb', '/norestart' -Verb RunAs -PassThru -Wait
+              $code = $p.ExitCode
+            } catch {
+              Note ("could not start the installer — " + $_.Exception.Message + " (UAC declined?)")
+            }
+            if ($code -eq 0 -or $code -eq 3010) { Note "installed successfully" }
+            else { Note ("installer exited with $code — the previous version is still installed") }
             Start-Sleep -Milliseconds 400
             if (Test-Path $Exe) { Start-Process $Exe }
             Remove-Item $Msi -Force -ErrorAction SilentlyContinue

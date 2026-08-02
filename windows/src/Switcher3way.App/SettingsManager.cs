@@ -21,6 +21,12 @@ public sealed class SettingsManager
     public bool CheckForUpdates { get; set; } = true;
     /// <summary>Version the user chose to skip in the update prompt (not offered again in the background).</summary>
     public string? SkippedVersion { get; set; }
+    /// <summary>
+    /// Version we last tried to install. If we are still running an older version, that install did not
+    /// take effect (a declined UAC prompt, a failed msiexec) — so the background check stops re-offering
+    /// it instead of looping. A manual check still offers it.
+    /// </summary>
+    public string? LastUpdateAttemptVersion { get; set; }
     /// <summary>Timestamp of the last successful update check (informational).</summary>
     public DateTime? LastUpdateCheck { get; set; }
     /// <summary>Forced UI language 2-letter code (e.g. "uk"); empty/null = follow the system.</summary>
