@@ -91,7 +91,7 @@ internal sealed class KeyboardMonitor
     private void WinEventCallback(IntPtr hHook, uint ev, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
     {
         if (hwnd == IntPtr.Zero) return;
-        ClearBuffer();                  // app switch → the buffer is stale (unsafe cursor context)
+        ClearBuffer("foreground change");                  // app switch → the buffer is stale (unsafe cursor context)
         ForegroundChanged?.Invoke(hwnd);
     }
 
@@ -104,13 +104,14 @@ internal sealed class KeyboardMonitor
         {
             uint msg = (uint)wParam;
             if (msg is Native.WM_LBUTTONDOWN or Native.WM_RBUTTONDOWN or Native.WM_MBUTTONDOWN or Native.WM_XBUTTONDOWN)
-                ClearBuffer();
+                ClearBuffer("mouse click");
         }
         return Native.CallNextHookEx(_mouseHook, nCode, wParam, lParam);
     }
 
-    private void ClearBuffer()
+    private void ClearBuffer(string reason = "?")
     {
+        Diagnostics.Log($"  buf: cleared ({reason})");
         lock (_lock) { _current.Clear(); _prev.Clear(); _bufferHwnd = IntPtr.Zero; }
         Typed?.Invoke();        // also end any in-progress manual cycle
         PhraseReset?.Invoke();  // click / app switch ends the phrase
@@ -178,7 +179,14 @@ internal sealed class KeyboardMonitor
             case KeyKind.Character:
                 bool shift = (Native.GetAsyncKeyState((int)Native.VK_SHIFT) & 0x8000) != 0;
                 bool caps = (Native.GetAsyncKeyState((int)Native.VK_CAPITAL) & 0x0001) != 0;
-                lock (_lock) { _current.Add(new TypedKey((int)vk, shift, caps)); _bufferHwnd = Native.GetForegroundWindow(); }
+                int n;
+                lock (_lock)
+                {
+                    _current.Add(new TypedKey((int)vk, shift, caps));
+                    _bufferHwnd = Native.GetForegroundWindow();
+                    n = _current.Count;
+                }
+                Diagnostics.Log($"  buf: +vk{vk:X2} (len={n})");
                 break;
             case KeyKind.Boundary:
                 CompleteWord(vk);
@@ -230,6 +238,7 @@ internal sealed class KeyboardMonitor
             // Focus moved since the word was typed → caret no longer matches the buffer; drop it.
             else if (_bufferHwnd != IntPtr.Zero && Native.GetForegroundWindow() != _bufferHwnd)
             {
+                Diagnostics.Log($"  buf: dropped at boundary — focus moved (buf hwnd {_bufferHwnd:X}, fg {Native.GetForegroundWindow():X})");
                 _current.Clear(); _prev.Clear(); _bufferHwnd = IntPtr.Zero; focusMoved = true;
             }
             else

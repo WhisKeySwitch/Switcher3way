@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  MSIX manifest for the Microsoft Store build.
+
+  Identity below is the real Partner Center identity for this app (Store ID 9MXFXL7GG3C5,
+  PFN IronMade.Switcher3Way_zeh9vvkybnryc) — it must match Partner Center exactly, including the
+  capital W in "Switcher3Way", or the upload is rejected. The Store re-signs the package, which is
+  what removes the SmartScreen "unknown publisher" warning.
+
+  runFullTrust is a RESTRICTED capability: Switcher3way needs a system-wide keyboard hook to see
+  what is typed and SendInput to rewrite it, neither of which works in the app-container sandbox.
+  Store submission therefore requires a written justification and gets a manual review.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap5 rescap">
+
+  <Identity
+    Name="IronMade.Switcher3Way"
+    Publisher="CN=AF9BB38F-30B9-45AC-B73D-521C0053C310"
+    Version="0.2.0.0" />
+
+  <Properties>
+    <DisplayName>Switcher3way</DisplayName>
+    <PublisherDisplayName>IronMade</PublisherDisplayName>
+    <Logo>Images\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+    <Resource Language="uk" />
+    <Resource Language="ru" />
+  </Resources>
+
+  <Applications>
+    <Application Id="App" Executable="Switcher3way.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Switcher3way"
+        Description="Fixes the keyboard layout when you type in the wrong one — English, Ukrainian and Russian."
+        BackgroundColor="transparent"
+        Square150x150Logo="Images\Square150x150Logo.png"
+        Square44x44Logo="Images\Square44x44Logo.png">
+        <uap:DefaultTile
+          Wide310x150Logo="Images\Wide310x150Logo.png"
+          Square71x71Logo="Images\SmallTile.png"
+          Square310x310Logo="Images\LargeTile.png" />
+        <uap:SplashScreen Image="Images\SplashScreen.png" />
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- "Start with Windows": the packaged equivalent of the Startup-folder shortcut.
+             TaskId must match StartupShortcut.TaskId. Off by default; the app enables it. -->
+        <uap5:Extension Category="windows.startupTask" Executable="Switcher3way.exe"
+                        EntryPoint="Windows.FullTrustApplication">
+          <uap5:StartupTask TaskId="Switcher3wayStartup" Enabled="false" DisplayName="Switcher3way" />
+        </uap5:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <!-- Global keyboard hook + input injection require full trust; see the note above. -->
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

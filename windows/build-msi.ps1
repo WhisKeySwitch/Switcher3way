@@ -1,21 +1,27 @@
 <#
 .SYNOPSIS
-  Build the Switcher3way Windows installer (self-contained MSI, per-machine, x64).
+  Build the Switcher3way MSI (direct-download channel, per-machine, x64).
 
 .DESCRIPTION
-  1. Publishes the app self-contained for win-x64 (bundles the .NET 8 Desktop runtime, so the
-     target PC needs no .NET prerequisite) into publish/win-x64.
-  2. Generates installer/license.rtf from the repo LICENSE (the MSI EULA page).
-  3. Builds installer/Switcher3way.Installer.wixproj into an MSI under installer/bin/Release.
+  The Microsoft Store channel is build-msix.ps1 — that package is smaller and Store-signed, so
+  prefer it; this MSI exists for direct downloads. See RELEASING.md.
 
-  Requires the .NET SDK. WiX is restored from NuGet by the wixproj (no global install needed).
+  1. Publishes with the .NET runtime bundled (no .NET prerequisite) but the Windows App SDK left as
+     a runtime dependency: WinAppSDK self-contained cannot be produced in this environment, so the
+     target PC needs "Windows App Runtime 1.6". The app shows a plain message if it is missing
+     rather than exiting silently.
+  2. Generates installer/license.rtf from the repo LICENSE (the MSI EULA page).
+  3. Builds installer/Switcher3way.Installer.wixproj into an MSI under installer/bin.
+
+  Requires the .NET SDK plus Visual Studio's MSIX/PRI build tooling (see Directory.Build.props).
+  WiX is restored from NuGet by the wixproj (no global install needed).
 
 .EXAMPLE
-  pwsh windows/build-msi.ps1 -Version 0.1.0
+  pwsh windows/build-msi.ps1 -Version 0.2.0
 #>
 [CmdletBinding()]
 param(
-    [string]$Version = "0.1.0",
+    [string]$Version = "0.2.0",
     [string]$Rid = "win-x64"
 )
 
@@ -27,9 +33,10 @@ $wixProj   = Join-Path $root "installer\Switcher3way.Installer.wixproj"
 $stageDir  = Join-Path $root "publish\$Rid"
 $licenseRtf= Join-Path $root "installer\license.rtf"
 
-Write-Host "==> Publishing self-contained ($Rid, v$Version)..." -ForegroundColor Cyan
+Write-Host "==> Publishing ($Rid, v$Version): .NET bundled, WinAppSDK as a runtime dependency..." -ForegroundColor Cyan
 if (Test-Path $stageDir) { Remove-Item $stageDir -Recurse -Force }
 dotnet publish $appProj -c Release -r $Rid --self-contained true `
+    -p:Platform=x64 -p:WindowsAppSDKSelfContained=false `
     -p:UseAppHost=true -p:Version=$Version -o $stageDir
 if ($LASTEXITCODE -ne 0) { throw "publish failed" }
 
@@ -44,20 +51,22 @@ Write-Host "==> Building MSI..." -ForegroundColor Cyan
 # The WiX build can flake on its first invocation right after a publish (MSBuild node reuse);
 # a plain retry succeeds. Disable the build server for this step and retry once to be safe.
 $env:DOTNET_CLI_USE_MSBUILD_SERVER = "0"
-dotnet build $wixProj -c Release -nodeReuse:false `
-    -p:AppVersion=$Version -p:StageDir=$stageDir -p:LicenseRtf=$licenseRtf
+# -p:Platform=x64 is required: without it WiX emits 32-bit components into a 64-bit directory (ICE80).
+$wixArgs = @("-c", "Release", "-nodeReuse:false", "-p:Platform=x64",
+             "-p:AppVersion=$Version", "-p:StageDir=$stageDir", "-p:LicenseRtf=$licenseRtf")
+dotnet build $wixProj @wixArgs
 if ($LASTEXITCODE -ne 0) {
     Write-Host "   first attempt failed; retrying..." -ForegroundColor Yellow
-    dotnet build $wixProj -c Release -nodeReuse:false `
-        -p:AppVersion=$Version -p:StageDir=$stageDir -p:LicenseRtf=$licenseRtf
+    dotnet build $wixProj @wixArgs
     if ($LASTEXITCODE -ne 0) { throw "MSI build failed" }
 }
 
-$msi = Get-ChildItem (Join-Path $root "installer\bin\Release") -Filter *.msi -Recurse |
+$msi = Get-ChildItem (Join-Path $root "installer\bin") -Filter *.msi -Recurse |
        Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if ($msi) {
     Write-Host "`n==> MSI ready:" -ForegroundColor Green
     Write-Host ("    {0}  ({1:N1} MB)" -f $msi.FullName, ($msi.Length / 1MB))
+    Write-Host "    NOTE: this channel requires 'Windows App Runtime 1.6' on the target PC." -ForegroundColor DarkGray
 } else {
     throw "no MSI produced"
 }

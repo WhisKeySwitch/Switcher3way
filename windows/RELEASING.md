@@ -1,9 +1,75 @@
 # Releasing the Windows build
 
-How to cut a Switcher3way **Windows** release: build the installer, publish it to the public
-downloads repo, and update the landing page. The Windows app is versioned **independently** of
-macOS (started at `0.1.0`, preview) and ships as a **self-contained MSI** — the target PC needs
-no .NET installed.
+Switcher3way for Windows ships through **two channels**, built from the same project:
+
+| Channel | Build | Artifact | Signing | Updates |
+|---|---|---|---|---|
+| **Microsoft Store** | `build-msix.ps1` (`-p:Packaged=true`) | MSIX, ~12 MB | the **Store signs it** — no certificate needed | the Store |
+| **Direct download** | `build-msi.ps1` | MSI, ~35 MB | unsigned → SmartScreen click-through | the in-app updater |
+
+The app detects which flavour it is at runtime (`PackageInfo.IsPackaged`) and adapts: packaged
+builds never self-update (Store policy) and use the package **StartupTask** for "start with
+Windows" instead of a Startup-folder shortcut.
+
+## Microsoft Store identity
+
+These must match Partner Center exactly (note the capital **W** in `Switcher3Way`) — they live in
+[`src/Switcher3way.App/Package.appxmanifest`](src/Switcher3way.App/Package.appxmanifest):
+
+| Field | Value |
+|---|---|
+| Package/Identity/Name | `IronMade.Switcher3Way` |
+| Package/Identity/Publisher | `CN=AF9BB38F-30B9-45AC-B73D-521C0053C310` |
+| Package/Properties/PublisherDisplayName | `IronMade` |
+| Package Family Name | `IronMade.Switcher3Way_zeh9vvkybnryc` |
+| Store ID | `9MXFXL7GG3C5` |
+
+**`runFullTrust` is a restricted capability.** Every submission (including updates) is reviewed by
+hand and needs a justification along these lines:
+
+> Switcher3way is a keyboard-layout utility. It installs a system-wide low-level keyboard hook
+> (`WH_KEYBOARD_LL`) to detect a word typed in the wrong keyboard layout and uses `SendInput` to
+> retype the corrected word; neither works inside the app container. The app is fully offline — no
+> keystroke data is stored or transmitted — and password fields are explicitly excluded.
+
+Store build + local certification run:
+
+```powershell
+pwsh windows/build-msix.ps1                        # package for Partner Center
+pwsh windows/build-msix.ps1 -Sideload -Sign -Certify   # local install test + WACK (run elevated)
+```
+
+### Submission pack (paste into Partner Center)
+
+**Privacy policy URL** — required, because a keyboard hook can access personal information:
+`https://whiskeyswitch.github.io/Switcher3way/privacy.html` (source: [`docs/privacy.html`](../docs/privacy.html)).
+
+**Restricted capability justification** (`runFullTrust`):
+
+> Switcher3way is a keyboard-layout utility. It installs a system-wide low-level keyboard hook
+> (`WH_KEYBOARD_LL`) to detect when a word has been typed in the wrong keyboard layout, and uses
+> `SendInput` to retype the corrected word in the right one. Neither a system-wide hook nor input
+> injection into other applications is possible inside the app container, so `runFullTrust` is
+> required. The app works entirely offline: keystrokes for the current word are held in memory only
+> and discarded at the next word boundary, nothing is stored or transmitted, and password fields are
+> explicitly excluded from processing.
+
+**Notes for certification** (reviewers must be told it is a tray app with no main window, or they
+report that nothing launches):
+
+> Switcher3way runs in the notification area — it has no main window. On first launch a short
+> welcome flow appears; finish it to reach the tray icon.
+>
+> To test: add both an English and a Ukrainian (or Russian) keyboard layout in Windows. With the
+> English layout active, open Notepad and type `ghbdsn` followed by a space — the text is replaced
+> with `привіт` and the layout switches. Alternatively select any wrong-layout text and press the
+> trigger key (F9 by default) to convert it; press it again to cycle or undo.
+>
+> The tray icon's menu provides enable/disable, pause, Settings and Help. The app makes no network
+> connections in this (Store) build.
+
+**Also needed for the listing:** screenshots (1366×768 or larger) — the tray flyout, the Settings
+window, and the conversion feedback chip are the useful three.
 
 > The macOS release flow is separate — see `NOTES-3WAY.md` / `build_app.sh`.
 

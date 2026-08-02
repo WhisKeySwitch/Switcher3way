@@ -47,6 +47,48 @@ public sealed class Win32LayoutCatalog : ILayoutCatalog
         return sb.ToString();
     }
 
+    // ---- Reverse mapping (character → keystroke) --------------------------------------------
+    private static readonly Dictionary<string, Dictionary<char, TypedKey>> _reverse = new();
+
+    /// <summary>
+    /// Character → the keystroke that produces it in this layout: the inverse of
+    /// <see cref="Render"/>. Needed for the manual trigger's selection path, where we start from
+    /// text on screen rather than from recorded keystrokes. Cached per layout.
+    /// </summary>
+    public IReadOnlyDictionary<char, TypedKey> ReverseMap(Layout layout)
+    {
+        if (_reverse.TryGetValue(layout.Id, out var cached)) return cached;
+        var map = new Dictionary<char, TypedKey>();
+        if (TryParseId(layout.Id, out var hkl))
+        {
+            // Unshifted first so the simplest keystroke wins for characters reachable both ways.
+            foreach (bool shift in new[] { false, true })
+                foreach (uint vk in CandidateVks())
+                {
+                    var keyState = new byte[256];
+                    keyState[Native.VK_SHIFT] = (byte)(shift ? 0x80 : 0x00);
+                    uint scan = Native.MapVirtualKeyEx(vk, Native.MAPVK_VK_TO_VSC, hkl);
+                    var s = RenderKey(vk, scan, hkl, keyState);
+                    FlushDeadKey(hkl, keyState);
+                    if (s.Length == 1 && !map.ContainsKey(s[0]))
+                        map[s[0]] = new TypedKey((int)vk, shift, Caps: false);
+                }
+        }
+        _reverse[layout.Id] = map;
+        return map;
+    }
+
+    /// <summary>The printable keys a word can be typed with: digits, letters, OEM punctuation, space.</summary>
+    private static IEnumerable<uint> CandidateVks()
+    {
+        yield return 0x20;                                   // space
+        for (uint vk = 0x30; vk <= 0x39; vk++) yield return vk;  // 0-9
+        for (uint vk = 0x41; vk <= 0x5A; vk++) yield return vk;  // A-Z
+        foreach (uint vk in new uint[] { 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0,
+                                         0xDB, 0xDC, 0xDD, 0xDE, 0xDF, 0xE2 })
+            yield return vk;                                 // ;=,-./` [\]' and friends
+    }
+
     // ---- HKL <-> id ------------------------------------------------------------------------
     internal static string HklToId(IntPtr hkl) => ((ulong)(long)hkl).ToString("X");
     internal static bool TryParseId(string id, out IntPtr hkl)
