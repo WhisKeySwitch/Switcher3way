@@ -19,3 +19,6 @@ DerivedData/
 signing/cert.p12
 signing/key.pem
 signing/*.pfx
+
+# MSIX build output
+windows/src/Switcher3way.App/AppPackages/

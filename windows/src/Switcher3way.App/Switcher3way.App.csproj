@@ -8,7 +8,6 @@
     <Platform>x64</Platform>
     <Platforms>x64</Platforms>
     <UseWinUI>true</UseWinUI>
-    <WindowsPackageType>None</WindowsPackageType>
     <!-- Framework-dependent for dev/CI builds here. The release packaging (self-contained vs the
          MSI installing the Windows App SDK runtime) is finalized in the build/MSI phase — it does
          not affect app code. -->
@@ -22,6 +21,28 @@
     <!-- Custom entry point (mutex + selftest) instead of the generated WinUI Main. -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
+
+  <!-- Two shipping flavours from one project:
+         default            → unpackaged, installed by the WiX MSI (direct download)
+         -p:Packaged=true   → MSIX for the Microsoft Store (Store signs it; no cert needed)
+       PackageInfo.IsPackaged detects which one is running, so the updater and "start with
+       Windows" behave correctly in each. -->
+  <PropertyGroup Condition="'$(Packaged)' == 'true'">
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <AppxPackageSigningEnabled Condition="'$(AppxPackageSigningEnabled)' == ''">false</AppxPackageSigningEnabled>
+    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
+    <AppxBundle>Never</AppxBundle>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Packaged)' != 'true'">
+    <WindowsPackageType>None</WindowsPackageType>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(Packaged)' == 'true'">
+    <AppxManifest Include="Package.appxmanifest">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+    <Content Include="Images\**\*.png" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.*" />

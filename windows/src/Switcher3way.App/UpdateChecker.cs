@@ -48,6 +48,8 @@ internal sealed class UpdateChecker
     public void StartSchedule()
     {
         _timer.Stop();
+        // The Store services updates for packaged builds, and self-updating one is against policy.
+        if (PackageInfo.IsPackaged) { Diagnostics.Log("update: packaged build — the Store handles updates"); return; }
         if (!_settings.CheckForUpdates) return;
         var delay = _ui.CreateTimer();
         delay.Interval = TimeSpan.FromSeconds(15);
@@ -61,6 +63,13 @@ internal sealed class UpdateChecker
 
     private void Check(bool interactive)
     {
+        if (PackageInfo.IsPackaged)
+        {
+            // Manual check in a Store build: point at the Store rather than downloading an MSI.
+            if (interactive) UpdatePromptWindow.ShowMessage(Loc.T("update.upToDate.title"),
+                "Updates for this build are delivered through the Microsoft Store.");
+            return;
+        }
         if (_busy) return;
         if (!interactive && !_settings.CheckForUpdates) return;
         SetBusy(true);
