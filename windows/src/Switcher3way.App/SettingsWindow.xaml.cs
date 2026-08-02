@@ -56,6 +56,13 @@ public sealed partial class SettingsWindow : Window
         AutoFixToggle.IsOn = _s.AutoFix;
         foreach (var a in AmbLangs) AmbiguousCombo.Items.Add(a);
         AmbiguousCombo.SelectedItem = AmbLangs.FirstOrDefault(a => a.Value == _s.AmbiguousLang) ?? AmbLangs[0];
+        UpdatesToggle.IsOn = _s.CheckForUpdates;
+        DebugToggle.IsOn = _s.DebugLog;
+        LogPathText.Text = Diagnostics.FilePath;
+
+        var v = typeof(SettingsWindow).Assembly.GetName().Version;
+        AboutVersion.Text = $"Version {v?.Major}.{v?.Minor}.{v?.Build} — Windows preview";
+        if (Environment.ProcessPath is string exe) AboutIcon.Source = AppInfo.Icon(exe);
         _loading = false;
 
         RefreshStatus();
@@ -124,6 +131,20 @@ public sealed partial class SettingsWindow : Window
         if (_loading || AmbiguousCombo.SelectedItem is not AmbLang a) return;
         _s.AmbiguousLang = a.Value;
         Commit();
+    }
+
+    // ---- Advanced ---------------------------------------------------------------------------
+    private void UpdatesToggle_Toggled(object s, RoutedEventArgs e) { if (_loading) return; _s.CheckForUpdates = UpdatesToggle.IsOn; Commit(); }
+    private void DebugToggle_Toggled(object s, RoutedEventArgs e) { if (_loading) return; _s.DebugLog = DebugToggle.IsOn; Commit(); }
+
+    private void OpenLog_Click(object s, RoutedEventArgs e)
+    {
+        try
+        {
+            System.IO.Directory.CreateDirectory(Diagnostics.Dir);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Diagnostics.Dir) { UseShellExecute = true });
+        }
+        catch (Exception ex) { Diagnostics.Log("open log folder failed: " + ex.Message); }
     }
 
     // ---- Exceptions ------------------------------------------------------------------------

@@ -232,12 +232,59 @@
                         </Border>
                     </StackPanel>
                 </StackPanel>
-                <TextBlock x:Name="AdvancedPanel" Visibility="Collapsed"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                           Text="Advanced — coming next." />
-                <TextBlock x:Name="AboutPanel" Visibility="Collapsed"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                           Text="About — coming next." />
+                <!-- Advanced -->
+                <StackPanel x:Name="AdvancedPanel" Visibility="Collapsed" Spacing="3">
+                    <Border Style="{StaticResource Card}">
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Check for updates automatically" />
+                                <TextBlock Text="Looks for new Windows builds once a day"
+                                           FontSize="12" TextWrapping="Wrap"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="UpdatesToggle" Grid.Column="1" Toggled="UpdatesToggle_Toggled" />
+                        </Grid>
+                    </Border>
+                    <Border Style="{StaticResource Card}">
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Debug logging" />
+                                <TextBlock Text="Records what was detected and converted, for troubleshooting"
+                                           FontSize="12" TextWrapping="Wrap"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="DebugToggle" Grid.Column="1" Toggled="DebugToggle_Toggled" />
+                        </Grid>
+                    </Border>
+                    <Border Style="{StaticResource Card}">
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Log file" />
+                                <TextBlock x:Name="LogPathText" FontSize="12" IsTextSelectionEnabled="True"
+                                           FontFamily="Consolas" TextWrapping="Wrap"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Open log folder" Click="OpenLog_Click" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- About -->
+                <StackPanel x:Name="AboutPanel" Visibility="Collapsed" Spacing="10" Padding="4,8">
+                    <Image x:Name="AboutIcon" Width="64" Height="64" HorizontalAlignment="Left" />
+                    <TextBlock Text="Switcher3way" FontSize="22" FontWeight="SemiBold" />
+                    <TextBlock Text="Auto-fix your keyboard layout across English, Ukrainian, and Russian."
+                               TextWrapping="Wrap" />
+                    <TextBlock x:Name="AboutVersion" FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="MIT License · a fork of RuSwitcher, generalized to N-way."
+                               FontSize="12" TextWrapping="Wrap"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="-12,0,0,0">
+                        <HyperlinkButton Content="Website" NavigateUri="https://whiskeyswitch.github.io/Switcher3way/" />
+                        <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/WhisKeySwitch/Switcher3way" />
+                    </StackPanel>
+                </StackPanel>
             </Grid>
         </ScrollViewer>
 
