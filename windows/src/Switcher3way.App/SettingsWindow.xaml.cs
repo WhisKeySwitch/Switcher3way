@@ -169,15 +169,7 @@ public sealed partial class SettingsWindow : Window
     private void UpdatesToggle_Toggled(object s, RoutedEventArgs e) { if (_loading) return; _s.CheckForUpdates = UpdatesToggle.IsOn; Commit(); }
     private void DebugToggle_Toggled(object s, RoutedEventArgs e) { if (_loading) return; _s.DebugLog = DebugToggle.IsOn; Commit(); }
 
-    private void OpenLog_Click(object s, RoutedEventArgs e)
-    {
-        try
-        {
-            System.IO.Directory.CreateDirectory(Diagnostics.Dir);
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Diagnostics.Dir) { UseShellExecute = true });
-        }
-        catch (Exception ex) { Diagnostics.Log("open log folder failed: " + ex.Message); }
-    }
+    private void OpenLog_Click(object s, RoutedEventArgs e) => Launch.OpenFolder(Diagnostics.Dir);
 
     // ---- Exceptions ------------------------------------------------------------------------
     /// <summary>0 = Apps, 1 = Never convert, 2 = Always convert.</summary>

@@ -75,8 +75,9 @@ if ($Certify) {
 Write-Host @"
 
 Before submitting to Partner Center:
-  • Package.appxmanifest Identity Name/Publisher must match the values Partner Center shows
-    under Product identity (they are placeholders in the repo).
+  • Identity is set to the real product identity (Store ID 9MXFXL7GG3C5) — bump -Version for a
+    new submission; the revision field must stay 0.
   • runFullTrust is a restricted capability: justify it in the submission notes (system-wide
     keyboard hook + SendInput cannot work inside the app container; nothing leaves the device).
+    The wording lives in windows/RELEASING.md.
 "@ -ForegroundColor DarkGray

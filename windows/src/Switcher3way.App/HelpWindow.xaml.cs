@@ -80,8 +80,7 @@ public sealed partial class HelpWindow : Window
             uri.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             args.Cancel = true;
-            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri) { UseShellExecute = true }); }
-            catch { /* best-effort */ }
+            Launch.Open(uri);
         }
     }
 

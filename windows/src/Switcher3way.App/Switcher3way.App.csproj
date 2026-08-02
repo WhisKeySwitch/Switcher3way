@@ -18,6 +18,7 @@
     <AssemblyName>Switcher3way</AssemblyName>
     <Version>0.1.1</Version>
     <ApplicationIcon>Switcher3way.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Custom entry point (mutex + selftest) instead of the generated WinUI Main. -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>

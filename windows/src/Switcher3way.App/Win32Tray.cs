@@ -97,11 +97,11 @@ internal sealed class Win32Tray : IDisposable
             // Required dance so the popup behaves like a real menu and dismisses correctly.
             SetForegroundWindow(_hwnd);
             GetCursorPos(out POINT pt);
-            int cmd = TrackPopupMenuEx(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY,
+            int chosen = TrackPopupMenuEx(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY,
                                        pt.x, pt.y, _hwnd, IntPtr.Zero);
             PostMessageW(_hwnd, WM_NULL, IntPtr.Zero, IntPtr.Zero);
 
-            if (cmd > 0 && cmd < _actions.Count) _actions[cmd]?.Invoke();
+            if (chosen > 0 && chosen < _actions.Count) _actions[chosen]?.Invoke();
         }
         finally
         {
