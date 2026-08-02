@@ -82,7 +82,7 @@
                         <Border Style="{StaticResource Card}">
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                 <StackPanel Spacing="2">
-                                    <TextBlock Text="{app:Loc Key=settings.autoSwitch}" />
+                                    <TextBlock x:Name="T_Enable" Text="{app:Loc Key=settings.autoSwitch}" />
                                     <TextBlock Text="Watch what you type and fix the layout when a word is clearly in the wrong one"
                                                FontSize="12" TextWrapping="Wrap"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -93,7 +93,7 @@
                         <Border Style="{StaticResource Card}">
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                 <StackPanel Spacing="2">
-                                    <TextBlock Text="{app:Loc Key=settings.perAppLayout}" />
+                                    <TextBlock x:Name="T_PerApp" Text="{app:Loc Key=settings.perAppLayout}" />
                                     <TextBlock Text="Restore each app's last layout when you switch back to it"
                                                FontSize="12" TextWrapping="Wrap"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -119,7 +119,7 @@
                         <Border Style="{StaticResource Card}">
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                 <StackPanel Spacing="2">
-                                    <TextBlock Text="{app:Loc Key=settings.trigger}" />
+                                    <TextBlock x:Name="T_Trigger" Text="{app:Loc Key=settings.trigger}" />
                                     <TextBlock Text="Converts the last word or the selection. Tap again to undo."
                                                FontSize="12" TextWrapping="Wrap"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -131,7 +131,7 @@
                         <Border Style="{StaticResource Card}">
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                 <StackPanel Spacing="2">
-                                    <TextBlock Text="{app:Loc Key=settings.language}" />
+                                    <TextBlock x:Name="T_Language" Text="{app:Loc Key=settings.language}" />
                                     <TextBlock Text="16 languages available" FontSize="12"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
@@ -148,7 +148,7 @@
                         <Border Style="{StaticResource Card}">
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                 <StackPanel Spacing="2">
-                                    <TextBlock Text="{app:Loc Key=settings.autofix.title}" />
+                                    <TextBlock x:Name="T_AutoFix" Text="{app:Loc Key=settings.autofix.title}" />
                                     <TextBlock Text="Only for finished words that pass their language's dictionary"
                                                FontSize="12" TextWrapping="Wrap"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -159,10 +159,10 @@
                         <Border Style="{StaticResource Card}">
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                 <StackPanel Spacing="2" MaxWidth="330">
-                                    <TextBlock Text="{app:Loc Key=settings.autofix.ambiguousLang}" />
+                                    <TextBlock x:Name="T_Amb" Text="{app:Loc Key=settings.autofix.ambiguousLang}" />
                                     <TextBlock FontSize="12" TextWrapping="Wrap"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                               Text="{app:Loc Key=settings.autofix.ambiguousLang.hint}" />
+                                               x:Name="T_AmbHint" Text="{app:Loc Key=settings.autofix.ambiguousLang.hint}" />
                                 </StackPanel>
                                 <ComboBox x:Name="AmbiguousCombo" Grid.Column="1" MinWidth="150"
                                           SelectionChanged="AmbiguousCombo_SelectionChanged" />
@@ -172,7 +172,7 @@
 
                     <StackPanel Spacing="8">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <TextBlock Text="{app:Loc Key=settings.group.exceptions}" FontWeight="SemiBold" />
+                            <TextBlock x:Name="T_Exceptions" Text="{app:Loc Key=settings.group.exceptions}" FontWeight="SemiBold" />
                             <TextBlock Text="Where auto-fix stays off, and words to never or always convert"
                                        FontSize="12" VerticalAlignment="Center"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -238,7 +238,7 @@
                     <Border Style="{StaticResource Card}">
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Spacing="2">
-                                <TextBlock Text="{app:Loc Key=settings.checkUpdates}" />
+                                <TextBlock x:Name="T_Updates" Text="{app:Loc Key=settings.checkUpdates}" />
                                 <TextBlock Text="Looks for new Windows builds once a day"
                                            FontSize="12" TextWrapping="Wrap"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -249,7 +249,7 @@
                     <Border Style="{StaticResource Card}">
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Spacing="2">
-                                <TextBlock Text="{app:Loc Key=settings.debugLog}" />
+                                <TextBlock x:Name="T_Debug" Text="{app:Loc Key=settings.debugLog}" />
                                 <TextBlock Text="Records what was detected and converted, for troubleshooting"
                                            FontSize="12" TextWrapping="Wrap"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -265,7 +265,7 @@
                                            FontFamily="Consolas" TextWrapping="Wrap"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
-                            <Button Grid.Column="1" Content="{app:Loc Key=win.openLog}" Click="OpenLog_Click" />
+                            <Button Grid.Column="1" x:Name="B_OpenLog" Content="{app:Loc Key=win.openLog}" Click="OpenLog_Click" />
                         </Grid>
                     </Border>
                 </StackPanel>
@@ -274,7 +274,7 @@
                 <StackPanel x:Name="AboutPanel" Visibility="Collapsed" Spacing="10" Padding="4,8">
                     <Image x:Name="AboutIcon" Width="64" Height="64" HorizontalAlignment="Left" />
                     <TextBlock Text="Switcher3way" FontSize="22" FontWeight="SemiBold" />
-                    <TextBlock Text="{app:Loc Key=win.tagline}"
+                    <TextBlock x:Name="T_Tagline" Text="{app:Loc Key=win.tagline}"
                                TextWrapping="Wrap" />
                     <TextBlock x:Name="AboutVersion" FontSize="12"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />

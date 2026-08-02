@@ -34,14 +34,12 @@ public sealed partial class SettingsWindow : Window
 
     private readonly SettingsManager _s;
     private readonly Action _onChanged;
-    private readonly Action? _reopen;
     private bool _loading;
 
-    public SettingsWindow(SettingsManager s, Action onChanged, Action? reopen = null)
+    public SettingsWindow(SettingsManager s, Action onChanged)
     {
         _s = s;
         _onChanged = onChanged;
-        _reopen = reopen;
         this.InitializeComponent();
         AppWindow.Resize(new SizeInt32(620, 660));
 
@@ -113,16 +111,38 @@ public sealed partial class SettingsWindow : Window
         _s.InterfaceLanguage = l.Code;
         Loc.Configure(l.Code);
         Commit();
-        // Strings resolve when the XAML loads, so the window is reloaded in the new language — but
-        // never from inside this event: closing a window while its own control is still raising
-        // events crashes WinUI. Defer to the dispatcher so the event completes first.
-        if (_reopen is null) return;
-        var reopen = _reopen;
-        DispatcherQueue.TryEnqueue(() =>
-        {
-            try { Close(); reopen(); }
-            catch (Exception ex) { Diagnostics.Log("settings reload failed: " + ex); }
-        });
+        ApplyLanguage();   // update this window's strings in place
+    }
+
+    /// <summary>
+    /// Re-apply every localized string to the live UI. Used after an interface-language change:
+    /// closing and re-creating the window to reload the XAML crashed WinUI natively (access
+    /// violation in Microsoft.UI.Xaml.dll), so the strings are swapped in place instead.
+    /// </summary>
+    private void ApplyLanguage()
+    {
+        TabGeneral.Text = Loc.T("settings.tab.general");
+        TabAutoFix.Text = Loc.T("settings.tab.autofix");
+        TabAdvanced.Text = Loc.T("settings.tab.advanced");
+        TabAbout.Text = Loc.T("settings.tab.about");
+
+        T_Enable.Text = Loc.T("settings.autoSwitch");
+        T_PerApp.Text = Loc.T("settings.perAppLayout");
+        T_Trigger.Text = Loc.T("settings.trigger");
+        T_Language.Text = Loc.T("settings.language");
+        T_AutoFix.Text = Loc.T("settings.autofix.title");
+        T_Amb.Text = Loc.T("settings.autofix.ambiguousLang");
+        T_AmbHint.Text = Loc.T("settings.autofix.ambiguousLang.hint");
+        T_Exceptions.Text = Loc.T("settings.group.exceptions");
+        T_Updates.Text = Loc.T("settings.checkUpdates");
+        T_Debug.Text = Loc.T("settings.debugLog");
+        T_Tagline.Text = Loc.T("win.tagline");
+        B_OpenLog.Content = Loc.T("win.openLog");
+        ExcSearch.PlaceholderText = Loc.T("settings.exceptions.search");
+        AddWordButton.Content = Loc.T("common.add");
+
+        // Rebuild the "System default" entry and the rows (their labels are localized too).
+        RefreshExceptions();
     }
 
     private void Tabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
