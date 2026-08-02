@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.UI.Dispatching;
-using Microsoft.UI.Dispatching;
 
 namespace Switcher3way.App;
 

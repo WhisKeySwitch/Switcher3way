@@ -3,9 +3,10 @@
 <!--
   MSIX manifest for the Microsoft Store build.
 
-  Identity is a placeholder: Partner Center assigns the real Name/Publisher when the app is
-  reserved, and those values must be pasted in before submission (the Store also re-signs the
-  package, which is what removes the SmartScreen "unknown publisher" warning).
+  Identity below is the real Partner Center identity for this app (Store ID 9MXFXL7GG3C5,
+  PFN IronMade.Switcher3Way_zeh9vvkybnryc) — it must match Partner Center exactly, including the
+  capital W in "Switcher3Way", or the upload is rejected. The Store re-signs the package, which is
+  what removes the SmartScreen "unknown publisher" warning.
 
   runFullTrust is a RESTRICTED capability: Switcher3way needs a system-wide keyboard hook to see
   what is typed and SendInput to rewrite it, neither of which works in the app-container sandbox.
@@ -19,13 +20,13 @@
   IgnorableNamespaces="uap uap5 rescap">
 
   <Identity
-    Name="WhisKeySwitch.Switcher3way"
-    Publisher="CN=WhisKeySwitch"
+    Name="IronMade.Switcher3Way"
+    Publisher="CN=AF9BB38F-30B9-45AC-B73D-521C0053C310"
     Version="0.1.1.0" />
 
   <Properties>
     <DisplayName>Switcher3way</DisplayName>
-    <PublisherDisplayName>WhisKeySwitch</PublisherDisplayName>
+    <PublisherDisplayName>IronMade</PublisherDisplayName>
     <Logo>Images\StoreLogo.png</Logo>
   </Properties>
 
