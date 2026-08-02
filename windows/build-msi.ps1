@@ -41,11 +41,27 @@ dotnet publish $appProj -c Release -r $Rid --self-contained true `
 if ($LASTEXITCODE -ne 0) { throw "publish failed" }
 
 Write-Host "==> Generating license.rtf from LICENSE..." -ForegroundColor Cyan
+# Two things this has to get right, both of which were wrong before and visibly corrupted the EULA
+# page: a \par control word must be terminated by whitespace (otherwise "\parof" is read as an unknown
+# control word and the following word is swallowed), and the lines must be joined with ONE \par —
+# `-join '\par' + '\par'` evaluates the + first and joins with two.
 $license = Get-Content (Join-Path $repoRoot "LICENSE") -Raw
-$esc = $license -replace '\\', '\\\\' -replace '\{', '\{' -replace '\}', '\}'
-$esc = ($esc -split "`r?`n") -join '\par' + '\par'
-$rtf = "{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fnil Segoe UI;}}\fs18 $esc}"
-Set-Content -Path $licenseRtf -Value $rtf -Encoding ASCII -NoNewline
+$rtf = [System.Text.StringBuilder]::new()
+[void]$rtf.Append('{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fnil Segoe UI;}}\fs18' + "`r`n")
+foreach ($line in ($license -replace "`r`n", "`n").TrimEnd("`n").Split("`n")) {
+    $esc = $line.Replace('\', '\\').Replace('{', '\{').Replace('}', '\}')
+    $out = [System.Text.StringBuilder]::new()
+    foreach ($ch in $esc.ToCharArray()) {
+        # Non-ASCII has to be escaped as \uN? or it renders as mojibake in the installer.
+        if ([int]$ch -gt 127) { [void]$out.Append('\u' + [int]$ch + '?') } else { [void]$out.Append($ch) }
+    }
+    [void]$rtf.Append($out.ToString() + '\par' + "`r`n")   # newline terminates the control word
+}
+[void]$rtf.Append('}')
+Set-Content -Path $licenseRtf -Value $rtf.ToString() -Encoding ASCII -NoNewline
+
+# Guard against the exact regression: a \par immediately followed by a letter eats that word.
+if ((Get-Content $licenseRtf -Raw) -match '\\par[A-Za-z]') { throw "license.rtf is malformed: \par is not delimited" }
 
 Write-Host "==> Building MSI..." -ForegroundColor Cyan
 # The WiX build can flake on its first invocation right after a publish (MSBuild node reuse);
