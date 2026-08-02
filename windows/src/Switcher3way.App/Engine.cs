@@ -199,9 +199,11 @@ internal sealed class Engine
         var res = ArmedRewrite(word.Count + 1, d.Converted + boundary, d.Original + boundary);
         if (res == TextRewriter.Result.Ok)
         {
+            var prevLayout = _catalog.CurrentLayoutId(); // before the switch — the cancel target
             var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
             Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" [{LangLabel(d.TargetLayoutId)}] via {path} : {res}");
             _phrase.Record(word, d.Converted, 1, kind, gen);
+            SeedCancelCycle(d.Original, d.Converted, boundary, d.TargetLayoutId, prevLayout);
         }
         else if (res == TextRewriter.Result.Aborted)
         {
@@ -220,10 +222,14 @@ internal sealed class Engine
         var res = ArmedRewrite(oldSeg.Length, newSeg, oldSeg);
         if (res == TextRewriter.Result.Ok)
         {
+            var prevLayout = _catalog.CurrentLayoutId(); // before the switch — the cancel target
             var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
             Diagnostics.Log($"  auto: phrase -> [{LangLabel(d.TargetLayoutId)}] \"{newSeg.TrimEnd()}\" via {path} : {res}");
             _phrase.Confirm(corr, gen);
             _phrase.Record(word, d.Converted, 1, new PhraseTracker.WordKind.Locked(lang), gen);
+            // One trigger tap cancels the whole segment, not just the last word.
+            SeedCancelCycle(corr.OldSegment + d.Original, corr.NewSegment + d.Converted, boundary,
+                            d.TargetLayoutId, prevLayout);
         }
         else if (res == TextRewriter.Result.Aborted)
         {
@@ -254,6 +260,22 @@ internal sealed class Engine
     {
         var lang = _catalog.InstalledLayouts().FirstOrDefault(l => l.Id == layoutId)?.Lang;
         return lang is null ? layoutId : (lang.Length <= 2 ? lang : lang.Substring(0, 2));
+    }
+
+    /// <summary>
+    /// Seed the trigger cycle from an applied auto-fix: the converted text is the only candidate
+    /// and it is already on screen (Step = 1), so the next trigger press — with no typing in
+    /// between — restores the original text and the pre-conversion layout: the one-tap cancel
+    /// the macOS app has. Real typing clears the cycle via the monitor's Typed event.
+    /// </summary>
+    private void SeedCancelCycle(string original, string converted, char boundary,
+                                 string targetLayoutId, string previousLayoutId)
+    {
+        var plan = new ManualPlan(original, previousLayoutId,
+                                  new[] { new ManualCandidate(targetLayoutId, converted) });
+        lock (_cycleLock)
+            _cycle = new Cycle { Plan = plan, Suffix = boundary.ToString(), Step = 1,
+                                 OnScreenLen = converted.Length + 1 };
     }
 
     // ---- Manual N-way cycle ----------------------------------------------------------------
@@ -287,6 +309,10 @@ internal sealed class Engine
             }
             cyc = _cycle;
         }
+
+        // Manual control invalidates the phrase memory: its rewrites aren't tracked, so a later
+        // phrase correction would be computed over text that is no longer on screen (macOS parity).
+        _phrase.Reset();
 
         bool restore = cyc.Step >= cyc.Plan.Candidates.Count;
         string targetId = restore ? cyc.Plan.OriginalLayoutId : cyc.Plan.Candidates[cyc.Step].TargetLayoutId;
