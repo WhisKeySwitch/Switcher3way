@@ -1,125 +1,124 @@
 # Tasks — Windows UI Redesign (WinUI 3)
 
-Land in phase order on a `windows-winui3` feature branch (keeps `main` shipping the WinForms MSI).
-Migrate the existing `Switcher3way.App` **in place**, skeleton-first: phase 0 stands up a running WinUI
-app model; every later phase adds real screens, so the branch builds and runs throughout the port.
-Merge to `main` at parity, then the WinForms UI is gone.
+Landed on the `windows-winui3` branch (PR #42), in-place and skeleton-first: phase 0 stood up a
+running WinUI app model, and every later phase added real screens, so the branch built and ran
+throughout. Version **0.2.0**.
+
+Where reality diverged from the plan it is noted inline and recorded in design.md decisions 13–15
+(Store packaging, Win32 tray, hand-built cards).
 
 ## 0. Walking skeleton (platform seams)
 
-- [ ] 0.1 Convert `Switcher3way.App` to WinUI 3 **in place** (Windows App SDK, **unpackaged,
-  self-contained**: `UseWinUI=true`, `WindowsPackageType=None`, `WindowsAppSDKSelfContained=true`,
-  apphost `.exe`; keep `AssemblyName=Switcher3way`, the Core/Dictionaries refs, and the single-instance
-  mutex). Replace the WinForms `Application.Run` entry with a WinUI `Application`; retire the
-  WinForms/WPF app model. On the `windows-winui3` branch so `main` keeps shipping WinForms.
-- [ ] 0.2 Single-instance + app lifecycle (reuse the existing mutex); theme = `Default` +
-  `UISettings.ColorValuesChanged`; accent = system accent; no in-app theme switch.
-- [ ] 0.3 Tray host with `H.NotifyIcon.WinUI`: reuse `TrayApp.MakeFlag` + the 400 ms `RefreshIcon`
-  poll (dimmed/pause-bars when `!EffectivelyEnabled`); a stub flyout.
-- [ ] 0.4 `AppNotification` registration for unpackaged (AUMID + Start-menu shortcut + activation
-  handler); one round-trip test toast; fall back to the balloon tip if registration fails.
-- [ ] 0.5 Confirm `build-msi.ps1` stages the WinAppSDK runtime via `dotnet publish`; MSI + updater
-  still install/relaunch the `.exe`.
+- [x] 0.1 Convert `Switcher3way.App` to WinUI 3 **in place** (Windows App SDK; `UseWinUI`, apphost
+  `.exe`, single-instance mutex and `selftest` kept; WinForms/WPF app model retired).
+- [x] 0.2 Single-instance + lifecycle; theme follows the OS; system accent colour.
+- [x] 0.3 Tray host — **direct Win32 `Shell_NotifyIcon`**, not H.NotifyIcon (decision 14); reuses the
+  existing flag rendering and the 400 ms poll (dimmed + pause bars when off).
+- [ ] 0.4 `AppNotification` registration for unpackaged toasts — **not done**; toasts were not built
+  (see 6.2). Packaged builds get identity for free, so this only matters for the MSI channel.
+- [x] 0.5 Build/packaging verified: `Directory.Build.props` points at VS's PRI/MSIX tooling;
+  `build-msi.ps1` reworked for the WinUI reality (WinAppSDK left as a runtime dependency,
+  `-p:Platform=x64`); `build-msix.ps1` added.
 
 ## 1. Shared plumbing
 
-- [ ] 1.1 `SettingsManager`: add `HasCompletedOnboarding` (bool, persisted). Wrap the process-wide
-  instance in a thin observable (`Changed` event / `INotifyPropertyChanged`) all surfaces subscribe to.
-- [ ] 1.2 Immediate-apply: delete `SettingsForm`'s `_apps/_never/_always` working copies + `Apply()`;
-  each control setter writes the property and calls `Save()` now (including `StartupShortcut.Set` and
-  `Loc.Configure` on change).
-- [ ] 1.3 `Engine`: add a success feedback signal `event Action<ConversionInfo> Converted`
-  (`original`, `converted`, `targetLang`, `canUndo`) raised after a successful auto/manual fix; keep
-  `Notify` for errors. Undo reuses the manual-undo path.
-- [ ] 1.4 `Loc`: add new keys — SettingsCard descriptions (`settings.*.desc`), exceptions group
-  headers + empty states, `Add app…`/picker, onboarding copy, feedback chip/toast text; English +
-  16-locale translation (fallback to English). Re-word `settings.launchAtLogin` → **Start with Windows**.
-- [ ] 1.5 Move `SecureField` UIA off WPF `System.Windows.Automation` to COM `UIAutomationClient`; drop
-  the WPF reference from the WinUI project.
+- [x] 1.1 `HasCompletedOnboarding` added; settings shared as one instance across surfaces.
+- [x] 1.2 Immediate-apply: working copies and `Apply()` gone; every control writes + `Save()`s now,
+  including `StartupShortcut.Set` and `Loc.Configure`.
+- [x] 1.3 `Engine.Converted` event (`ConversionInfo`) raised from the single-word, phrase-correction
+  and manual paths; never on an aborted/failed rewrite or the restore step.
+- [~] 1.4 `Loc` wiring — done via a `{app:Loc}` markup extension plus in-place `ApplyLanguage()`.
+  **Partial:** the description/prose strings written for this redesign have no translation keys yet,
+  so they are English in every language.
+- [x] 1.5 `SecureField` re-implemented without WPF: `ES_PASSWORD` + MSAA `STATE_SYSTEM_PROTECTED`
+  (this covers browser password inputs); suppression is logged.
 
 ## 2. Settings shell + General (`1a`)
 
-- [ ] 2.1 620px window, Mica, extended custom title bar (40px, app icon + "Switcher3way" + caption
-  buttons); `SelectorBar` tab strip (General / Auto-fix / Advanced / About) — not `TabView`.
-- [ ] 2.2 Status card (General only): 26×19 flag, "`<lang>` — current layout", "N layouts installed ·
-  dictionaries ready", and an Active/Paused pill (caution colours + remaining time when paused). Live
-  from the 400 ms poll.
-- [ ] 2.3 General cards via `SettingsCard` (collapsed borders, group headers): Enable, Remember-per-app,
-  Start-with-Windows; Trigger group — trigger-key ComboBox (mono keycap + chevron; items/order from
-  `SettingsForm.TriggerKeys`) and Interface-language ComboBox (`SettingsForm.Languages`, System default first).
-- [ ] 2.4 Footer: "Changes apply as you make them" + `Close` only.
+- [x] 2.1 620px window, `SelectorBar` tabs (not `TabView`).
+- [x] 2.2 Status card — layout, installed count, Active/Paused pill, live.
+- [x] 2.3 General cards — Enable / Remember-per-app / Start-with-Windows, trigger-key and
+  interface-language combos (same items and order as before).
+- [x] 2.4 Footer: "Changes apply as you make them" + `Close` only.
 
 ## 3. Auto-fix + exceptions (`1b`) + app picker (`1c`)
 
-- [ ] 3.1 Auto-fix group: Fix-automatically toggle; Language-for-ambiguous-words ComboBox
-  (Українська / Русский / Do not convert → `AmbiguousLang`), the hint promoted to a wrapping description
-  (card grows, not fixed height).
-- [ ] 3.2 Exceptions panel: `SelectorBar` segments Apps / Never convert / Always convert with live
-  counts (`DeniedApps`+`ProtectedApps`, `NeverConvertWords`, `AlwaysConvertWords`); search box filters live.
-- [ ] 3.3 Grouped list with sticky headers ("Always off — password managers, not removable" =
-  `ProtectedApps`; "Added by you" = `DeniedApps`): 44px rows, real icon (`ExtractAssociatedIcon`/
-  `SHGetFileInfo`, cached) + friendly name (`FileDescription`) + `.exe`; protected rows locked (no
-  remove); user rows have a remove button; text ellipsises, never wraps.
-- [ ] 3.4 Footer: accent `+ Add app…` opening the `1c` picker; `.exe` drop target; Never/Always
-  segments swap the footer to a text box + `Add`.
-- [ ] 3.5 Add-an-app picker (`ContentDialog`): running processes with a visible top-level window,
-  de-duped by path, excluding listed; checkbox rows (icon + friendly name + `.exe`); primary counts the
-  selection ("Add N app(s)"); `Browse for .exe…` via `FileOpenPicker`. (Two-pane full page from `1c` is
-  a fallback only if the inline block gets crowded once localised.)
+- [x] 3.1 Auto-fix toggle + ambiguous-language combo with the hint promoted to a wrapping description.
+- [x] 3.2 Segmented Apps / Never / Always with live counts + search.
+- [x] 3.3 Grouped list with real app icons and friendly names; protected rows locked; user rows
+  removable; text ellipsises.
+- [x] 3.4 Footer swaps between "+ Add app…" and text-box + Add.
+- [ ] 3.5 Add-an-app picker — **built** (running apps, de-duped, counted primary button,
+  `Browse for .exe…`), except the **drag-and-drop `.exe`** target from the design.
 
 ## 4. Advanced + About
 
-- [ ] 4.1 Advanced: Check-for-updates + Debug-logging toggles; an Open-log-folder card whose
-  description shows `Diagnostics.FilePath` in selectable mono. (These move here from the tray.)
-- [ ] 4.2 About: icon, name, tagline (`win.tagline`), `Version {Major}.{Minor}`, MIT/fork line,
-  Website + GitHub `HyperlinkButton`s.
+- [x] 4.1 Advanced: update + debug toggles, log path in selectable mono, Open-log-folder (moved off
+  the tray, per the design).
+- [x] 4.2 About: icon, name, tagline, version, MIT/fork line, Website + GitHub links.
 
 ## 5. Tray flyout (`1d`)
 
-- [ ] 5.1 290px flyout: header (flag + layout + "Auto-fix on · F9 to convert"); toggle rows (Enable /
-  Auto-fix / Remember-per-app) with small `ToggleSwitch`es; `Pause…` submenu (30 min / 1 hour / Until
-  restart), showing `Resume` + paused header when paused.
-- [ ] 5.2 Settings… (`Ctrl+,`), Help (`F1`), Check-for-updates… (busy label swap on
-  `UpdateChecker.IsBusy`), Quit — with mono shortcut hints. Full keyboard navigation + focus visuals.
+- [x] 5.1 Fluent flyout — status header, three toggle switches, pause durations that swap to Resume;
+  implemented as a real borderless window (decision 14), positioned by the work area, hides on
+  deactivate.
+- [x] 5.2 Settings (`Ctrl+,` hint), Help, Check-for-updates, Quit.
 
 ## 6. Conversion feedback (`1f` + `1g`)
 
-- [ ] 6.1 Caret chip: click-through layered overlay (`WS_EX_LAYERED|TRANSPARENT|NOACTIVATE|TOPMOST`),
-  positioned via UIA `GetBoundingRectangles` → `GetCaretPos` → tray fallback; success dot, struck-through
-  mono keystrokes → mono converted word, divider, trigger-keycap + "undo". Fade 200/hold 1600/out 120 ms;
-  cancel-and-reshow on a new fix. Keycap follows `TriggerKey` ("Shift Shift" for double-tap).
-- [ ] 6.2 Toasts (`AppNotification`), two cases only: error (replaces balloon; elevation copy) and the
-  remember-word prompt (Undo / Never convert this → `NeverConvertWords`). No toast per successful fix.
-- [ ] 6.3 Wire both to `Engine.Converted` / `Engine.Notify` on the dispatcher.
+- [x] 6.1 Caret chip — click-through layered window, DPI-scaled, caret-anchored with documented
+  fallbacks, fade in/hold/out, keycap names the configured trigger.
+- [ ] 6.2 Toasts — **not built.** The error case still only logs, and the remember-word prompt does
+  not exist; the "Surface errors and prompts as actionable notifications" requirement is unmet.
+- [x] 6.3 Feedback wired from the engine onto the UI thread.
 
 ## 7. First run (`1i`)
 
-- [ ] 7.1 520px, 3 steps, shown once when `!HasCompletedOnboarding`; shared 40px title bar + footer
-  with step dots + nav buttons.
-- [ ] 7.2 Step 1 welcome (headline + paragraph + demo chip). Step 2 layouts: one row per
-  `InstalledLayouts()` with dictionary-ready/caution pill from `HunspellDictionaryValidator.IsAvailable`,
-  plus the ambiguity caution bar. Step 3 trigger: three radio cards (F9 / Right Ctrl / Shift Shift) +
-  live try-it running the real `NWayResolver` + Start-with-Windows checkbox.
-- [ ] 7.3 Persist the chosen trigger + startup; set `HasCompletedOnboarding` on Finish.
+- [x] 7.1 520/560px window, three steps, shown once, step dots + navigation.
+- [x] 7.2 Welcome; layouts step with dictionary-ready/caution pills; trigger step with a live try-it
+  that runs the real resolver.
+- [x] 7.3 Trigger + start-with-Windows persisted; `HasCompletedOnboarding` set on Finish (and on
+  failure, so the flow can never block startup).
 
 ## 8. Update prompt + Help (`1j`)
 
-- [ ] 8.1 Update `ContentDialog`: title/subtitle (`update.available.title` / `update.installed` + "The
-  app restarts itself to finish"); WHAT'S NEW card rendering `UpdateInfo.Notes` Markdown as bullets
-  (reuse the `HelpContent` subset parser); `Install and restart` / `Later` / `Skip this version`
-  (hyperlink). No raw markup.
-- [ ] 8.2 Help window: 172px TOC from the guide's `##` headings; `WebView2` rendering `HelpContent`
-  HTML; EN/УК/РУ language pills (replace the `help:` scheme); external links → default browser; keep
-  the worked-example table in the guide.
+- [x] 8.1 Update prompt as its own window (no XamlRoot in a tray-only app) with release notes
+  **rendered** as headings + accent bullets; Install / Later / Skip-as-hyperlink; also serves the
+  up-to-date and error messages.
+- [x] 8.2 Help window: WebView2 over the existing `HelpContent` HTML, section TOC from the guide's
+  own headings, EN/УК/РУ pills, external links to the browser, graceful message if WebView2 is absent.
 
 ## 9. Localisation, empty states, polish, verification
 
-- [ ] 9.1 Empty states: protected-only apps list → "No apps added yet."; empty Never/Always →
-  "Nothing here yet — undo a fix with F9 to add a word."
-- [ ] 9.2 Verify wrap-vs-ellipsis under German/Ukrainian: SettingsCard descriptions wrap and grow;
-  list-row data ellipsises. Focus rectangles on every interactive element incl. the tray flyout.
-- [ ] 9.3 Theme parity pass (light + dark) against the option screenshots; confirm accent follows the
-  Windows accent colour.
-- [ ] 9.4 Smoke test end-to-end: settings immediate-apply across surfaces; a real fix shows the chip;
-  error shows the toast; onboarding once; update renders bullets; Help TOC + language switch; MSI
-  install + updater relaunch of the WinUI build.
+- [x] 9.1 Empty states for the apps and word lists.
+- [~] 9.2 Ellipsis-vs-wrap behaviour implemented; a German/Ukrainian overflow pass is still untested
+  in practice. Focus visuals come from the stock controls.
+- [x] 9.3 Light/dark follow the OS; accent is the system accent.
+- [x] 9.4 Smoke-tested end to end by the user: tray + flyout, Settings (all four tabs, immediate
+  apply, language switch), conversion chip, selection conversion, onboarding, updater ("up to date"),
+  Help. Both channels build at 0.2.0 (MSIX 12.4 MB, MSI 35.2 MB).
+
+## 10. Store distribution (added — decision 13)
+
+- [x] 10.1 MSIX flavour from the same project (`-p:Packaged=true`), real Partner Center identity
+  (Store ID 9MXFXL7GG3C5), `runFullTrust` + `startupTask` declared, tile/splash assets generated.
+- [x] 10.2 `PackageInfo.IsPackaged`; packaged builds never self-update and use the package StartupTask.
+- [x] 10.3 Windows App Certification Kit run: 22 pass / 1 warning / 1 optional fail. Fixed the DPI
+  declaration (`app.manifest`, PerMonitorV2) and moved packaged launches to `Windows.System.Launcher`;
+  remaining flags are false positives (dictionary words "bash"/"reg"; "MSBuild" inside Microsoft's own
+  `WinRT.Runtime.dll`).
+- [x] 10.4 Privacy policy published (`docs/privacy.html`, linked from both landing pages) — the Store
+  requires one for an app that can access personal information — plus a submission pack in
+  `RELEASING.md` (justification + notes for certification).
+- [ ] 10.5 Submit to Partner Center and get `runFullTrust` approved — **outstanding, and outside the
+  repo**: screenshots still need capturing, and the review latency is unknown.
+
+## Deferred (tracked, not done)
+
+- [ ] Toasts (6.2) and unpackaged notification registration (0.4).
+- [ ] UIA-based caret position, so the chip is accurate in apps with no classic caret (Chrome,
+  VS Code, Electron) instead of falling back to the window corner.
+- [ ] Translation keys for the new description/prose strings (1.4).
+- [ ] Drag-and-drop `.exe` onto the exceptions panel (3.5).
+- [ ] Delete the superseded WinForms files (`TrayApp.cs`, `SettingsForm.cs`, `UpdatePromptForm.cs`),
+  excluded from the build but still present.

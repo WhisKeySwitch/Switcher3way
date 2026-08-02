@@ -23,6 +23,35 @@ the current layout and a dimmed/paused state.
 - **WHEN** an update check is running
 - **THEN** the check-for-updates control SHALL show a busy/disabled state until it completes
 
+### Requirement: Distribute as a signed, offline application
+The Windows build SHALL be distributed through the Microsoft Store as a packaged application signed
+by the Store, and MAY additionally be offered as a direct-download installer. It SHALL operate
+entirely offline for detection, validation and conversion. A packaged build SHALL NOT update itself —
+the Store services updates — and SHALL register "start with Windows" through its package startup task
+rather than a startup-folder shortcut. A direct-download build MAY check for and install updates
+itself, and SHALL state plainly what is missing if a runtime it depends on is absent, rather than
+failing silently.
+
+#### Scenario: Store distribution is signed without a developer certificate
+- **WHEN** the app is submitted to the Microsoft Store
+- **THEN** the Store SHALL sign the package, so installing it shows no "unknown publisher" warning
+
+#### Scenario: Packaged builds defer updates to the Store
+- **WHEN** an update check runs in a packaged build
+- **THEN** the app SHALL NOT download or install an update itself, and SHALL indicate that updates come from the Store
+
+#### Scenario: Start with Windows in a packaged build
+- **WHEN** the user enables "start with Windows" in a packaged build
+- **THEN** the app SHALL enable its package startup task, which stays visible in Windows' startup-apps settings
+
+#### Scenario: A missing runtime is explained
+- **WHEN** a direct-download build starts on a PC without the Windows App Runtime it depends on
+- **THEN** the app SHALL name the required runtime instead of exiting with no message
+
+#### Scenario: No runtime network dependency
+- **WHEN** the application performs detection, validation, or conversion
+- **THEN** it SHALL do so without any network access
+
 ## ADDED Requirements
 
 ### Requirement: Apply settings changes immediately

@@ -30,19 +30,13 @@ icon, a click-through caret overlay, actionable toasts, and how all of that coex
 
 ## Decisions
 
-1. **Unpackaged, self-contained Windows App SDK — keep the MSI + updater.** Build the WinUI 3 app
-   *unpackaged* (Windows App SDK self-contained, `WindowsAppSDKSelfContained=true`,
-   `WindowsPackageType=None`) so it still ships as the existing per-machine **MSI** and the SHA-256
-   updater keeps working unchanged (the updater relaunches an `.exe`; the apphost stays an `.exe`).
-   *Rejected:* MSIX/Store — it would replace the whole distribution + update pipeline we just built.
-   Cost: the app grows (WinAppSDK runtime bundled) and unpackaged **AppNotification** needs explicit
-   registration (below).
+1. ~~**Unpackaged, self-contained Windows App SDK — keep the MSI + updater.**~~ **SUPERSEDED — see
+   Decision 13.** The original reasoning was that MSIX would discard the MSI/updater pipeline *and*
+   hard-require a paid signing certificate just to install. The second half stopped being true when
+   Microsoft made individual Store accounts free, which changed the answer.
 
-2. **Tray icon via `H.NotifyIcon.WinUI`.** NotifyIcon isn't in the SDK. Use the maintained
-   `H.NotifyIcon.WinUI` package, which supports a WinUI `MenuFlyout`/custom flyout as the context
-   menu — that's exactly the `1d` flyout. Keep `TrayApp.MakeFlag` icon rendering and the 400 ms
-   `RefreshIcon` poll verbatim (dimmed + pause bars when `!EffectivelyEnabled`). *Rejected:* a raw
-   `Shell_NotifyIcon` Win32 host — more code, and the flyout would be hand-built.
+2. ~~**Tray icon via `H.NotifyIcon.WinUI`.**~~ **SUPERSEDED — see Decision 14.** The package
+   installs the icon fine, but its menu **clicks never route** in an unpackaged tray-only app.
 
 3. **Caret chip is a Win32 layered overlay, not a WinUI window.** `1f` must be **click-through and
    never focused**, which WinUI top-level windows resist. Use a lightweight layered window
@@ -100,6 +94,32 @@ icon, a click-through caret overlay, actionable toasts, and how all of that coex
     try-it runs the real `NWayResolver` on what the user types and shows the would-be conversion, then
     persists the chosen trigger and `Start with Windows`. Setting the flag on Finish gates future launches.
 
+13. **Dual distribution: MSIX to the Microsoft Store (primary) + the MSI (secondary).** Replaces
+    Decision 1. Individual Store accounts became free, and the Store **signs submitted packages** —
+    which removes the SmartScreen "unknown publisher" warning without an OV/EV certificate, the one
+    blocker we could not solve ourselves. One project builds both flavours (`-p:Packaged=true` for
+    MSIX); `PackageInfo.IsPackaged` detects which is running, so packaged builds never self-update
+    (Store policy) and use the package **StartupTask** instead of a Startup-folder shortcut.
+    Measured: Store MSIX **12.4 MB** (the WinAppSDK framework is a shared Store dependency) vs MSI
+    **35.2 MB** vs the outgoing WinForms MSI 55.2 MB. Costs, accepted: `runFullTrust` is a
+    *restricted* capability, so every submission is reviewed by hand with a written justification;
+    and **self-contained WinAppSDK cannot be produced in this environment at all**, so the MSI
+    channel depends on "Windows App Runtime 1.6" being installed — the app now says so plainly
+    instead of exiting silently.
+
+14. **Tray is direct Win32 (`Shell_NotifyIcon` + `TrackPopupMenuEx`), and the Fluent flyout is a real
+    window.** Replaces Decision 2. H.NotifyIcon's WinUI flyout renders but its item clicks were never
+    delivered — verified by file logging that the handler was never entered — in either
+    `ContextFlyout` or `ContextMenuMode.PopupMenu`, and hosting the icon inside a hidden window did
+    not help; a tray-only app has no reliable `XamlRoot` for a flyout. `TrackPopupMenuEx(TPM_RETURNCMD)`
+    returns the chosen command id synchronously, so nothing can silently fail. The designed Fluent
+    look (`1d`) is then a small borderless always-on-top **window** with real WinUI controls, with the
+    native menu kept as an automatic fallback if it ever fails to show.
+
+15. **SettingsCard rows are hand-built, not CommunityToolkit.** `CommunityToolkit.WinUI.Controls.SettingsControls`
+    transitively pulls in **Uno.WinUI**, which conflicts with WinAppSDK and breaks the XAML compiler.
+    A `Border` + `Grid` with a shared style reproduces the design without the dependency.
+
 12. **In-place migration on a feature branch, skeleton-first (no parallel project) — user decision.**
     Convert the existing `Switcher3way.App` from WinForms to WinUI 3 **in place** — one project, one
     build, one updater — rather than standing up a second project. Because WinForms and WinUI 3 can't
@@ -129,9 +149,18 @@ icon, a click-through caret overlay, actionable toasts, and how all of that coex
 
 ## Open Questions
 
-_Both prior questions are resolved by user decision: **in-place migration** (Decision 12) and
-**unpackaged self-contained** packaging (Decision 1)._
+_The original questions are settled: **in-place migration** (Decision 12) and packaging, which moved
+to **dual MSIX + MSI** (Decision 13). `build-msi.ps1` did need reworking — WinAppSDK self-contained is
+not producible here, and WiX needs `-p:Platform=x64` — both done._
 
-- **Verify during the phase-0 skeleton:** whether `build-msi.ps1` needs any change to stage the
-  WindowsAppSDK self-contained runtime into the publish folder. Expected to be picked up automatically
-  by `dotnet publish`, but confirm before porting screens (a build-script tweak, not a design change).
+Still open:
+
+- **Will `runFullTrust` be approved?** It is a restricted capability, manually reviewed, for an app
+  whose shape (global hook + input injection) invites scrutiny. Unknown latency; the MSI channel is
+  the hedge.
+- **Accurate caret position in apps with no classic caret** (Chrome, VS Code, Electron): needs UI
+  Automation. The chip currently falls back to the focused window's corner there.
+- **Toasts (`1g`)** — the error and remember-word notifications are specified but not built; the
+  error case still only logs. The corresponding spec requirement is therefore not yet satisfied.
+- **New UI strings are English-only.** Everything with an existing translation key is localized;
+  the descriptions/prose written for this redesign have no keys yet.
