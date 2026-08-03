@@ -121,9 +121,9 @@ public sealed partial class OnboardingWindow : Window
     // ---- step 3: trigger + live try-it -------------------------------------------------------
     private (int Vk, bool Double) SelectedTrigger()
     {
-        if (TrigRCtrl.IsChecked == true) return (0xA3, false);
-        if (TrigShift.IsChecked == true) return (0x10, true);
-        return (0x78, false);
+        if (TrigPause.IsChecked == true) return (0x13, false);
+        if (TrigF9.IsChecked == true) return (0x78, false);
+        return (0x11, true);   // double Ctrl — the default
     }
 
     private void ApplyTrigger()
@@ -143,7 +143,7 @@ public sealed partial class OnboardingWindow : Window
     private void UpdateTryLabel()
     {
         var (vk, dbl) = SelectedTrigger();
-        var label = (vk, dbl) switch { (0xA3, _) => "Right Ctrl", (0x10, true) => "Shift Shift", _ => "F9" };
+        var label = (vk, dbl) switch { (0x13, _) => "Pause/Break", (0x78, _) => "F9", _ => "Ctrl twice" };
         TryLabel.Text = $"Try it — type a word in the wrong layout, then tap {label}";
     }
 

@@ -14,12 +14,13 @@ namespace Switcher3way.App;
 public sealed partial class SettingsWindow : Window
 {
     private sealed record TriggerKey(string Name, int Vk, bool Double) { public override string ToString() => Name; }
+    // Ordered by how well they work in practice: the recommended three first, the rest after.
     private static readonly TriggerKey[] Triggers =
     {
-        new("F8", 0x77, false), new("F9", 0x78, false), new("F10", 0x79, false), new("F11", 0x7A, false),
-        new("F12", 0x7B, false), new("Pause/Break", 0x13, false), new("Scroll Lock", 0x91, false),
-        new("Right Ctrl", 0xA3, false), new("Double Shift", 0x10, true), new("Double Ctrl", 0x11, true),
-        new("Double Alt", 0x12, true),
+        new("Double Ctrl", 0x11, true), new("Pause/Break", 0x13, false), new("F9", 0x78, false),
+        new("Double Shift", 0x10, true), new("Double Alt", 0x12, true), new("Right Ctrl", 0xA3, false),
+        new("Scroll Lock", 0x91, false), new("F8", 0x77, false), new("F10", 0x79, false),
+        new("F11", 0x7A, false), new("F12", 0x7B, false),
     };
 
     private sealed record Lang(string Code, string Name) { public override string ToString() => Name; }
@@ -49,7 +50,8 @@ public sealed partial class SettingsWindow : Window
         StartupToggle.IsOn = StartupShortcut.IsEnabled;
 
         foreach (var t in Triggers) TriggerCombo.Items.Add(t);
-        TriggerCombo.SelectedItem = Triggers.FirstOrDefault(t => t.Vk == _s.TriggerKey && t.Double == _s.TriggerDoubleTap) ?? Triggers[1];
+        TriggerCombo.SelectedItem = Triggers.FirstOrDefault(t => t.Vk == _s.TriggerKey && t.Double == _s.TriggerDoubleTap)
+                                    ?? Triggers[0];   // the recommended default
         foreach (var l in Languages) LanguageCombo.Items.Add(l);
         LanguageCombo.SelectedItem = Languages.FirstOrDefault(l => l.Code == _s.InterfaceLanguage) ?? Languages[0];
 

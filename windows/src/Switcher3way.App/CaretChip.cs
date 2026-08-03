@@ -25,7 +25,7 @@ internal sealed class CaretChip : IDisposable
     private readonly WndProc _proc;
     private readonly DispatcherQueueTimer _timer;
 
-    private string _original = "", _converted = "", _trigger = "F9";
+    private string _original = "", _converted = "", _trigger = "Ctrl Ctrl";
     private int _elapsed;
     private Phase _phase = Phase.Hidden;
     private enum Phase { Hidden, FadeIn, Hold, FadeOut }

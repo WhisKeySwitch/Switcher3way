@@ -80,27 +80,27 @@
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                Text="Tap it to convert the last word or the selection. Tap it again to undo." />
                     <Grid ColumnSpacing="8" ColumnDefinitions="*,*,*">
-                        <RadioButton x:Name="TrigF9" Grid.Column="0" GroupName="trig" IsChecked="True"
-                                     Checked="Trigger_Checked" Tag="f9" HorizontalAlignment="Stretch">
+                        <RadioButton x:Name="TrigCtrlCtrl" Grid.Column="0" GroupName="trig" IsChecked="True"
+                                     Checked="Trigger_Checked" Tag="ctrlctrl" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
-                                <Border Style="{StaticResource Keycap}"><TextBlock Text="F9" FontFamily="Consolas" FontSize="13" /></Border>
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="Ctrl Ctrl" FontFamily="Consolas" FontSize="13" /></Border>
                                 <TextBlock Text="Recommended" FontSize="11" HorizontalAlignment="Center"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </RadioButton>
-                        <RadioButton x:Name="TrigRCtrl" Grid.Column="1" GroupName="trig"
-                                     Checked="Trigger_Checked" Tag="rctrl" HorizontalAlignment="Stretch">
+                        <RadioButton x:Name="TrigPause" Grid.Column="1" GroupName="trig"
+                                     Checked="Trigger_Checked" Tag="pause" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
-                                <Border Style="{StaticResource Keycap}"><TextBlock Text="Right Ctrl" FontFamily="Consolas" FontSize="13" /></Border>
-                                <TextBlock Text="Thumb reach" FontSize="11" HorizontalAlignment="Center"
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="Pause/Break" FontFamily="Consolas" FontSize="13" /></Border>
+                                <TextBlock Text="Dedicated key" FontSize="11" HorizontalAlignment="Center"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </RadioButton>
-                        <RadioButton x:Name="TrigShift" Grid.Column="2" GroupName="trig"
-                                     Checked="Trigger_Checked" Tag="shift" HorizontalAlignment="Stretch">
+                        <RadioButton x:Name="TrigF9" Grid.Column="2" GroupName="trig"
+                                     Checked="Trigger_Checked" Tag="f9" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
-                                <Border Style="{StaticResource Keycap}"><TextBlock Text="Shift Shift" FontFamily="Consolas" FontSize="13" /></Border>
-                                <TextBlock Text="Double tap" FontSize="11" HorizontalAlignment="Center"
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="F9" FontFamily="Consolas" FontSize="13" /></Border>
+                                <TextBlock Text="Function key" FontSize="11" HorizontalAlignment="Center"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </RadioButton>
