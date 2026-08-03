@@ -70,11 +70,6 @@ Import-Certificate -FilePath "$env:TEMP\s3w-dev.cer" -CertStoreLocation Cert:\Lo
 Remove both afterwards — a machine-wide trusted root means anything signed with that key is trusted by
 this PC, and the Store channel never needs it (the Store re-signs the package).
 
-**Sideload testing removes the MSI install.** The MSI-installed copy of Switcher3way has been
-uninstalled twice while testing packages on the same machine (Application log, `MsiInstaller` event
-1034, "Windows Installer removed the product"). Expect to reinstall the MSI afterwards, and don't test
-packages on a machine whose MSI install you still need.
-
 **Only one of the two can run.** The single-instance mutex is shared, and both flavours read the same
 `%APPDATA%\Switcher3way` — the packaged app's data is *not* redirected to `LocalCache`. Whichever
 starts first wins; stop one before launching the other.
