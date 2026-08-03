@@ -4,12 +4,25 @@ Switcher3way for Windows ships through **two channels**, built from the same pro
 
 | Channel | Build | Artifact | Signing | Updates |
 |---|---|---|---|---|
-| **Microsoft Store** | `build-msix.ps1` (`-p:Packaged=true`) | MSIX, ~12 MB | the **Store signs it** — no certificate needed | the Store |
+| **Microsoft Store** | `build-msix.ps1` (`-p:Packaged=true`) | MSIX, ~45 MB | the **Store signs it** — no certificate needed | the Store |
 | **Direct download** | `build-msi.ps1` | MSI, ~35 MB | unsigned → SmartScreen click-through | the in-app updater |
 
 The app detects which flavour it is at runtime (`PackageInfo.IsPackaged`) and adapts: packaged
 builds never self-update (Store policy) and use the package **StartupTask** for "start with
 Windows" instead of a Startup-folder shortcut.
+
+**Both packages bundle .NET.** MSIX declares a framework dependency on the Windows App Runtime, which
+the Store resolves automatically, but there is no equivalent for the .NET runtime — a
+framework-dependent package fails to launch on a PC without .NET 8, which would defeat the point of
+the Store channel. `build-msix.ps1` therefore builds `-p:SelfContained=true` and refuses to finish if
+.NET is missing from the package. That is why the MSIX is ~45 MB rather than the ~12 MB an earlier
+framework-dependent build measured.
+
+`build-msix.ps1` also copies each package to `windows/dist/` as
+`Switcher3way-<version>-x64-{store,sideload}.msix` and prints its Publisher and signing state. Both
+modes write the same `AppPackages` path, so without this a Store build silently overwrites a
+dev-signed sideload package — and a dev-signed package is rejected on upload. The script hard-fails a
+Store build whose Publisher is not the Partner Center one.
 
 ## Microsoft Store identity
 
