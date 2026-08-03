@@ -82,11 +82,24 @@ internal sealed class UpdateChecker
                 if (info is null || !IsNewer(info.Version, current))
                 {
                     Diagnostics.Log($"update: up to date (current {current}, latest {info?.Version ?? "none"})");
+                    // A previous attempt evidently succeeded (or is irrelevant now) — forget it.
+                    if (_settings.LastUpdateAttemptVersion is not null)
+                    {
+                        _settings.LastUpdateAttemptVersion = null;
+                        _settings.Save();
+                    }
                     if (interactive) Post(() => ShowUpToDate(current));
                 }
                 else if (!interactive && _settings.SkippedVersion == info.Version)
                 {
                     Diagnostics.Log($"update: {info.Version} available but skipped by user");
+                }
+                else if (!interactive && _settings.LastUpdateAttemptVersion == info.Version)
+                {
+                    // We already installed this once and are still on the old version, so the install
+                    // did not take (declined UAC, failed msiexec). Don't loop; a manual check re-offers.
+                    Diagnostics.Log($"update: {info.Version} was already attempted and did not take effect — " +
+                                    "not re-offering automatically (use Check for updates to retry)");
                 }
                 else
                 {
@@ -130,6 +143,11 @@ internal sealed class UpdateChecker
         {
             try
             {
+                // Remember the attempt before handing off: if the install doesn't take (declined UAC,
+                // msiexec failure) the relaunched app must not offer the same version again forever.
+                _settings.LastUpdateAttemptVersion = info.Version;
+                _settings.Save();
+
                 await UpdateInstaller.InstallAsync(info);
                 Diagnostics.Log($"update: installing {info.Version}, relaunching");
                 Post(_quit); // the relauncher waits for us to exit, runs the MSI, then restarts the app
