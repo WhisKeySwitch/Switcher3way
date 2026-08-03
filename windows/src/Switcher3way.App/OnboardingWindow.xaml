@@ -11,7 +11,9 @@
                 <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="4" />
-                <Setter Property="Padding" Value="12,4" />
+                <!-- 9px sides, not 12: with the radio indicator eating into a third of a 560px window,
+                     12 clipped the longest keycap ("Pause/Break") to "Pause/Brea". -->
+                <Setter Property="Padding" Value="9,4" />
             </Style>
         </Grid.Resources>
 
@@ -79,11 +81,12 @@
                     <TextBlock FontSize="13" TextWrapping="Wrap"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                Text="Tap it to convert the last word or the selection. Tap it again to undo." />
-                    <Grid ColumnSpacing="8" ColumnDefinitions="*,*,*">
+                    <!-- The middle column carries the longest keycap, so it gets the extra room. -->
+                    <Grid ColumnSpacing="8" ColumnDefinitions="*,1.2*,*">
                         <RadioButton x:Name="TrigCtrlCtrl" Grid.Column="0" GroupName="trig" IsChecked="True"
                                      Checked="Trigger_Checked" Tag="ctrlctrl" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
-                                <Border Style="{StaticResource Keycap}"><TextBlock Text="Ctrl Ctrl" FontFamily="Consolas" FontSize="13" /></Border>
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="Ctrl Ctrl" FontFamily="Consolas" FontSize="12" /></Border>
                                 <TextBlock Text="Recommended" FontSize="11" HorizontalAlignment="Center"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
@@ -91,7 +94,7 @@
                         <RadioButton x:Name="TrigPause" Grid.Column="1" GroupName="trig"
                                      Checked="Trigger_Checked" Tag="pause" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
-                                <Border Style="{StaticResource Keycap}"><TextBlock Text="Pause/Break" FontFamily="Consolas" FontSize="13" /></Border>
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="Pause/Break" FontFamily="Consolas" FontSize="12" /></Border>
                                 <TextBlock Text="Dedicated key" FontSize="11" HorizontalAlignment="Center"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
@@ -99,7 +102,7 @@
                         <RadioButton x:Name="TrigF9" Grid.Column="2" GroupName="trig"
                                      Checked="Trigger_Checked" Tag="f9" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
-                                <Border Style="{StaticResource Keycap}"><TextBlock Text="F9" FontFamily="Consolas" FontSize="13" /></Border>
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="F9" FontFamily="Consolas" FontSize="12" /></Border>
                                 <TextBlock Text="Function key" FontSize="11" HorizontalAlignment="Center"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
