@@ -11,6 +11,7 @@ namespace Switcher3way.App;
 public partial class App : Application
 {
     private Tray? _tray;
+    private Window? _keepAlive;
 
     public App() => this.InitializeComponent();
 
@@ -22,6 +23,11 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += (_, e) => { Log("Task: " + e.Exception); e.SetObserved(); };
         try
         {
+            // WinUI ends the message loop once the last window closes, which for a tray-first app means
+            // the process dies the moment the user closes Settings — or, on a fresh install, the moment
+            // they press Finish in the welcome flow. This window is never activated, so it never shows;
+            // it exists only to keep the loop running. "Quit" calls Application.Exit(), which ignores it.
+            _keepAlive = new Window();
             _tray = new Tray();
             // Diagnostic hook: `Switcher3way.exe diagui` exercises the XAML surfaces at startup so a
             // shipped build that can't open windows reports why, instead of just looking half-dead.
