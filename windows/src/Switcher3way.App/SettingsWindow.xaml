@@ -278,7 +278,7 @@
                                TextWrapping="Wrap" />
                     <TextBlock x:Name="AboutVersion" FontSize="12"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="MIT License · a fork of RuSwitcher, generalized to N-way."
+                    <TextBlock Text="© 2026 IronMade · MIT License · a fork of RuSwitcher, generalized to N-way."
                                FontSize="12" TextWrapping="Wrap"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <StackPanel Orientation="Horizontal" Spacing="4" Margin="-12,0,0,0">
