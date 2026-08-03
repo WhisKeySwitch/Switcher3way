@@ -29,6 +29,10 @@
        PackageInfo.IsPackaged detects which one is running, so the updater and "start with
        Windows" behave correctly in each. -->
   <PropertyGroup Condition="'$(Packaged)' == 'true'">
+    <!-- Lets the code compile out what a Store build must not contain — process launching, the MSI
+         self-updater — rather than only skipping it at runtime. The App Certification Kit reads the
+         binary, so unreachable code still fails its "Blocked executables" test. -->
+    <DefineConstants>$(DefineConstants);PACKAGED</DefineConstants>
     <EnableMsixTooling>true</EnableMsixTooling>
     <AppxPackageSigningEnabled Condition="'$(AppxPackageSigningEnabled)' == ''">false</AppxPackageSigningEnabled>
     <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
@@ -43,6 +47,15 @@
       <SubType>Designer</SubType>
     </AppxManifest>
     <Content Include="Images\**\*.png" />
+  </ItemGroup>
+
+  <!-- One updater implementation per flavour: the MSI self-updater for direct downloads, a throwing
+       stub for the Store. See UpdateInstaller.Store.cs for why this is file-level rather than #if. -->
+  <ItemGroup Condition="'$(Packaged)' == 'true'">
+    <Compile Remove="UpdateInstaller.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Packaged)' != 'true'">
+    <Compile Remove="UpdateInstaller.Store.cs" />
   </ItemGroup>
 
   <ItemGroup>

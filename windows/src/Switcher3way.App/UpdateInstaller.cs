@@ -13,6 +13,12 @@ namespace Switcher3way.App;
 /// Note: the MSI is not code-signed yet, so integrity rests on HTTPS + the published SHA-256 —
 /// there is no signature-equality gate like the macOS installer has. Add an Authenticode check
 /// here once a signing certificate is in place.
+///
+/// <b>Unpackaged builds only.</b> The csproj swaps this file out for <c>UpdateInstaller.Store.cs</c>
+/// when <c>Packaged=true</c>, so a Store build's binary contains no reference to powershell.exe or
+/// msiexec — the App Certification Kit reads the binary, and unreachable code still fails its
+/// "Blocked executables" test. (A <c>#if</c> can't do the job here: in a skipped region the C# lexer
+/// scans every line for directives, and the relauncher script's `#` comments read as malformed ones.)
 /// </summary>
 internal static class UpdateInstaller
 {
