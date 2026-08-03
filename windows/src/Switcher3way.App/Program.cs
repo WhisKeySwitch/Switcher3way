@@ -44,6 +44,7 @@ internal static class Program
                 System.Threading.SynchronizationContext.SetSynchronizationContext(ctx);
                 _ = new App();
             });
+            Diagnostics.Log("main: Application.Start returned — the message loop ended");
         }
         finally
         {

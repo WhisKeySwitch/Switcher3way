@@ -87,7 +87,9 @@ internal sealed class Tray : IDisposable
         }
         catch (Exception ex)
         {
-            Diagnostics.Log("tray flyout failed, using native menu: " + ex);
+            // Also write ungated: if XAML window creation is broken, the debug log may not be usable
+            // either, and this is exactly the failure we need to see in a shipped build.
+            Diagnostics.LogAlways("tray flyout failed, using native menu: " + ex);
             _flyout = null;
             return false;
         }
@@ -152,7 +154,7 @@ internal sealed class Tray : IDisposable
         }
         catch (Exception ex)
         {
-            Diagnostics.Log("settings open failed: " + ex);
+            Diagnostics.LogAlways("settings open failed: " + ex);
         }
     }
 
