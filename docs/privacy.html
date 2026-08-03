@@ -28,7 +28,7 @@
 <body>
 <div class="wrap">
   <h1>Privacy Policy</h1>
-  <p class="lead">Switcher3way for Windows · last updated 2 August 2026</p>
+  <p class="lead">Switcher3way for Windows · last updated 3 August 2026</p>
 
   <div class="box">
     <p><strong>Switcher3way does not collect, store, or transmit anything you type.</strong> All
@@ -41,6 +41,14 @@
   are held in memory only, and are discarded as soon as the word ends, you move the caret, click, or
   switch applications. No keystroke history is kept, no log of typed text is produced, and nothing is
   uploaded.</p>
+
+  <h2>The clipboard</h2>
+  <p>When you press the trigger key, Switcher3way checks whether you have text selected — the only way
+  Windows offers to read a selection from another application is to ask it to copy. So the app sends a
+  <code>Ctrl+C</code>, reads what arrived (at most 200 characters), and <strong>puts your previous
+  clipboard contents back</strong>. This happens only at the moment you press the trigger, never while
+  you type, and the text is used solely to work out which layout it belongs to. It is not stored or
+  sent anywhere.</p>
 
   <h2>Places the app deliberately does not look</h2>
   <ul>
