@@ -8,7 +8,11 @@ namespace Switcher3way.App;
 /// build). The two differ in ways the app must respect:
 ///   • packaged apps must not update themselves — the Store does that, and self-updating breaks policy;
 ///   • "start with Windows" uses the package's StartupTask instead of a Startup-folder shortcut;
-///   • settings live in the package's redirected app data.
+///   • the bootstrapper API must not be called — the runtime comes from the framework dependency.
+///
+/// Settings are NOT redirected: a full-trust packaged build reads and writes the same
+/// <c>%APPDATA%\Switcher3way</c> as the MSI build (verified on Windows 11 26200), so switching between
+/// the two channels keeps the user's settings. Don't rely on per-package isolation here.
 /// </summary>
 internal static class PackageInfo
 {

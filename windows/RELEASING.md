@@ -52,6 +52,33 @@ pwsh windows/build-msix.ps1                        # package for Partner Center
 pwsh windows/build-msix.ps1 -Sideload -Sign -Certify   # local install test + WACK (run elevated)
 ```
 
+### Sideload testing: what bites
+
+**Trusting the dev certificate takes two stores.** `Add-AppxPackage` is satisfied by the certificate in
+`LocalMachine\TrustedPeople`, but double-clicking the `.msix` (App Installer) also wants the chain to
+end at a trusted root and fails with **`0x800B010A`** — "the publisher certificate could not be
+verified" — until the same self-signed certificate is *also* in `LocalMachine\Root`:
+
+```powershell
+$c = Get-ChildItem Cert:\CurrentUser\My | Where-Object Thumbprint -eq AF3E5CA81DA3A215225702AD60AD34BA1FB5E060
+Export-Certificate -Cert $c -FilePath "$env:TEMP\s3w-dev.cer"
+# elevated:
+Import-Certificate -FilePath "$env:TEMP\s3w-dev.cer" -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+Import-Certificate -FilePath "$env:TEMP\s3w-dev.cer" -CertStoreLocation Cert:\LocalMachine\Root
+```
+
+Remove both afterwards — a machine-wide trusted root means anything signed with that key is trusted by
+this PC, and the Store channel never needs it (the Store re-signs the package).
+
+**Sideload testing removes the MSI install.** The MSI-installed copy of Switcher3way has been
+uninstalled twice while testing packages on the same machine (Application log, `MsiInstaller` event
+1034, "Windows Installer removed the product"). Expect to reinstall the MSI afterwards, and don't test
+packages on a machine whose MSI install you still need.
+
+**Only one of the two can run.** The single-instance mutex is shared, and both flavours read the same
+`%APPDATA%\Switcher3way` — the packaged app's data is *not* redirected to `LocalCache`. Whichever
+starts first wins; stop one before launching the other.
+
 ### Submission pack (paste into Partner Center)
 
 **Privacy policy URL** — required, because a keyboard hook can access personal information:
