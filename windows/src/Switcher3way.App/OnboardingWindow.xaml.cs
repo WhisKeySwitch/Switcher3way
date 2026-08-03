@@ -47,12 +47,37 @@ public sealed partial class OnboardingWindow : Window
         var presenter = OverlappedPresenter.CreateForDialog();
         presenter.IsResizable = false;
         AppWindow.SetPresenter(presenter);
-        AppWindow.Resize(new SizeInt32(560, 620));
+        // 700, not 620: Ukrainian and Russian run noticeably longer than English and the step-2 InfoBar
+        // was clipped mid-sentence at the old height.
+        AppWindow.Resize(new SizeInt32(560, 700));
 
         if (Environment.ProcessPath is string exe) AppIcon.Source = AppInfo.Icon(exe);
+        ApplyLanguage();
         BuildLayoutRows();
         UpdateTryLabel();
         ShowStep(1);
+    }
+
+    /// <summary>
+    /// Every string this window shows. It was all hard-coded English until August 2026, so a user who
+    /// had picked Ukrainian or Russian was walked through setup in a language they had not chosen.
+    /// The keycap labels stay literal on purpose — they name physical keys.
+    /// </summary>
+    private void ApplyLanguage()
+    {
+        Title = Loc.T("onboarding.window.title");
+        T_Step1Head.Text = Loc.T("onboarding.step1.headline");
+        T_Step1Body.Text = Loc.T("onboarding.step1.body");
+        T_Step2Title.Text = Loc.T("onboarding.step2.title");
+        T_Step2Body.Text = Loc.T("onboarding.step2.body");
+        I_Step2.Message = Loc.T("onboarding.step2.info");
+        T_Step3Title.Text = Loc.T("onboarding.step3.title");
+        T_Step3Body.Text = Loc.T("onboarding.step3.body");
+        T_TrigRecommended.Text = Loc.T("onboarding.trigger.recommended");
+        T_TrigDedicated.Text = Loc.T("onboarding.trigger.dedicated");
+        T_TrigFunction.Text = Loc.T("onboarding.trigger.function");
+        StartupCheck.Content = Loc.T("settings.startup");
+        BackButton.Content = Loc.T("common.back");
     }
 
     // ---- steps ------------------------------------------------------------------------------
@@ -64,7 +89,7 @@ public sealed partial class OnboardingWindow : Window
         Step3.Visibility = step == 3 ? Visibility.Visible : Visibility.Collapsed;
 
         BackButton.Visibility = step == 1 ? Visibility.Collapsed : Visibility.Visible;
-        NextButton.Content = step switch { 1 => "Get started", 2 => "Next", _ => "Finish" };
+        NextButton.Content = step switch { 1 => Loc.T("common.getStarted"), 2 => Loc.T("common.next"), _ => Loc.T("common.finish") };
 
         var on = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
         var off = new SolidColorBrush(Colors.Gray) { Opacity = 0.45 };
@@ -110,7 +135,7 @@ public sealed partial class OnboardingWindow : Window
                 Name = LayoutStatus.LangName(lang),
                 Mechanical = lang switch { "en" => "QWERTY", "uk" or "ru" or "be" => "ЙЦУКЕН", _ => "" },
                 Flag = FlagIcon.Image(lang),
-                PillText = ready ? "Dictionary ready" : "No dictionary — skipped",
+                PillText = Loc.T(ready ? "onboarding.dict.ready" : "onboarding.dict.missing"),
                 PillBackground = ready ? success : caution,
                 PillForeground = ready ? successText : cautionText,
             });
@@ -143,8 +168,8 @@ public sealed partial class OnboardingWindow : Window
     private void UpdateTryLabel()
     {
         var (vk, dbl) = SelectedTrigger();
-        var label = (vk, dbl) switch { (0x13, _) => "Pause/Break", (0x78, _) => "F9", _ => "Ctrl twice" };
-        TryLabel.Text = $"Try it — type a word in the wrong layout, then tap {label}";
+        var label = (vk, dbl) switch { (0x13, _) => "Pause/Break", (0x78, _) => "F9", _ => Loc.T("onboarding.try.ctrlTwice") };
+        TryLabel.Text = Loc.Tf("onboarding.try", label);
     }
 
     private void TryBox_TextChanged(object s, TextChangedEventArgs e) => Evaluate();
@@ -175,8 +200,8 @@ public sealed partial class OnboardingWindow : Window
             var plan = _resolver.ManualPlan(keys, capsLock: false, preferredAmbiguityLang: _s.AmbiguousLang);
             var best = plan?.Candidates.FirstOrDefault();
             TryResult.Text = best is null
-                ? "That already looks right — nothing to convert."
-                : $"Nice — that would become {best.Converted}";
+                ? Loc.T("onboarding.try.none")
+                : Loc.Tf("onboarding.try.ok", best.Converted);
         }
         catch (Exception ex)
         {

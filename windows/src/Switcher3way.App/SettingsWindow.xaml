@@ -3,7 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:app="using:Switcher3way.App"
-    Title="Switcher3way — Settings">
+    Title="Switcher3way">
 
     <Grid RowDefinitions="Auto,*,Auto" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.Resources>
@@ -83,7 +83,7 @@
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                 <StackPanel Spacing="2">
                                     <TextBlock x:Name="T_Enable" Text="{app:Loc Key=settings.autoSwitch}" />
-                                    <TextBlock Text="Watch what you type and fix the layout when a word is clearly in the wrong one"
+                                    <TextBlock x:Name="D_Enable"
                                                FontSize="12" TextWrapping="Wrap"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
@@ -94,7 +94,7 @@
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                 <StackPanel Spacing="2">
                                     <TextBlock x:Name="T_PerApp" Text="{app:Loc Key=settings.perAppLayout}" />
-                                    <TextBlock Text="Restore each app's last layout when you switch back to it"
+                                    <TextBlock x:Name="D_PerApp"
                                                FontSize="12" TextWrapping="Wrap"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
@@ -104,8 +104,8 @@
                         <Border Style="{StaticResource Card}">
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                 <StackPanel Spacing="2">
-                                    <TextBlock Text="Start with Windows" />
-                                    <TextBlock Text="Switcher3way runs in the notification area"
+                                    <TextBlock x:Name="T_Startup" />
+                                    <TextBlock x:Name="D_Startup"
                                                FontSize="12" TextWrapping="Wrap"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
@@ -114,13 +114,13 @@
                         </Border>
                     </StackPanel>
 
-                    <TextBlock Text="Trigger" FontWeight="SemiBold" Margin="2,4,0,0" />
+                    <TextBlock x:Name="H_Trigger" FontWeight="SemiBold" Margin="2,4,0,0" />
                     <StackPanel Spacing="3">
                         <Border Style="{StaticResource Card}">
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                 <StackPanel Spacing="2">
                                     <TextBlock x:Name="T_Trigger" Text="{app:Loc Key=settings.trigger}" />
-                                    <TextBlock Text="Converts the last word or the selection. Tap again to undo."
+                                    <TextBlock x:Name="D_Trigger"
                                                FontSize="12" TextWrapping="Wrap"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
@@ -132,7 +132,7 @@
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                 <StackPanel Spacing="2">
                                     <TextBlock x:Name="T_Language" Text="{app:Loc Key=settings.language}" />
-                                    <TextBlock Text="16 languages available" FontSize="12"
+                                    <TextBlock x:Name="D_Language" FontSize="12"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
                                 <ComboBox x:Name="LanguageCombo" Grid.Column="1" MinWidth="200"
@@ -149,7 +149,7 @@
                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                 <StackPanel Spacing="2">
                                     <TextBlock x:Name="T_AutoFix" Text="{app:Loc Key=settings.autofix.title}" />
-                                    <TextBlock Text="Only for finished words that pass their language's dictionary"
+                                    <TextBlock x:Name="D_AutoFix"
                                                FontSize="12" TextWrapping="Wrap"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
@@ -173,7 +173,7 @@
                     <StackPanel Spacing="8">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <TextBlock x:Name="T_Exceptions" Text="{app:Loc Key=settings.group.exceptions}" FontWeight="SemiBold" />
-                            <TextBlock Text="Where auto-fix stays off, and words to never or always convert"
+                            <TextBlock x:Name="D_Exceptions"
                                        FontSize="12" VerticalAlignment="Center"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
@@ -200,13 +200,13 @@
                                         <!-- TextBlock has no Background in WinUI — headers are wrapped. -->
                                         <Border x:Name="ProtectedHeader" Padding="12,8"
                                                 Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
-                                            <TextBlock FontSize="12" Text="Always off — password managers, not removable"
+                                            <TextBlock x:Name="T_ProtectedHeader" FontSize="12"
                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </Border>
                                         <ItemsControl x:Name="ProtectedList" ItemTemplate="{StaticResource RowTemplate}" />
                                         <Border x:Name="UserHeader" Padding="12,8"
                                                 Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
-                                            <TextBlock FontSize="12" Text="Added by you"
+                                            <TextBlock x:Name="T_UserHeader" FontSize="12"
                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </Border>
                                         <ItemsControl x:Name="UserList" ItemTemplate="{StaticResource RowTemplate}" />
@@ -219,13 +219,13 @@
                                 <!-- Footer: add app, or add word -->
                                 <Grid Grid.Row="2" Padding="12,10" ColumnSpacing="8" ColumnDefinitions="Auto,*"
                                       BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-                                    <Button x:Name="AddAppButton" Content="+ Add app…" Style="{StaticResource AccentButtonStyle}"
+                                    <Button x:Name="AddAppButton" Style="{StaticResource AccentButtonStyle}"
                                             Click="AddApp_Click" />
                                     <TextBlock x:Name="AddAppHint" Grid.Column="1" VerticalAlignment="Center" FontSize="12"
-                                               Text="Pick from running apps"
+                                               
                                                Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                                     <TextBox x:Name="AddWordBox" Grid.Column="0" Width="280" Visibility="Collapsed"
-                                             PlaceholderText="Add a word, then click Add" KeyDown="AddWordBox_KeyDown" />
+                                              KeyDown="AddWordBox_KeyDown" />
                                     <Button x:Name="AddWordButton" Grid.Column="1" Content="{app:Loc Key=common.add}" Visibility="Collapsed"
                                             HorizontalAlignment="Left" Click="AddWord_Click" />
                                 </Grid>
@@ -239,7 +239,7 @@
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Spacing="2">
                                 <TextBlock x:Name="T_Updates" Text="{app:Loc Key=settings.checkUpdates}" />
-                                <TextBlock Text="Looks for new Windows builds once a day"
+                                <TextBlock x:Name="D_Updates"
                                            FontSize="12" TextWrapping="Wrap"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
@@ -250,7 +250,7 @@
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Spacing="2">
                                 <TextBlock x:Name="T_Debug" Text="{app:Loc Key=settings.debugLog}" />
-                                <TextBlock Text="Records what was detected and converted, for troubleshooting"
+                                <TextBlock x:Name="D_Debug"
                                            FontSize="12" TextWrapping="Wrap"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
@@ -260,7 +260,7 @@
                     <Border Style="{StaticResource Card}">
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Spacing="2">
-                                <TextBlock Text="Log file" />
+                                <TextBlock x:Name="T_LogFile" />
                                 <TextBlock x:Name="LogPathText" FontSize="12" IsTextSelectionEnabled="True"
                                            FontFamily="Consolas" TextWrapping="Wrap"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -278,12 +278,12 @@
                                TextWrapping="Wrap" />
                     <TextBlock x:Name="AboutVersion" FontSize="12"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="© 2026 IronMade · MIT License · a fork of RuSwitcher, generalized to N-way."
+                    <TextBlock x:Name="T_Copyright"
                                FontSize="12" TextWrapping="Wrap"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <StackPanel Orientation="Horizontal" Spacing="4" Margin="-12,0,0,0">
-                        <HyperlinkButton Content="Website" NavigateUri="https://whiskeyswitch.github.io/Switcher3way/" />
-                        <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/WhisKeySwitch/Switcher3way" />
+                        <HyperlinkButton x:Name="L_Website" NavigateUri="https://whiskeyswitch.github.io/Switcher3way/" />
+                        <HyperlinkButton x:Name="L_GitHub" NavigateUri="https://github.com/WhisKeySwitch/Switcher3way" />
                     </StackPanel>
                 </StackPanel>
             </Grid>
@@ -292,9 +292,9 @@
         <Grid Grid.Row="2" Padding="20,12" ColumnDefinitions="*,Auto"
               Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}"
               BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-            <TextBlock Text="Changes apply as you make them" VerticalAlignment="Center"
+            <TextBlock x:Name="T_ApplyNote" VerticalAlignment="Center"
                        FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            <Button Grid.Column="1" Content="Close" Click="Close_Click" MinWidth="90" />
+            <Button x:Name="B_Close" Grid.Column="1" Click="Close_Click" MinWidth="90" />
         </Grid>
     </Grid>
 </Window>
