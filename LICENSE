@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2025 Rashns
+Copyright (c) 2026 IronMade
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,27 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+================================================================================
+THIRD-PARTY NOTICES
+================================================================================
+
+This product includes software from the projects below. The MIT permission
+notice reproduced above applies equally to the MIT-licensed portions listed
+here, and their copyright notices are retained as required.
+
+RuSwitcher (https://github.com/rashn/RuSwitcher)
+Copyright (c) 2025 Rashns
+Licensed under the MIT License.
+Portions of the layout-detection logic derive from this project.
+
+Bundled spelling dictionaries — each ships with its own license text beside its
+data files, and remains under its own terms:
+  * en_US — SCOWL via wooorm/dictionaries — MIT AND BSD
+  * ru    — Lebedev/Klukvin via wooorm/dictionaries — BSD-3-Clause
+  * uk    — LibreOffice uk_UA — MPL 1.1 (retained under MPL; included as data)
+See windows/src/Switcher3way.Dictionaries/DICTIONARIES.md for details.
+
+WeCantSpell.Hunspell — MPL 2.0.
+Microsoft Windows App SDK / WebView2 — Microsoft Software License Terms.

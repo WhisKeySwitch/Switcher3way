@@ -63,6 +63,13 @@
     <Compile Remove="UpdatePromptForm.cs" />
   </ItemGroup>
 
+  <!-- MIT requires the notice to accompany copies of the software, so it ships next to the exe in
+       both flavours (the installer's EULA page only covers the moment of installation, and the Store
+       package has no EULA page at all). -->
+  <ItemGroup>
+    <Content Include="..\..\..\LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- Tray flag images (public-domain flags), embedded and drawn as the layout indicator. -->
   <ItemGroup>
     <EmbeddedResource Include="assets\en.png"><LogicalName>en.png</LogicalName></EmbeddedResource>
