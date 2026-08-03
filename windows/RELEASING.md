@@ -63,7 +63,7 @@ report that nothing launches):
 > To test: add both an English and a Ukrainian (or Russian) keyboard layout in Windows. With the
 > English layout active, open Notepad and type `ghbdsn` followed by a space — the text is replaced
 > with `привіт` and the layout switches. Alternatively select any wrong-layout text and press the
-> trigger key (F9 by default) to convert it; press it again to cycle or undo.
+> trigger key (a double tap of Ctrl by default) to convert it; press it again to cycle or undo.
 >
 > The tray icon's menu provides enable/disable, pause, Settings and Help. The app makes no network
 > connections in this (Store) build.

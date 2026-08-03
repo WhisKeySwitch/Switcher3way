@@ -23,6 +23,14 @@ public partial class App : Application
         try
         {
             _tray = new Tray();
+            // Diagnostic hook: `Switcher3way.exe diagui` exercises the XAML surfaces at startup so a
+            // shipped build that can't open windows reports why, instead of just looking half-dead.
+            if (Environment.GetCommandLineArgs().Any(a => a.Equals("diagui", StringComparison.OrdinalIgnoreCase)))
+            {
+                Diagnostics.LogAlways("diagui: opening Settings…");
+                _tray.OpenSettings();
+                Diagnostics.LogAlways("diagui: done");
+            }
         }
         catch (Exception ex)
         {

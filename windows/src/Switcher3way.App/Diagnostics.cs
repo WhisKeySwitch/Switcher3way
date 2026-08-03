@@ -18,9 +18,21 @@ internal static class Diagnostics
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Switcher3way", "Logs");
     public static string FilePath => Path.Combine(Dir, "switcher3way.log");
 
+    /// <summary>
+    /// Write regardless of the debug-log setting. For failures a user would otherwise never be able
+    /// to report — e.g. a XAML window refusing to open in a shipped build, where the app looks
+    /// half-dead and the opt-in log isn't on.
+    /// </summary>
+    public static void LogAlways(string message) => Write(message);
+
     public static void Log(string message)
     {
         if (_settings is not { DebugLog: true }) return;
+        Write(message);
+    }
+
+    private static void Write(string message)
+    {
         try
         {
             lock (Lock)

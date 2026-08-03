@@ -22,14 +22,14 @@ internal sealed class KeyboardMonitor
     private Native.WinEventProc? _winEventProc;
     private IntPtr _bufferHwnd; // the foreground window the current buffer belongs to
 
-    // Double-tap trigger state (e.g. double Shift).
+    // Double-tap trigger state (e.g. the default double Ctrl).
     private bool _triggerHeld, _otherBetween;
     private long _lastTapMs;
     private const long DoubleTapMs = 350;
 
     /// <summary>A word finished at a boundary: the keys + the boundary char (' ', '\n', '\t').</summary>
     public event Action<IReadOnlyList<TypedKey>, char>? WordCompleted;
-    /// <summary>Manual trigger (F9) pressed.</summary>
+    /// <summary>The manual trigger (whatever key the settings name) was pressed.</summary>
     public event Action? TriggerPressed;
     /// <summary>Any real keystroke (not the trigger) — used to reset an in-progress manual cycle.</summary>
     public event Action? Typed;

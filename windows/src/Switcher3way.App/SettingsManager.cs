@@ -33,10 +33,14 @@ public sealed class SettingsManager
     public string InterfaceLanguage { get; set; } = "";
     /// <summary>First-run setup finished — the welcome flow is shown only until this is set.</summary>
     public bool HasCompletedOnboarding { get; set; }
-    /// <summary>Virtual-key code of the manual-conversion trigger (default F9 = 0x78).</summary>
-    public int TriggerKey { get; set; } = 0x78;
-    /// <summary>If true, trigger on a quick DOUBLE tap of <see cref="TriggerKey"/> (e.g. double Shift).</summary>
-    public bool TriggerDoubleTap { get; set; }
+    /// <summary>
+    /// Virtual-key code of the manual-conversion trigger. Defaults to Ctrl (0x11) as a double tap —
+    /// it needs no function key and is comfortable on laptop keyboards. Existing installs keep
+    /// whatever they already have; this only sets what a fresh install starts with.
+    /// </summary>
+    public int TriggerKey { get; set; } = 0x11;
+    /// <summary>If true, trigger on a quick DOUBLE tap of <see cref="TriggerKey"/> (e.g. double Ctrl).</summary>
+    public bool TriggerDoubleTap { get; set; } = true;
     public DateTime? PausedUntil { get; set; }
 
     /// <summary>Apps (exe names) where auto-conversion is suppressed — terminals, password managers, RDP.</summary>

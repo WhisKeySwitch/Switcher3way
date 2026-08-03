@@ -16,7 +16,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>Switcher3way.App</RootNamespace>
     <AssemblyName>Switcher3way</AssemblyName>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <ApplicationIcon>Switcher3way.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Custom entry point (mutex + selftest) instead of the generated WinUI Main. -->
@@ -62,6 +62,24 @@
     <Compile Remove="SettingsForm.cs" />
     <Compile Remove="UpdatePromptForm.cs" />
   </ItemGroup>
+
+  <!-- `dotnet publish` does NOT carry the compiled XAML (the .xbf files and resources.pri) into the
+       publish folder for an unpackaged WinUI app, even though both sit in $(OutDir). The app then
+       starts, shows its Win32 tray icon, and throws XamlParseException the moment any window is
+       created — so an installed build looks half-dead: native fallback menu, Settings does nothing,
+       no onboarding. Copy them explicitly, and fail the build if they are missing. -->
+  <Target Name="PublishXamlResources" AfterTargets="Publish">
+    <ItemGroup>
+      <_XamlResource Include="$(OutDir)*.xbf" />
+      <!-- The PRI is not emitted on every publish path; take it when it exists (it carries resource
+           strings and scale-qualified assets, which our XAML does not currently rely on). -->
+      <_XamlResource Include="$(OutDir)resources.pri" Condition="Exists('$(OutDir)resources.pri')" />
+    </ItemGroup>
+    <Error Condition="'@(_XamlResource)' == ''"
+           Text="No compiled XAML (.xbf) found in $(OutDir) — the published app would fail to open any window." />
+    <Copy SourceFiles="@(_XamlResource)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Published @(_XamlResource->Count()) XAML resource file(s)." />
+  </Target>
 
   <!-- MIT requires the notice to accompany copies of the software, so it ships next to the exe in
        both flavours (the installer's EULA page only covers the moment of installation, and the Store
