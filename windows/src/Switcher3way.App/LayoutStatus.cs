@@ -15,13 +15,14 @@ internal static class LayoutStatus
         catch (CultureNotFoundException) { return "?"; }
     }
 
-    /// <summary>English display name for a 2-letter code (for the status line).</summary>
+    /// <summary>
+    /// Display name for a 2-letter code, in the interface language — it appears in the tray, the
+    /// settings status card and the onboarding layout list, so it cannot stay English-only.
+    /// Unknown codes fall back to the bare code.
+    /// </summary>
     public static string LangName(string two) => two switch
     {
-        "en" => "English",
-        "uk" => "Ukrainian",
-        "ru" => "Russian",
-        "be" => "Belarusian",
+        "en" or "uk" or "ru" or "be" => Loc.T("lang." + two),
         _ => two.ToUpperInvariant(),
     };
 }

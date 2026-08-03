@@ -2,7 +2,7 @@
     x:Class="Switcher3way.App.OnboardingWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Welcome to Switcher3way">
+    Title="Switcher3way">
 
     <Grid RowDefinitions="*,Auto" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.Resources>
@@ -24,10 +24,10 @@
                             HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Image x:Name="AppIcon" Width="76" Height="76" HorizontalAlignment="Center" />
                     <TextBlock FontSize="26" FontWeight="SemiBold" TextAlignment="Center" LineHeight="30"
-                               Text="Type in the wrong layout.&#x0a;Keep typing anyway." />
+                               x:Name="T_Step1Head" />
                     <TextBlock MaxWidth="400" TextAlignment="Center" TextWrapping="Wrap"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Text="Switcher3way notices words typed in the wrong keyboard layout and converts them — across English, Ukrainian and Russian." />
+                               x:Name="T_Step1Body" />
                     <Border HorizontalAlignment="Center" Margin="0,4,0,0" CornerRadius="6" Padding="18,12"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
@@ -44,10 +44,10 @@
 
                 <!-- Step 2: detected layouts -->
                 <StackPanel x:Name="Step2" Padding="32,16,32,26" Spacing="14" Visibility="Collapsed">
-                    <TextBlock Text="Your layouts" FontSize="22" FontWeight="SemiBold" />
+                    <TextBlock x:Name="T_Step2Title" FontSize="22" FontWeight="SemiBold" />
                     <TextBlock FontSize="13" TextWrapping="Wrap"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Text="Nothing to configure — Switcher3way reads every layout Windows has installed and checks each candidate against that language's dictionary." />
+                               x:Name="T_Step2Body" />
                     <ItemsControl x:Name="LayoutList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -71,23 +71,23 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <InfoBar IsOpen="True" IsClosable="False" Severity="Warning"
-                             Message="Words that are valid in more than one of these — там, for example — are converted to your preferred language, and corrected later if the phrase turns out to be the other one." />
+                    <InfoBar x:Name="I_Step2" IsOpen="True" IsClosable="False" Severity="Warning"
+                             />
                 </StackPanel>
 
                 <!-- Step 3: trigger key + live try-it -->
                 <StackPanel x:Name="Step3" Padding="32,16,32,26" Spacing="14" Visibility="Collapsed">
-                    <TextBlock Text="Pick your trigger" FontSize="22" FontWeight="SemiBold" />
+                    <TextBlock x:Name="T_Step3Title" FontSize="22" FontWeight="SemiBold" />
                     <TextBlock FontSize="13" TextWrapping="Wrap"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Text="Tap it to convert the last word or the selection. Tap it again to undo." />
+                               x:Name="T_Step3Body" />
                     <!-- The middle column carries the longest keycap, so it gets the extra room. -->
                     <Grid ColumnSpacing="8" ColumnDefinitions="*,1.2*,*">
                         <RadioButton x:Name="TrigCtrlCtrl" Grid.Column="0" GroupName="trig" IsChecked="True"
                                      Checked="Trigger_Checked" Tag="ctrlctrl" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
                                 <Border Style="{StaticResource Keycap}"><TextBlock Text="Ctrl Ctrl" FontFamily="Consolas" FontSize="12" /></Border>
-                                <TextBlock Text="Recommended" FontSize="11" HorizontalAlignment="Center"
+                                <TextBlock x:Name="T_TrigRecommended" FontSize="11" HorizontalAlignment="Center"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </RadioButton>
@@ -95,7 +95,7 @@
                                      Checked="Trigger_Checked" Tag="pause" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
                                 <Border Style="{StaticResource Keycap}"><TextBlock Text="Pause/Break" FontFamily="Consolas" FontSize="12" /></Border>
-                                <TextBlock Text="Dedicated key" FontSize="11" HorizontalAlignment="Center"
+                                <TextBlock x:Name="T_TrigDedicated" FontSize="11" HorizontalAlignment="Center"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </RadioButton>
@@ -103,7 +103,7 @@
                                      Checked="Trigger_Checked" Tag="f9" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
                                 <Border Style="{StaticResource Keycap}"><TextBlock Text="F9" FontFamily="Consolas" FontSize="12" /></Border>
-                                <TextBlock Text="Function key" FontSize="11" HorizontalAlignment="Center"
+                                <TextBlock x:Name="T_TrigFunction" FontSize="11" HorizontalAlignment="Center"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </RadioButton>
@@ -122,7 +122,7 @@
                         </StackPanel>
                     </Border>
 
-                    <CheckBox x:Name="StartupCheck" Content="Start with Windows" IsChecked="True" />
+                    <CheckBox x:Name="StartupCheck" IsChecked="True" />
                 </StackPanel>
             </Grid>
         </ScrollViewer>
@@ -136,8 +136,8 @@
                 <Ellipse x:Name="Dot2" Width="7" Height="7" />
                 <Ellipse x:Name="Dot3" Width="7" Height="7" />
             </StackPanel>
-            <Button x:Name="BackButton" Grid.Column="2" Content="Back" Click="Back_Click" Visibility="Collapsed" />
-            <Button x:Name="NextButton" Grid.Column="3" Content="Get started" Click="Next_Click"
+            <Button x:Name="BackButton" Grid.Column="2" Click="Back_Click" Visibility="Collapsed" />
+            <Button x:Name="NextButton" Grid.Column="3" Click="Next_Click"
                     Style="{StaticResource AccentButtonStyle}" MinWidth="110" />
         </Grid>
     </Grid>

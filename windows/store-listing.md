@@ -78,7 +78,9 @@ welcome flow appears the first time you run it.
 
 A physical keyboard is required: the app cannot see input from the on-screen touch keyboard.
 
-The interface is available in 16 languages.
+The interface is fully translated into English, Ukrainian and Russian. Thirteen more languages are
+partly translated and fall back to English for anything not yet covered; the language picker says which
+is which.
 
 ### Product features
 
@@ -180,7 +182,8 @@ Switcher3way прибирає цей момент.
 
 Потрібна фізична клавіатура: застосунок не бачить введення з екранної клавіатури.
 
-Інтерфейс доступний 16 мовами.
+Інтерфейс повністю перекладено англійською, українською та російською. Ще тринадцять мов перекладено
+частково — там, де перекладу ще немає, показується англійська; у виборі мови це позначено.
 
 ### Можливості
 
@@ -284,7 +287,8 @@ Switcher3way читает все раскладки, установленные 
 
 Нужна физическая клавиатура: программа не видит ввод с экранной клавиатуры.
 
-Интерфейс доступен на 16 языках.
+Интерфейс полностью переведён на английский, украинский и русский. Ещё тринадцать языков переведены
+частично — там, где перевода ещё нет, показывается английский; в выборе языка это отмечено.
 
 ### Возможности
 
@@ -347,10 +351,13 @@ checking that it converts.
 on-screen keyboard injects — so auto-fix genuinely does nothing on a keyboard-less tablet. Saying so
 here matches the Keyboard/Minimum hardware declaration and heads off a bad review.
 
-**Every claim was checked against the code, not from memory.** Two were wrong on the first draft: the
-pause durations are 30 minutes / 1 hour / until restart (`TrayFlyoutWindow.xaml.cs`), not "ten
-minutes"; and "16 languages" does hold — `Loc.cs` carries be, bg, de, el, en, es, fr, hy, ja, ka, ko,
-pl, pt, ru, uk, zh. Recheck both if the copy is reused for a later version.
+**Every claim needs checking against the code, not memory.** Two were wrong in the first draft. The
+pause durations are 30 minutes / 1 hour / until restart (`TrayFlyoutWindow.xaml.cs`), not "ten minutes".
+And the interface was described as "available in 16 languages" on the strength of `Loc.cs` holding 16
+language blocks — but the WinUI rewrite had added ~50 strings hard-coded in English, so Ukrainian and
+Russian users saw most of Settings and all of onboarding in English. That is now fixed in the app for
+en/uk/ru; the other 13 languages fall back to English for those strings and the picker labels them
+partly translated. Recheck if the copy is reused for a later version.
 
 ---
 

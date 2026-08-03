@@ -24,9 +24,17 @@ public sealed partial class SettingsWindow : Window
     };
 
     private sealed record Lang(string Code, string Name) { public override string ToString() => Name; }
-    private static readonly Lang[] Languages =
+    /// <summary>
+    /// Language names stay in their own language. Anything that isn't fully translated yet is labelled
+    /// as partial rather than quietly serving English — see <see cref="Loc.IsComplete"/>.
+    /// </summary>
+    private static Lang[] BuildLanguages() => LanguageNames
+        .Select(l => Loc.IsComplete(l.Code) ? l : l with { Name = $"{l.Name} — {Loc.T("settings.language.partial")}" })
+        .ToArray();
+
+    private static readonly Lang[] LanguageNames =
     {
-        new("", "System default — English"), new("en", "English"), new("uk", "Українська"),
+        new("", "System default"), new("en", "English"), new("uk", "Українська"),
         new("ru", "Русский"), new("be", "Беларуская"), new("de", "Deutsch"), new("fr", "Français"),
         new("es", "Español"), new("pt", "Português"), new("pl", "Polski"), new("zh", "中文"),
         new("ja", "日本語"), new("ko", "한국어"), new("el", "Ελληνικά"), new("bg", "Български"),
@@ -52,39 +60,38 @@ public sealed partial class SettingsWindow : Window
         foreach (var t in Triggers) TriggerCombo.Items.Add(t);
         TriggerCombo.SelectedItem = Triggers.FirstOrDefault(t => t.Vk == _s.TriggerKey && t.Double == _s.TriggerDoubleTap)
                                     ?? Triggers[0];   // the recommended default
-        foreach (var l in Languages) LanguageCombo.Items.Add(l);
-        LanguageCombo.SelectedItem = Languages.FirstOrDefault(l => l.Code == _s.InterfaceLanguage) ?? Languages[0];
+        RebuildLanguageCombo();
 
         AutoFixToggle.IsOn = _s.AutoFix;
-        foreach (var a in AmbLangs) AmbiguousCombo.Items.Add(a);
-        AmbiguousCombo.SelectedItem = AmbLangs.FirstOrDefault(a => a.Value == _s.AmbiguousLang) ?? AmbLangs[0];
+        RebuildAmbiguousCombo();
         UpdatesToggle.IsOn = _s.CheckForUpdates;
         DebugToggle.IsOn = _s.DebugLog;
         LogPathText.Text = Diagnostics.FilePath;
 
-        var v = typeof(SettingsWindow).Assembly.GetName().Version;
-        AboutVersion.Text = $"Version {v?.Major}.{v?.Minor}.{v?.Build} — Windows preview";
         if (Environment.ProcessPath is string exe) AboutIcon.Source = AppInfo.Icon(exe);
         _loading = false;
 
-        RefreshStatus();
-        RefreshExceptions();
+        // One code path for every string in this window, on first open as well as on a language
+        // change — otherwise the two drift and half the window stays in English.
+        ApplyLanguage();
     }
 
     private sealed record AmbLang(string Value, string Name) { public override string ToString() => Name; }
-    private static readonly AmbLang[] AmbLangs =
+    /// <summary>Built on demand: the language names stay as they are, "Do not convert" is localized.</summary>
+    private static AmbLang[] AmbLangs() => new AmbLang[]
     {
-        new("uk", "Українська"), new("ru", "Русский"), new("off", "Do not convert"),
+        new("uk", "Українська"), new("ru", "Русский"), new("off", Loc.T("settings.autofix.ambiguousLang.off")),
     };
 
     private void RefreshStatus()
     {
         var lang = LayoutStatus.CurrentLang();
         int count = new Win32LayoutCatalog().InstalledLayouts().Count;
-        StatusLine.Text = $"{LayoutStatus.LangName(lang)} — current layout";
-        StatusSub.Text = $"{count} layouts installed";
+        StatusLine.Text = Loc.Tf("settings.status.currentLayout", LayoutStatus.LangName(lang));
+        StatusSub.Text = Loc.Tf("settings.status.layoutsInstalled", count);
         bool on = _s.EffectivelyEnabled;
-        StatusPillText.Text = _s.IsPaused ? "Paused" : (on ? "Active" : "Off");
+        StatusPillText.Text = _s.IsPaused ? Loc.T("settings.status.paused")
+                                          : (on ? Loc.T("settings.status.active") : Loc.T("settings.status.off"));
     }
 
     // ---- immediate-apply handlers ----------------------------------------------------------
@@ -143,8 +150,67 @@ public sealed partial class SettingsWindow : Window
         ExcSearch.PlaceholderText = Loc.T("settings.exceptions.search");
         AddWordButton.Content = Loc.T("common.add");
 
-        // Rebuild the "System default" entry and the rows (their labels are localized too).
+        // Everything below used to be hard-coded English in the XAML, so switching the interface
+        // language left most of this window untranslated.
+        Title = Loc.T("settings.window.title");
+        D_Enable.Text = Loc.T("settings.autoSwitch.desc");
+        D_PerApp.Text = Loc.T("settings.perAppLayout.desc");
+        T_Startup.Text = Loc.T("settings.startup");
+        D_Startup.Text = Loc.T("settings.startup.desc");
+        H_Trigger.Text = Loc.T("settings.group.trigger");
+        D_Trigger.Text = Loc.T("settings.trigger.desc");
+        D_Language.Text = Loc.T("settings.language.desc");
+        D_AutoFix.Text = Loc.T("settings.autofix.desc");
+        D_Exceptions.Text = Loc.T("settings.exceptions.desc");
+        T_ProtectedHeader.Text = Loc.T("settings.exceptions.protectedHeader");
+        T_UserHeader.Text = Loc.T("settings.exceptions.userHeader");
+        AddAppButton.Content = Loc.T("settings.exceptions.addApp");
+        AddAppHint.Text = Loc.T("settings.exceptions.addAppHint");
+        AddWordBox.PlaceholderText = Loc.T("settings.exceptions.addWord");
+        D_Updates.Text = Loc.T("settings.checkUpdates.desc");
+        D_Debug.Text = Loc.T("settings.debugLog.desc");
+        T_LogFile.Text = Loc.T("settings.logFile");
+        T_Copyright.Text = Loc.T("about.copyright");
+        L_Website.Content = Loc.T("about.website");
+        L_GitHub.Content = Loc.T("about.github");
+        T_ApplyNote.Text = Loc.T("settings.applyNote");
+        B_Close.Content = Loc.T("common.close");
+
+        var v = typeof(SettingsWindow).Assembly.GetName().Version;
+        AboutVersion.Text = Loc.Tf("settings.version", $"{v?.Major}.{v?.Minor}.{v?.Build}");
+
+        // The combos hold localized labels of their own; the rows and the status pill too.
+        RebuildAmbiguousCombo();
+        RebuildLanguageCombo();
+        RefreshStatus();
         RefreshExceptions();
+    }
+
+    /// <summary>
+    /// The ambiguity choices are two language names (never translated) plus "Do not convert", which is.
+    /// Rebuilt on a language change so that third entry follows the interface language.
+    /// </summary>
+    private void RebuildAmbiguousCombo()
+    {
+        bool wasLoading = _loading;
+        _loading = true;
+        var current = _s.AmbiguousLang;
+        AmbiguousCombo.Items.Clear();
+        foreach (var a in AmbLangs()) AmbiguousCombo.Items.Add(a);
+        AmbiguousCombo.SelectedItem = AmbLangs().FirstOrDefault(a => a.Value == current) ?? AmbLangs()[0];
+        _loading = wasLoading;
+    }
+
+    /// <summary>Rebuilt on a language change so "System default" and the "partial" tags follow it.</summary>
+    private void RebuildLanguageCombo()
+    {
+        bool wasLoading = _loading;
+        _loading = true;
+        var langs = BuildLanguages();
+        LanguageCombo.Items.Clear();
+        foreach (var l in langs) LanguageCombo.Items.Add(l);
+        LanguageCombo.SelectedItem = langs.FirstOrDefault(l => l.Code == _s.InterfaceLanguage) ?? langs[0];
+        _loading = wasLoading;
     }
 
     private void Tabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
@@ -222,8 +288,8 @@ public sealed partial class SettingsWindow : Window
         {
             EmptyNote.Visibility = Visibility.Visible;
             EmptyNote.Text = apps
-                ? "No apps added yet."
-                : "Nothing here yet — undo a fix with the trigger key to add a word.";
+                ? Loc.T("settings.exceptions.emptyApps")
+                : Loc.T("settings.exceptions.emptyWords");
         }
         else EmptyNote.Visibility = Visibility.Collapsed;
 
@@ -293,26 +359,26 @@ public sealed partial class SettingsWindow : Window
         var dialog = new ContentDialog
         {
             XamlRoot = Content.XamlRoot,
-            Title = "Add an app",
+            Title = Loc.T("settings.exceptions.picker.title"),
             Content = new StackPanel
             {
                 Spacing = 10,
                 Children =
                 {
-                    new TextBlock { Text = "Auto-fix stays off in the apps you pick.", FontSize = 13, Opacity = 0.8 },
+                    new TextBlock { Text = Loc.T("settings.exceptions.picker.note"), FontSize = 13, Opacity = 0.8 },
                     list,
                 },
             },
             PrimaryButtonText = "Add",
-            CloseButtonText = "Cancel",
+            CloseButtonText = Loc.T("common.cancel"),
             DefaultButton = ContentDialogButton.Primary,
         };
         list.SelectionChanged += (_, _) =>
             dialog.PrimaryButtonText = list.SelectedItems.Count switch
             {
                 0 => "Add",
-                1 => "Add 1 app",
-                var n => $"Add {n} apps",
+                1 => Loc.T("settings.exceptions.picker.add1"),
+                var n => Loc.Tf("settings.exceptions.picker.addN", n),
             };
 
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
