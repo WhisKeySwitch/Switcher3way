@@ -4,9 +4,19 @@ Ready to paste into Partner Center → **Store listings**. One listing per langu
 Ukrainian (uk), Russian (ru) — the three languages the app itself converts between, which is also what
 `Package.appxmanifest` declares under `<Resources>`.
 
-Field limits Partner Center enforces: **short description** 1,000 characters (only the first ~100 show
-in search results, so the hook goes first), **description** 10,000, each **product feature** 200,
-**what's new** 1,500, **search terms** 7 terms / 30 characters each / 21 words total.
+## What the form actually asks for
+
+The current Partner Center listing page has these fields, and no separate "short description" — so the
+hook has to be the **first paragraph of Description**, because that is what gets used in previews and
+search results:
+
+| Field | Limit | Notes |
+|---|---|---|
+| **Description** (required) | 10,000 chars | Plain text. Blank lines separate paragraphs; markdown is not rendered, so no backticks or asterisks |
+| **What's new in this version** | 1,500 chars | **Leave blank on the first submission** — the form says so, and there is no previous Store version to compare against. Use the text below from the *second* submission onwards |
+| **Product features** | 20 items, 200 chars each | One box per bullet; "Add more" for each. Displayed as a bulleted list |
+| **Search terms** | 7 terms, 30 chars each, 21 words total | Not shown to customers |
+| **Screenshots** | at least 1, 1366×768 or larger | Each has its own caption field |
 
 Keep the three languages in step — if you edit one, edit all three.
 
@@ -14,13 +24,11 @@ Keep the three languages in step — if you edit one, edit all three.
 
 ## English (en)
 
-### Short description
-
-Typed in the wrong keyboard layout? Switcher3way spots it and fixes it. `ghbdsn` becomes `привіт`, the
-layout switches, and you keep typing. Works across English, Ukrainian and Russian — free, offline and
-open source.
-
 ### Description
+
+Typed in the wrong keyboard layout? Switcher3way spots it and fixes it. Type ghbdsn and it becomes
+привіт, the layout switches, and you carry on. English, Ukrainian and Russian — free, offline and open
+source.
 
 You know the moment: half a sentence in and you realise the layout was wrong. Switcher3way takes that
 moment away.
@@ -44,8 +52,8 @@ last word you typed. Select any text and tap it to convert the selection instead
 nothing typed in between to step through the other layouts, and once more to get your original text
 back. The trigger obeys you even where automatic fixing holds back.
 
-Every fix shows a small chip under the corrected word — ghbdsn → привіт — with a reminder of the undo
-key, so a change is never silent.
+Every fix shows a small chip under the corrected word, with a reminder of the undo key, so a change is
+never silent.
 
 WHERE IT STAYS OUT OF THE WAY
 
@@ -89,6 +97,8 @@ The interface is available in 16 languages.
 
 ### What's new in this version
 
+Leave blank for the first submission. From the next update onwards:
+
 Version 0.2.2
 
 • The trigger key is now a double tap of Ctrl by default. It needs no reach on laptop keyboards and
@@ -112,13 +122,11 @@ russian keyboard
 
 ## Українська (uk)
 
-### Короткий опис
-
-Набрали не в тій розкладці? Switcher3way це помітить і виправить. `ghbdsn` стає `привіт`, розкладка
-перемикається, а ви просто продовжуєте писати. Англійська, українська та російська — безкоштовно,
-без інтернету, з відкритим кодом.
-
 ### Опис
+
+Набрали не в тій розкладці? Switcher3way це помітить і виправить. Наберіть ghbdsn — і це стане привіт,
+розкладка перемкнеться, а ви просто продовжите писати. Англійська, українська та російська —
+безкоштовно, без інтернету, з відкритим кодом.
 
 Знайомий момент: пів речення вже набрано, і аж тоді ви розумієте, що розкладка була не та.
 Switcher3way прибирає цей момент.
@@ -143,8 +151,8 @@ Switcher3way прибирає цей момент.
 щоб повернути початковий текст. Тригер слухається вас навіть там, де автоматичне виправлення
 стримується.
 
-Кожне виправлення показує невелику підказку під словом — ghbdsn → привіт — із нагадуванням про
-клавішу скасування, тож зміна ніколи не буває непомітною.
+Кожне виправлення показує невелику підказку під словом із нагадуванням про клавішу скасування, тож
+зміна ніколи не буває непомітною.
 
 ДЕ ЗАСТОСУНОК НЕ ВТРУЧАЄТЬСЯ
 
@@ -191,6 +199,8 @@ Switcher3way прибирає цей момент.
 
 ### Що нового
 
+Для першої публікації лишіть порожнім. Починаючи з наступного оновлення:
+
 Версія 0.2.2
 
 • Тригером типово став подвійний Ctrl. До нього не треба тягтися на ноутбуці й він ні з чим не
@@ -214,13 +224,11 @@ layout switcher
 
 ## Русский (ru)
 
-### Краткое описание
-
-Набрали не в той раскладке? Switcher3way это заметит и исправит. `ghbdsn` превращается в `привіт`,
-раскладка переключается, а вы просто продолжаете писать. Английский, украинский и русский —
-бесплатно, без интернета, с открытым исходным кодом.
-
 ### Описание
+
+Набрали не в той раскладке? Switcher3way это заметит и исправит. Наберите ghbdsn — и это превратится
+в привіт, раскладка переключится, а вы просто продолжите писать. Английский, украинский и русский —
+бесплатно, без интернета, с открытым исходным кодом.
 
 Знакомый момент: полфразы уже набрано, и только тогда вы понимаете, что раскладка была не та.
 Switcher3way избавляет от этого момента.
@@ -247,8 +255,8 @@ Switcher3way читает все раскладки, установленные 
 чтобы вернуть исходный текст. Триггер слушается вас даже там, где автоматическое исправление
 воздерживается.
 
-Каждое исправление показывает небольшую подсказку под словом — ghbdsn → привіт — с напоминанием о
-клавише отмены, так что изменение никогда не остаётся незамеченным.
+Каждое исправление показывает небольшую подсказку под словом с напоминанием о клавише отмены, так что
+изменение никогда не остаётся незамеченным.
 
 ГДЕ ПРОГРАММА НЕ ВМЕШИВАЕТСЯ
 
@@ -295,6 +303,8 @@ Switcher3way читает все раскладки, установленные 
 
 ### Что нового
 
+Для первой публикации оставьте пустым. Начиная со следующего обновления:
+
 Версия 0.2.2
 
 • Триггером по умолчанию стал двойной Ctrl. К нему не нужно тянуться на ноутбуке, и он ни с чем не
@@ -318,13 +328,20 @@ layout switcher
 
 ## Notes on choices made here
 
+**The hook is the first paragraph of Description, not a separate field.** The listing form has no short
+description, and previews take the opening lines — so the description leads with the problem and the
+example rather than with "Switcher3way is an application that…".
+
+**No markdown, no backticks.** The Description box renders plain text; asterisks and backticks would
+appear literally. Paragraph breaks and the ALL-CAPS section headings are the only structure available.
+
 **No competitor names in the search terms.** "Punto Switcher" and similar would pull real traffic, but
 they are other people's product names and Store policy 10.1.1 rejects listings that use trademarks the
 publisher does not own.
 
-**The examples are honest.** `ghbdsn` → `привіт` is what the app actually produces with an English
-layout active and Ukrainian preferred — it is the same string the self-test prints. Don't swap in an
-example without checking it converts.
+**The examples are honest.** ghbdsn → привіт is what the app actually produces with an English layout
+active and Ukrainian preferred — the same string the self-test prints. Don't swap in an example without
+checking that it converts.
 
 **"A physical keyboard is required" earns its place.** The hook ignores injected input, and Windows'
 on-screen keyboard injects — so auto-fix genuinely does nothing on a keyboard-less tablet. Saying so
