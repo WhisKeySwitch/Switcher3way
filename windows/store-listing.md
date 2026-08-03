@@ -352,5 +352,78 @@ pause durations are 30 minutes / 1 hour / until restart (`TrayFlyoutWindow.xaml.
 minutes"; and "16 languages" does hold — `Loc.cs` carries be, bg, de, el, en, es, fr, hy, ja, ka, ko,
 pl, pt, ru, uk, zh. Recheck both if the copy is reused for a later version.
 
-**Screenshot captions** are a separate field per image. Suggested order, one caption each: the tray
-flyout, Settings → General, Settings → Auto-fix, the exceptions list, the welcome flow.
+---
+
+## Screenshots
+
+At least one is required; up to 10 are allowed. Each must be **1366×768 or larger** — a bare app window
+is too small, so compose each shot on a full 1920×1080 screen rather than cropping tight to the window.
+PNG. Captions are a separate field per image, 200 characters each.
+
+Order matters: the first screenshot is the one shown in search results and at the top of the listing,
+so it must be the app *doing its job*, not a settings page.
+
+### 1. The fix happening — the hero shot
+
+Notepad with `привіт` just written where `ghbdsn` was typed, and the feedback chip visible underneath.
+This is the whole product in one frame.
+
+The chip is only on screen for about 1.9 s (200 ms fade in, 1.6 s hold, 120 ms fade out — `CaretChip.cs`),
+and it cannot be triggered by synthetic input because the hook ignores injected keys. So it has to be
+captured live while someone types: a burst of screen grabs every ~150 ms for a few seconds, then pick
+the frame where the chip is at full opacity.
+
+- **en** — Type a word in the wrong layout and keep going. Switcher3way rewrites it and switches the layout, showing what changed and how to undo it.
+- **uk** — Наберіть слово не в тій розкладці й продовжуйте. Switcher3way перепише його та перемкне розкладку, показавши, що змінилось і як це скасувати.
+- **ru** — Наберите слово не в той раскладке и продолжайте. Switcher3way перепишет его и переключит раскладку, показав, что изменилось и как это отменить.
+
+### 2. The tray flyout
+
+The status header with the current layout, the quick toggles and the Pause submenu.
+
+- **en** — Everything from the notification area: current layout, master switch, Auto-fix, and pause for half an hour, an hour or until restart.
+- **uk** — Усе з області повідомлень: поточна розкладка, головний вимикач, автовиправлення та пауза на півгодини, годину чи до перезапуску.
+- **ru** — Всё из области уведомлений: текущая раскладка, главный выключатель, автоисправление и пауза на полчаса, час или до перезапуска.
+
+### 3. Welcome flow, step 2 — "Your layouts"
+
+The three detected layouts with their "Dictionary ready" pills. This is the three-language claim made
+visible, and it is the clearest single answer to "how is this different from a two-layout switcher".
+
+- **en** — Nothing to configure: Switcher3way reads every layout Windows has installed and checks each one against that language's dictionary.
+- **uk** — Нічого не треба налаштовувати: Switcher3way читає всі встановлені у Windows розкладки й перевіряє кожну словником її мови.
+- **ru** — Ничего не нужно настраивать: Switcher3way читает все установленные в Windows раскладки и проверяет каждую словарём её языка.
+
+### 4. Settings → General
+
+The trigger picker open, showing Double Ctrl selected with Pause/Break and F9 beneath it.
+
+- **en** — Pick the trigger that suits your keyboard. Tap it to convert the last word or a selection; tap again to cycle layouts or undo.
+- **uk** — Виберіть тригер, який пасує вашій клавіатурі. Натисніть, щоб конвертувати останнє слово або виділення; ще раз — щоб перебрати розкладки чи скасувати.
+- **ru** — Выберите триггер под свою клавиатуру. Нажмите, чтобы преобразовать последнее слово или выделение; ещё раз — чтобы перебрать раскладки или отменить.
+
+### 5. Settings → Auto-fix
+
+The preferred-language choice for words that are valid in both Ukrainian and Russian.
+
+- **en** — Words that exist in both Ukrainian and Russian go to the language you prefer — and are corrected later if the rest of the phrase says otherwise.
+- **uk** — Слова, які існують і українською, і російською, ідуть у вибрану вами мову — а згодом виправляються, якщо решта фрази каже інше.
+- **ru** — Слова, которые есть и в украинском, и в русском, идут в выбранный вами язык — а позже исправляются, если остальная фраза говорит другое.
+
+### 6. Settings → the exceptions list
+
+The unified list with a password manager showing its "always off" badge.
+
+- **en** — Password fields are never touched. Password managers and terminals are excluded by default, and you can exclude any app or single word.
+- **uk** — Поля паролів не зачіпаються ніколи. Менеджери паролів і термінали виключені типово, і ви можете виключити будь-який застосунок чи окреме слово.
+- **ru** — Поля паролей не затрагиваются никогда. Менеджеры паролей и терминалы исключены по умолчанию, и вы можете исключить любое приложение или отдельное слово.
+
+### Before you shoot
+
+- **One theme throughout.** The app follows the system theme; a listing that mixes dark and light shots
+  looks careless. Dark reads well for shots 2–6.
+- **Clean the frame.** No repository paths, editor windows, personal file names, chat notifications or
+  taskbar badges — the hero shot in particular wants an empty Notepad on a plain desktop.
+- **Don't crop to the window.** A 560×620 window on its own is under the minimum and will be rejected;
+  leave it on the full screen.
+- **Same layout pair in every shot** (English + Ukrainian, say), so the story stays consistent.
