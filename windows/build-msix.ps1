@@ -36,10 +36,15 @@ $outDir = Join-Path $root "src\Switcher3way.App\AppPackages"
 $mode = if ($Sideload) { "SideloadOnly" } else { "StoreUpload" }
 $signing = if ($Sign) { "true" } else { "false" }
 
+# SelfContained bundles .NET into the package. It is not optional for the Store: MSIX can declare a
+# framework dependency on the Windows App Runtime (and does, below), but there is no equivalent for
+# the .NET runtime — a framework-dependent package simply fails to launch on a PC without .NET 8, and
+# "no prerequisites" is the whole reason the Store build exists. WindowsAppSDKSelfContained stays
+# false so the WinAppSDK keeps coming from its framework package.
 $args = @(
     $proj, "-t:Publish", "-restore",
     "-p:Configuration=Release", "-p:Platform=x64", "-p:RuntimeIdentifier=win-x64",
-    "-p:Packaged=true",
+    "-p:Packaged=true", "-p:SelfContained=true", "-p:WindowsAppSDKSelfContained=false",
     "-p:UapAppxPackageBuildMode=$mode",
     "-p:AppxPackageSigningEnabled=$signing",
     "-p:AppxPackageDir=$outDir\"
@@ -59,8 +64,47 @@ $pkg = Get-ChildItem $outDir -Recurse -Include *.msixupload, *.msix -ErrorAction
        Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if (-not $pkg) { throw "no package produced" }
 
+# Both modes write the same AppPackages path, so a Store build silently overwrites a dev-signed
+# sideload package (and vice versa) — and the two are indistinguishable by name while differing in
+# exactly the way that matters: a dev-signed package has the wrong Publisher and is rejected on
+# upload. Copy each to a name that says which it is, and verify what actually came out.
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip = [System.IO.Compression.ZipFile]::OpenRead($pkg.FullName)
+try {
+    function Read-Entry($name) {
+        $e = $zip.GetEntry($name)
+        if (-not $e) { return $null }
+        $r = New-Object System.IO.StreamReader($e.Open())
+        try { $r.ReadToEnd() } finally { $r.Dispose() }
+    }
+    $publisher   = ([xml](Read-Entry "AppxManifest.xml")).Package.Identity.Publisher
+    $signed      = $null -ne $zip.GetEntry("AppxSignature.p7x")
+    $bundledNet  = $null -ne $zip.GetEntry("System.Private.CoreLib.dll")
+} finally { $zip.Dispose() }
+
+# Without .NET in the package the app cannot start on a PC that has no .NET 8 runtime, which is the
+# one promise the Store build makes. Never let that ship.
+if (-not $bundledNet) { throw "package is framework-dependent on .NET — rebuild with -p:SelfContained=true" }
+if ($Sideload) {
+    if (-not $signed) { Write-Warning "sideload package is unsigned — it cannot be installed locally (use -Sign)" }
+} else {
+    if ($publisher -ne "CN=AF9BB38F-30B9-45AC-B73D-521C0053C310") {
+        throw "Store package has the wrong Publisher ($publisher) — a dev-signed build cannot be uploaded"
+    }
+    if ($signed) { Write-Warning "Store package is signed; Partner Center expects to sign it itself" }
+}
+
+$dist = Join-Path $root "dist"
+New-Item -ItemType Directory -Force -Path $dist | Out-Null
+$version = if ($Version) { $Version } else { "dev" }
+$copy = Join-Path $dist ("Switcher3way-$version-x64-" + $(if ($Sideload) { "sideload" } else { "store" }) + $pkg.Extension)
+Copy-Item $pkg.FullName $copy -Force
+
 Write-Host "`n==> Package ready:" -ForegroundColor Green
-Write-Host ("    {0}  ({1:N1} MB)" -f $pkg.FullName, ($pkg.Length / 1MB))
+Write-Host ("    {0}  ({1:N1} MB)" -f $copy, ((Get-Item $copy).Length / 1MB))
+Write-Host ("    built at {0}" -f $pkg.FullName) -ForegroundColor DarkGray
+Write-Host ("    Publisher: {0}" -f $publisher)
+Write-Host ("    signed: {0}   .NET bundled: {1}" -f $signed, $bundledNet)
 
 if ($Certify) {
     $appcert = "C:\Program Files (x86)\Windows Kits\10\App Certification Kit\appcert.exe"

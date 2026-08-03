@@ -22,3 +22,5 @@ signing/*.pfx
 
 # MSIX build output
 windows/src/Switcher3way.App/AppPackages/
+windows/dist/
+windows/publish/

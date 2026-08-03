@@ -27,7 +27,13 @@ internal static class Program
         // Locate the (framework-dependent) Windows App SDK runtime before any WinUI type loads.
         // Unpackaged builds depend on it being installed; without this check the process would just
         // vanish, which is what happened before the runtime was present on this machine.
-        if (!Bootstrap.TryInitialize(0x00010006, out _)) // 1.6.x
+        //
+        // A PACKAGED build must not do this. The bootstrapper exists to find a runtime for apps with no
+        // package identity; inside MSIX the runtime arrives through the manifest's framework dependency
+        // and the API fails — which made the Store build show "Windows App Runtime 1.6 isn't installed"
+        // and quit, on a machine where it plainly was installed.
+        bool packaged = PackageInfo.IsPackaged;
+        if (!packaged && !Bootstrap.TryInitialize(0x00010006, out _)) // 1.6.x
         {
             MessageBoxW(IntPtr.Zero,
                 "Switcher3way needs the Windows App Runtime 1.6, which isn't installed.\n\n" +
@@ -48,7 +54,7 @@ internal static class Program
         }
         finally
         {
-            Bootstrap.Shutdown();
+            if (!packaged) Bootstrap.Shutdown();
         }
     }
 
