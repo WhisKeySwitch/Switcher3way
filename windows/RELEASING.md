@@ -142,19 +142,38 @@ approve what they can picture.
 > https://github.com/WhisKeySwitch/Switcher3way. Privacy policy:
 > https://whiskeyswitch.github.io/Switcher3way/privacy.html
 
-**Notes for certification** (reviewers must be told it is a tray app with no main window, or they
-report that nothing launches):
+**Notes for certification.** Three things will make a reviewer conclude the app is broken unless they
+are told: it has no main window, it does nothing until a second keyboard layout is installed, and it
+ignores synthetic input, so an automated test harness sees no reaction at all.
 
-> Switcher3way runs in the notification area — it has no main window. On first launch a short
-> welcome flow appears; finish it to reach the tray icon.
+> **No main window.** Switcher3way runs in the notification area. On first launch a short welcome flow
+> appears; finishing it leaves the app in the tray. Windows 11 hides new tray icons by default — if the
+> flag icon is not visible, expand the notification area with the "^" chevron next to the clock. Click
+> the icon for the menu (enable/disable, pause, Settings, Help).
 >
-> To test: add both an English and a Ukrainian (or Russian) keyboard layout in Windows. With the
-> English layout active, open Notepad and type `ghbdsn` followed by a space — the text is replaced
-> with `привіт` and the layout switches. Alternatively select any wrong-layout text and press the
-> trigger key (a double tap of Ctrl by default) to convert it; press it again to cycle or undo.
+> **Set-up needed before it can do anything.** The app converts between the keyboard layouts Windows
+> has installed, so please add a second layout first: Settings → Time & language → Language & region →
+> add **Ukrainian** or **Russian** alongside English. With only one layout installed there is nothing
+> to convert and the app will correctly appear to do nothing.
 >
-> The tray icon's menu provides enable/disable, pause, Settings and Help. The app makes no network
-> connections in this (Store) build.
+> **Please test by typing on a real keyboard.** The app deliberately ignores injected input
+> (`LLKHF_INJECTED`) so that it never reacts to its own corrections — a script, a remote-control tool or
+> the on-screen touch keyboard will produce no response. This is by design, not a fault.
+>
+> **Test — automatic:** with the English layout active, open Notepad and type `ghbdsn` then a space. The
+> text is replaced with `привіт`, the layout switches to Ukrainian, and a small chip appears under the
+> word showing the change and the undo key.
+>
+> **Test — manual trigger:** select any text typed in the wrong layout and tap **Ctrl twice**. It
+> converts in place; tapping again steps through the other layouts and then back to the original. The
+> trigger is configurable in Settings → General.
+>
+> **Other notes.** No account, sign-in or credentials of any kind are required, and there are no
+> purchases. This build makes no network connections. `runFullTrust` is used for a system-wide keyboard
+> hook and `SendInput`; password fields are excluded from processing. x64 only.
+>
+> If you want a record of what the app detected, Settings → Advanced → Debug logging (off by default)
+> writes to `%APPDATA%\Switcher3way\Logs\switcher3way.log`.
 
 **Also needed for the listing:** screenshots (1366×768 or larger) — the tray flyout, the Settings
 window, and the conversion feedback chip are the useful three.
