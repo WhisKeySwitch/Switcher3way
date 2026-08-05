@@ -6,7 +6,6 @@ namespace Switcher3way.App;
 /// <summary>
 /// System-tray presence: a live flag icon plus the context menu (core toggles, pause durations,
 /// settings, quit), backed by <see cref="Win32Tray"/>. Owns the <see cref="Engine"/> and settings.
-/// Replaces the WinForms TrayApp. Help/Updates rejoin the menu as those surfaces are ported.
 /// </summary>
 internal sealed class Tray : IDisposable
 {

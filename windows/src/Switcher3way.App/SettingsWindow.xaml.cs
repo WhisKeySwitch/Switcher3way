@@ -2,6 +2,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Graphics;
 
 namespace Switcher3way.App;
@@ -390,5 +391,70 @@ public sealed partial class SettingsWindow : Window
         }
         Commit();
         RefreshExceptions();
+    }
+
+    // ---- drag-and-drop an .exe (or a shortcut to one) onto the list ------------------------------
+    // The picker only lists *running* apps, so an app the user wants to exclude but isn't using right
+    // now can only be added this way (or by browsing). Accepts .exe directly and resolves .lnk targets.
+
+    private void ExcList_DragOver(object sender, DragEventArgs e)
+    {
+        if (SegIndex != 0 || !e.DataView.Contains(StandardDataFormats.StorageItems)) return;   // apps tab only
+        e.AcceptedOperation = DataPackageOperation.Copy;
+        e.DragUIOverride.Caption = Loc.T("settings.exceptions.dropHint");
+        e.DragUIOverride.IsGlyphVisible = true;
+        e.Handled = true;
+    }
+
+    private async void ExcList_Drop(object sender, DragEventArgs e)
+    {
+        if (SegIndex != 0 || !e.DataView.Contains(StandardDataFormats.StorageItems)) return;   // apps tab only
+        e.Handled = true;
+        try
+        {
+            var items = await e.DataView.GetStorageItemsAsync();
+            int added = 0;
+            foreach (var exe in items.OfType<Windows.Storage.StorageFile>().Select(f => ExeNameFrom(f.Path)))
+            {
+                if (exe is null) continue;
+                if (SettingsManager.IsProtectedApp(exe)) continue;   // password managers stay locked
+                if (_s.DeniedApps.Any(x => string.Equals(x, exe, StringComparison.OrdinalIgnoreCase))) continue;
+                _s.DeniedApps.Add(exe);
+                added++;
+            }
+            if (added == 0) return;
+            Commit();
+            RefreshExceptions();
+        }
+        catch (Exception ex)
+        {
+            Diagnostics.Log("exceptions drop failed: " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// The exe file name to store for a dropped path: the file itself for an .exe, or a shortcut's
+    /// target. Anything else (a document, a folder) returns null and is ignored.
+    /// </summary>
+    private static string? ExeNameFrom(string path)
+    {
+        if (path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            return System.IO.Path.GetFileName(path).ToLowerInvariant();
+
+        if (path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                dynamic shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!)!;
+                string target = shell.CreateShortcut(path).TargetPath;
+                if (target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    return System.IO.Path.GetFileName(target).ToLowerInvariant();
+            }
+            catch (Exception ex)
+            {
+                Diagnostics.Log($"could not resolve shortcut {path}: {ex.Message}");
+            }
+        }
+        return null;
     }
 }

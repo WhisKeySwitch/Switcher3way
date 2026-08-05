@@ -68,14 +68,6 @@
     <ProjectReference Include="..\Switcher3way.Dictionaries\Switcher3way.Dictionaries.csproj" />
   </ItemGroup>
 
-  <!-- WinForms UI still being ported to WinUI (phase 0+): temporarily excluded from the build.
-       Re-added surface by surface — tray, settings, help, update. -->
-  <ItemGroup>
-    <Compile Remove="TrayApp.cs" />
-    <Compile Remove="SettingsForm.cs" />
-    <Compile Remove="UpdatePromptForm.cs" />
-  </ItemGroup>
-
   <!-- `dotnet publish` does NOT carry the compiled XAML (the .xbf files and resources.pri) into the
        publish folder for an unpackaged WinUI app, even though both sit in $(OutDir). The app then
        starts, shows its Win32 tray icon, and throws XamlParseException the moment any window is
