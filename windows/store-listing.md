@@ -17,6 +17,9 @@ search results:
 | **Product features** | 20 items, 200 chars each | One box per bullet; "Add more" for each. Displayed as a bulleted list |
 | **Search terms** | 7 terms, 30 chars each, 21 words total | Not shown to customers |
 | **Screenshots** | at least 1, 1366×768 or larger | Each has its own caption field |
+| **Copyright and trademark info** | 200 chars | Optional, but fill it — see below |
+| **Additional license terms** | 10,000 chars | **Leave blank.** Blank means Microsoft's Standard Application License Terms, which is the normal arrangement for a free app. MIT already reaches the user: `LICENSE` ships inside the package (`Switcher3way.App.csproj` copies it next to the exe), which is what the licence requires. Pasting MIT here would add its warranty disclaimer *on top of* Microsoft's terms and invites questions about which governs |
+| **Developed by** | 255 chars | `IronMade` |
 
 Keep the three languages in step — if you edit one, edit all three.
 
@@ -358,6 +361,21 @@ language blocks — but the WinUI rewrite had added ~50 strings hard-coded in En
 Russian users saw most of Settings and all of onboarding in English. That is now fixed in the app for
 en/uk/ru; the other 13 languages fall back to English for those strings and the picker labels them
 partly translated. Recheck if the copy is reused for a later version.
+
+---
+
+## Copyright and trademark info
+
+One line per listing, 200-character limit. It names the project's own copyright first, then the upstream
+fork and the dictionary licences — the MPL 1.1 Ukrainian dictionary is the one with a real notice
+obligation, and the `LICENSE` shipped in the package carries the full texts.
+
+- **en** — (c) 2026 IronMade. MIT License. A fork of RuSwitcher, (c) 2025 Rashns. Bundled Hunspell dictionaries: en/ru BSD, uk MPL 1.1. Full notices ship with the app.
+- **uk** — (c) 2026 IronMade. Ліцензія MIT. Форк RuSwitcher, (c) 2025 Rashns. Вбудовані словники Hunspell: en/ru BSD, uk MPL 1.1. Повні тексти постачаються із застосунком.
+- **ru** — (c) 2026 IronMade. Лицензия MIT. Форк RuSwitcher, (c) 2025 Rashns. Встроенные словари Hunspell: en/ru BSD, uk MPL 1.1. Полные тексты поставляются с программой.
+
+Use the © character rather than "(c)" if the field accepts it — these are written in ASCII only so they
+survive being copied out of this file.
 
 ---
 
