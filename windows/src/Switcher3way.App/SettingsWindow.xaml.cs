@@ -252,6 +252,10 @@ public sealed partial class SettingsWindow : Window
         _ => _s.DeniedApps,
     };
 
+    /// <summary>Re-read the exception lists — used when something outside this window changes them,
+    /// such as accepting the "never convert this word" offer from a notification.</summary>
+    internal void ReloadExceptions() => RefreshExceptions();
+
     private void RefreshExceptions()
     {
         // Live counts on the segments.

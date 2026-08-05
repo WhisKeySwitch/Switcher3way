@@ -31,11 +31,25 @@ public partial class App : Application
             _tray = new Tray();
             // Diagnostic hook: `Switcher3way.exe diagui` exercises the XAML surfaces at startup so a
             // shipped build that can't open windows reports why, instead of just looking half-dead.
-            if (Environment.GetCommandLineArgs().Any(a => a.Equals("diagui", StringComparison.OrdinalIgnoreCase)))
+            var args2 = Environment.GetCommandLineArgs();
+            if (args2.Any(a => a.Equals("diagui", StringComparison.OrdinalIgnoreCase)))
             {
                 Diagnostics.LogAlways("diagui: opening Settings…");
                 _tray.OpenSettings();
                 Diagnostics.LogAlways("diagui: done");
+            }
+            // The notification paths need a failed rewrite or an undo to happen naturally, neither of
+            // which can be provoked with synthetic input (the hook ignores it). These show them on
+            // demand — separately, because Windows only surfaces one toast at a time and queues the rest.
+            if (args2.Any(a => a.Equals("diagtoast", StringComparison.OrdinalIgnoreCase)))
+            {
+                Diagnostics.LogAlways("diagtoast: error notification…");
+                Toast.ShowError(Loc.T("notify.protected"));
+            }
+            if (args2.Any(a => a.Equals("diagtoastoffer", StringComparison.OrdinalIgnoreCase)))
+            {
+                Diagnostics.LogAlways("diagtoastoffer: remember-word notification…");
+                Toast.OfferNeverConvert("ghbdsn", "привіт");
             }
         }
         catch (Exception ex)

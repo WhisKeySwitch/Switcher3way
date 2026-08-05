@@ -20,10 +20,6 @@ internal static class Program
             return;
         }
 
-        // Single instance — two copies would install two hooks and double-convert.
-        using var mutex = new System.Threading.Mutex(initiallyOwned: true, "Switcher3way.SingleInstance", out bool createdNew);
-        if (!createdNew) return;
-
         // Locate the (framework-dependent) Windows App SDK runtime before any WinUI type loads.
         // Unpackaged builds depend on it being installed; without this check the process would just
         // vanish, which is what happened before the runtime was present on this machine.
@@ -42,6 +38,23 @@ internal static class Program
                 "Switcher3way", MB_ICONERROR);
             return;
         }
+
+        // Single instance — two copies would install two hooks and double-convert.
+        //
+        // This has to be AppInstance rather than a named mutex, because clicking a button on one of our
+        // notifications makes Windows *launch the exe again* to deliver the activation. A mutex made that
+        // second process exit before handing anything over, so the button silently did nothing. Redirecting
+        // the activation to the running instance is what makes it arrive at NotificationInvoked.
+        // AppInstance is a Windows App SDK API, so it must come after the bootstrapper above.
+        var primary = Microsoft.Windows.AppLifecycle.AppInstance.FindOrRegisterForKey("Switcher3way.Main");
+        if (!primary.IsCurrent)
+        {
+            var activation = Microsoft.Windows.AppLifecycle.AppInstance.GetCurrent().GetActivatedEventArgs();
+            primary.RedirectActivationToAsync(activation).AsTask().GetAwaiter().GetResult();
+            if (!packaged) Bootstrap.Shutdown();
+            return;
+        }
+
         try
         {
             Application.Start(p =>
