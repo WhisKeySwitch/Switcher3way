@@ -8,13 +8,17 @@ namespace Switcher3way.App;
 /// Whether the focused control is a password field — auto and manual conversion must never rewrite
 /// in one, including in-browser login fields the denied-apps list can't catch.
 ///
-/// Three checks, in the order of what actually catches what:
-///   1. **UI Automation <c>IsPassword</c>** — the only signal that works for a browser
-///      <c>&lt;input type="password"&gt;</c>. Verified in Chrome on 5 Aug 2026 against a local test page:
-///      `password=True (uia=True es_password=False msaa=False)` on the password input, and `False` on the
-///      plain text field beside it. Run `Switcher3way.exe diagpw` to re-check in any app.
-///   2. a classic Win32 edit control with the <c>ES_PASSWORD</c> style — Win32 dialogs.
-///   3. the MSAA focused object carrying <c>STATE_SYSTEM_PROTECTED</c> — some non-Chromium hosts.
+/// Four checks, in the order of what actually catches what:
+///   1. **UI Automation <c>IsPassword</c>** — a masked browser <c>&lt;input type="password"&gt;</c>.
+///      Verified in Chrome and Edge on 5 Aug 2026 against a local test page: `uia=True` on the password
+///      input, `False` on the plain text field beside it.
+///   2. **UIA name/automation-id says "password"** — the same field while *un-masked*, which `IsPassword`
+///      does not report. See <see cref="UiaLooksLikePasswordField"/>; this is what a real login form with a
+///      show/hide toggle needs.
+///   3. a classic Win32 edit control with the <c>ES_PASSWORD</c> style — Win32 dialogs.
+///   4. the MSAA focused object carrying <c>STATE_SYSTEM_PROTECTED</c> — some non-Chromium hosts.
+///
+/// Run <c>Switcher3way.exe diagpw</c> to see all four for whatever has focus.
 ///
 /// **History worth keeping.** The WinForms build used `System.Windows.Automation.IsPassword` and worked.
 /// Dropping the WPF app model for WinUI took that assembly away, so this class was stubbed to `false`;
@@ -36,7 +40,8 @@ internal static class SecureField
     {
         try
         {
-            if (UiaIsPassword()) return true;               // browsers: the only check that sees them
+            if (UiaIsPassword()) return true;               // browsers: masked password inputs
+            if (UiaLooksLikePasswordField()) return true;   // …and un-masked ones, see below
 
             IntPtr focus = FocusedWindow();
             if (focus == IntPtr.Zero) return false;
@@ -91,6 +96,7 @@ internal static class SecureField
         var cls = new StringBuilder(64);
         GetClassNameW(focus, cls, cls.Capacity);
         bool uia = UiaIsPassword();
+        bool named = UiaLooksLikePasswordField();
         bool style = focus != IntPtr.Zero && HasPasswordStyle(focus);
         bool msaa = focus != IntPtr.Zero && MsaaProtected(focus);
 
@@ -106,9 +112,63 @@ internal static class SecureField
         }
         catch (Exception ex) { uiaElement = "threw: " + ex.Message; }
 
-        return $"password={uia || style || msaa}  (uia={uia} es_password={style} msaa={msaa})  " +
+        return $"password={uia || named || style || msaa}  " +
+               $"(uia={uia} named={named} es_password={style} msaa={msaa})  " +
                $"focus=0x{focus:X} class={cls}  uiaFocused[{uiaElement}]";
     }
+
+    /// <summary>
+    /// A text field that is *labelled* as a password even though it is not currently masked.
+    ///
+    /// UIA's <c>IsPassword</c> reports masking, not intent. Any form with a "show password" toggle turns
+    /// its input into a plain <c>type="text"</c> while revealed, and some forms never use
+    /// <c>type="password"</c> at all and mask in JavaScript. Observed in the wild: a login field whose
+    /// accessible name was <c>"Password Hide password"</c> with <c>IsPassword=false</c>, where conversion
+    /// went ahead and rewrote what the user typed.
+    ///
+    /// So an edit control whose accessible name or automation id says "password" is treated as one. This
+    /// deliberately over-blocks: the cost of a false positive is no auto-fix in a box labelled *password*,
+    /// which is what the user wants there anyway; the cost of a false negative is rewriting a credential.
+    /// </summary>
+    private static bool UiaLooksLikePasswordField()
+    {
+        if (_uiaBroken) return false;
+        try
+        {
+            _uia ??= new Interop.UIAutomationClient.CUIAutomation();
+            var el = _uia.GetFocusedElement();
+            if (el is null) return false;
+            if (el.CurrentControlType != UiaEditControlType) return false;   // only text inputs
+            return LooksLikePassword(el.CurrentName) || LooksLikePassword(el.CurrentAutomationId);
+        }
+        catch (Exception ex)
+        {
+            Diagnostics.Log("secure: UIA name check failed: " + ex.Message);
+            return false;
+        }
+    }
+
+    private const int UiaEditControlType = 50004;   // UIA_EditControlTypeId
+
+    /// <summary>
+    /// Password wording in the languages this app's users are most likely to meet — the interface language
+    /// is irrelevant here, since the label comes from whatever page they are on.
+    /// </summary>
+    private static readonly string[] PasswordWords =
+    {
+        "password", "passwd", "passcode",
+        "пароль",       // ru/uk/be
+        "passwort",     // de
+        "mot de passe", // fr
+        "contraseña",   // es
+        "senha",        // pt
+        "hasło",        // pl
+        "密码", "パスワード", "비밀번호",
+    };
+
+    internal static bool LooksLikePassword(string? label) =>
+        !string.IsNullOrWhiteSpace(label) &&
+        PasswordWords.Any(w => label.Contains(w, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>The focused control of the foreground thread (falls back to the foreground window).</summary>
     private static IntPtr FocusedWindow()
