@@ -432,8 +432,8 @@ The trigger picker open, showing Double Ctrl selected with Pause/Break and F9 be
 The preferred-language choice for words that are valid in both Ukrainian and Russian.
 
 - **en** — Words that exist in both Ukrainian and Russian go to the language you prefer — and are corrected later if the rest of the phrase says otherwise.
-- **uk** — Слова, які існують і українською, і російською, ідуть у вибрану вами мову — а згодом виправляються, якщо решта фрази каже інше.
-- **ru** — Слова, которые есть и в украинском, и в русском, идут в выбранный вами язык — а позже исправляются, если остальная фраза говорит другое.
+- **uk** — Слова, які існують і українською, і російською, конвертуються у задану вами розкладку — а згодом виправляються, якщо решта фрази іншою мовою.
+- **ru** — Слова, которые есть и в украинском, и в русском, конвертируются в выбранную вами раскладку — а позже исправляются, если далее фраза на другом языке.
 
 ### 6. Settings → the exceptions list
 
