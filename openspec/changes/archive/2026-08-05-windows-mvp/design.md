@@ -39,6 +39,13 @@ on Windows `ISpellChecker` (uk/ru language packs are frequently absent). Validat
 quality against the macOS `NSSpellChecker` baseline on a representative word set.
 
 ### M4 — Signing: SignPath Foundation (OSS), sign exe + installer, timestamped
+> **Superseded (5 August 2026).** Never carried out. Distribution went to the **Microsoft Store**, which
+> signs submitted packages, so the reputation problem this decision existed to solve is answered without a
+> certificate of ours — see decision 13 in the archived `2026-08-05-windows-winui3-redesign`. The
+> direct-download MSI ships unsigned with a SmartScreen click-through, and the self-signed identity below
+> is used only to sideload-test MSIX packages locally. The reasoning is kept because it is still the right
+> analysis if the direct-download channel ever needs to stand on its own.
+
 **Choice:** SignPath Foundation free OSS plan — an OV certificate whose private key stays on
 SignPath's HSM; signing happens server-side via the `signpath/github-action-submit-signing-request`
 GitHub Action. Sign **both** the apphost `.exe` and the installer; always RFC-3161 **timestamp**.
