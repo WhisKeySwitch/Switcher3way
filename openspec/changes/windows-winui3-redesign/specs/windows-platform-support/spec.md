@@ -30,7 +30,8 @@ entirely offline for detection, validation and conversion. A packaged build SHAL
 the Store services updates — and SHALL register "start with Windows" through its package startup task
 rather than a startup-folder shortcut. A direct-download build MAY check for and install updates
 itself, and SHALL state plainly what is missing if a runtime it depends on is absent, rather than
-failing silently.
+failing silently. A packaged build SHALL carry every runtime it needs that its manifest cannot declare
+as a dependency, so that installing it from the Store is sufficient to run it.
 
 #### Scenario: Store distribution is signed without a developer certificate
 - **WHEN** the app is submitted to the Microsoft Store
@@ -52,7 +53,53 @@ failing silently.
 - **WHEN** the application performs detection, validation, or conversion
 - **THEN** it SHALL do so without any network access
 
+#### Scenario: A packaged build needs no prerequisite
+- **WHEN** a packaged build is installed from the Store onto a PC with no .NET runtime installed
+- **THEN** the application SHALL start and function, because the package carries the runtime
+
+#### Scenario: An installed build can open its windows
+- **WHEN** any shipped installer or package is installed and the user opens Settings, Help or the
+  welcome flow
+- **THEN** the window SHALL appear — a build whose interface resources are missing SHALL NOT be
+  publishable, and the build SHALL fail rather than produce one
+
 ## ADDED Requirements
+
+### Requirement: Remain running with no window open
+The application SHALL continue running when no window of its own is open, since its normal state is a
+notification-area icon with no main window. Closing a window, or finishing the first-run flow, SHALL NOT
+end the process; only an explicit Quit SHALL.
+
+#### Scenario: Finishing first-run setup leaves the app running
+- **WHEN** the user completes the welcome flow on a fresh install
+- **THEN** the application SHALL remain running in the notification area
+
+#### Scenario: Closing Settings does not quit
+- **WHEN** the user closes the Settings window
+- **THEN** the application SHALL remain running, and its tray icon SHALL stay available
+
+### Requirement: Present the interface in the user's language
+Every string the interface displays SHALL be resolved through the localization layer rather than
+hard-coded, and SHALL follow the interface language the user has chosen. English, Ukrainian and Russian
+— the languages the application converts between — SHALL be translated in full. Where a language is
+incomplete the application SHALL fall back to English and SHALL identify that language as incomplete
+where it is chosen, rather than presenting a partial translation as a complete one. Names of physical
+keys MAY remain untranslated, since they label the keyboard.
+
+#### Scenario: Choosing a fully translated language
+- **WHEN** the user selects Ukrainian or Russian as the interface language
+- **THEN** every string in Settings, the tray flyout and the welcome flow SHALL appear in that language,
+  excluding names of physical keys and names Windows itself supplies
+
+#### Scenario: Choosing an incomplete language
+- **WHEN** the user opens the interface-language picker
+- **THEN** languages that lack translations for some strings SHALL be identified as incomplete, and
+  selecting one SHALL show English for the missing strings rather than blank or untranslated keys
+
+#### Scenario: Language change does not clip the layout
+- **WHEN** the interface language changes to one whose text is longer than English
+- **THEN** the affected text SHALL remain fully readable — wrapped or given more room — rather than
+  truncated
 
 ### Requirement: Apply settings changes immediately
 The Windows build SHALL commit each settings change to persistent storage at the moment the control
