@@ -131,6 +131,42 @@ icon, a click-through caret overlay, actionable toasts, and how all of that coex
     duplicate wiring, and a shared-library extraction; the branch model gives the same "`main` stays
     shippable" guarantee without them.
 
+16. **The publish step must copy the compiled XAML, and the build must fail if it cannot.**
+    `dotnet publish` leaves `.xbf` and `resources.pri` behind for an *unpackaged* WinUI app even though
+    both sit in `$(OutDir)`. The result is not a crash on startup but something worse: the app runs, its
+    Win32 tray icon appears, and every attempt to open a window throws `XamlParseException` — so it
+    looks half-dead rather than broken, which is how 0.2.0 shipped. A `PublishXamlResources` target copies
+    them and errors when none are found. *Packaged builds are unaffected*: MSIX embeds the compiled XAML
+    in `resources.pri` instead of shipping loose `.xbf`, so the same failure cannot occur there.
+
+17. **A tray-first app needs a keep-alive window.** WinUI ends the message loop when the last window
+    closes, which for an app with no main window means the process dies the moment the user closes
+    Settings — or, on a fresh install, the moment they press Finish in the welcome flow. It stayed
+    hidden through three releases because opening the tray flyout once leaves a hidden window alive, and
+    every existing install had done that; only a genuinely new user hit it. A `Window` that is created
+    and never activated is never shown and keeps the loop running; "Quit" goes through
+    `Application.Exit()`, which ignores it.
+
+18. **Packaged builds must not touch the bootstrapper, and must not contain process-launching code.**
+    `Bootstrap.TryInitialize` exists to find a Windows App Runtime for apps with *no package identity*;
+    inside MSIX the runtime arrives through the manifest's framework dependency and the call fails — so
+    the Store build displayed "Windows App Runtime 1.6 isn't installed" on a machine where it plainly
+    was, and exited. Gated on `PackageInfo.IsPackaged`. Separately, the packaged flavour compiles out the
+    `ShellExecute` fallbacks and swaps `UpdateInstaller` for a stub, so the assembly holds no
+    `Process.Start`, `msiexec` or MSI relauncher: a Store build must not self-update anyway, and the App
+    Certification Kit reads the binary rather than the reachable code. A `#if` cannot cover the updater —
+    the C# lexer scans *skipped* regions for directives, and the relauncher is a raw string whose
+    PowerShell `#` comments then parse as malformed ones (CS1024) — hence one file per flavour.
+
+19. **The Store package bundles .NET; only the WinAppSDK stays a framework dependency.** Refines
+    decision 13. MSIX can declare a dependency on `Microsoft.WindowsAppRuntime.1.6` and the Store
+    resolves it, but there is no equivalent for the .NET runtime: a framework-dependent package installs
+    from the Store and then fails to launch on any PC without .NET 8, which defeats the only advantage
+    the Store channel has over the MSI. Built `-p:SelfContained=true`, with the build refusing to finish
+    if `System.Private.CoreLib.dll` is absent from the package. The **12.4 MB measured in decision 13
+    was only achievable because .NET was missing**; the honest figure is **44.5 MB** against the MSI's
+    35.3 MB.
+
 ## Risks / Trade-offs
 
 - **WinUI-3-unpackaged + self-contained is the least-trodden path** (notifications/registration, tray
@@ -155,12 +191,24 @@ not producible here, and WiX needs `-p:Platform=x64` — both done._
 
 Still open:
 
-- **Will `runFullTrust` be approved?** It is a restricted capability, manually reviewed, for an app
+- **Will `runFullTrust` be approved?** Submitted 5 August 2026 and awaiting a manual review, for an app
   whose shape (global hook + input injection) invites scrutiny. Unknown latency; the MSI channel is
   the hedge.
 - **Accurate caret position in apps with no classic caret** (Chrome, VS Code, Electron): needs UI
   Automation. The chip currently falls back to the focused window's corner there.
 - **Toasts (`1g`)** — the error and remember-word notifications are specified but not built; the
   error case still only logs. The corresponding spec requirement is therefore not yet satisfied.
-- **New UI strings are English-only.** Everything with an existing translation key is localized;
-  the descriptions/prose written for this redesign have no keys yet.
+- **Thirteen interface languages are partly translated.** en/uk/ru are complete as of 0.2.3; the rest
+  fall back to English for the ~50 strings this redesign added, and the picker says so
+  (`Loc.IsComplete`) rather than leaving the user to discover it.
+
+Settled since:
+
+- **New UI strings were English-only** — the redesign's descriptions and prose had no translation keys,
+  so choosing Ukrainian or Russian translated the tab names and left the rest of Settings and all of
+  onboarding in English. Closed in 0.2.3 by routing every string through `Loc`, translating en/uk/ru,
+  and making `ApplyLanguage()` the single path used at construction as well as on a language change.
+- **Whether the packaged app's settings are isolated** — they are not. A full-trust MSIX reads and
+  writes the same `%APPDATA%\Switcher3way` as the MSI build (verified on Windows 11 26200), so the two
+  channels share settings and a user can move between them without losing anything. Nothing should rely
+  on per-package isolation here.
