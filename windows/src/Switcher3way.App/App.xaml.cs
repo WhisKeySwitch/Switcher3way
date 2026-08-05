@@ -31,11 +31,57 @@ public partial class App : Application
             _tray = new Tray();
             // Diagnostic hook: `Switcher3way.exe diagui` exercises the XAML surfaces at startup so a
             // shipped build that can't open windows reports why, instead of just looking half-dead.
-            if (Environment.GetCommandLineArgs().Any(a => a.Equals("diagui", StringComparison.OrdinalIgnoreCase)))
+            var args2 = Environment.GetCommandLineArgs();
+            if (args2.Any(a => a.Equals("diagui", StringComparison.OrdinalIgnoreCase)))
             {
                 Diagnostics.LogAlways("diagui: opening Settings…");
                 _tray.OpenSettings();
                 Diagnostics.LogAlways("diagui: done");
+            }
+            // The notification paths need a failed rewrite or an undo to happen naturally, neither of
+            // which can be provoked with synthetic input (the hook ignores it). These show them on
+            // demand — separately, because Windows only surfaces one toast at a time and queues the rest.
+            if (args2.Any(a => a.Equals("diagtoast", StringComparison.OrdinalIgnoreCase)))
+            {
+                Diagnostics.LogAlways("diagtoast: error notification…");
+                Toast.ShowError(Loc.T("notify.protected"));
+            }
+            if (args2.Any(a => a.Equals("diagtoastoffer", StringComparison.OrdinalIgnoreCase)))
+            {
+                Diagnostics.LogAlways("diagtoastoffer: remember-word notification…");
+                Toast.OfferNeverConvert("ghbdsn", "привіт");
+            }
+            // Which source the chip's position comes from, probed repeatedly so focus can be moved
+            // between apps while it runs — the chip itself only appears after a real conversion, which
+            // synthetic input cannot trigger.
+            if (args2.Any(a => a.Equals("diagcaret", StringComparison.OrdinalIgnoreCase)))
+            {
+                var probe = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+                int left = 15;
+                probe.Interval = TimeSpan.FromSeconds(2);
+                probe.Tick += (t, _) =>
+                {
+                    CaretChip.Probe();
+                    if (--left <= 0) t.Stop();
+                };
+                probe.Start();
+                Diagnostics.LogAlways("diagcaret: probing every 2s for 30s — move focus between apps");
+            }
+            // Same probe, but against our own WinUI text box: it has no classic caret, so it exercises the
+            // accessibility tiers the way Chrome and Electron do, without needing to steal the foreground.
+            if (args2.Any(a => a.Equals("diagcaretwinui", StringComparison.OrdinalIgnoreCase)))
+            {
+                _tray.OpenSettings();
+                var probe = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+                int left = 6;
+                probe.Interval = TimeSpan.FromSeconds(2);
+                probe.Tick += (t, _) =>
+                {
+                    CaretChip.Probe(_tray?.DiagFocusSettingsSearch() ?? IntPtr.Zero);
+                    if (--left <= 0) t.Stop();
+                };
+                probe.Start();
+                Diagnostics.LogAlways("diagcaretwinui: probing our own WinUI text box…");
             }
         }
         catch (Exception ex)

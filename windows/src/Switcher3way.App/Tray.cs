@@ -6,7 +6,6 @@ namespace Switcher3way.App;
 /// <summary>
 /// System-tray presence: a live flag icon plus the context menu (core toggles, pause durations,
 /// settings, quit), backed by <see cref="Win32Tray"/>. Owns the <see cref="Engine"/> and settings.
-/// Replaces the WinForms TrayApp. Help/Updates rejoin the menu as those surfaces are ported.
 /// </summary>
 internal sealed class Tray : IDisposable
 {
@@ -26,7 +25,14 @@ internal sealed class Tray : IDisposable
 
         _chip = new CaretChip();
         _engine = new Engine(_settings);
-        _engine.Notify += m => Diagnostics.Log($"notify: {m}"); // TODO: error toast (1g)
+
+        // Notifications: a failed rewrite, and the offer to remember a word after an undo. Both arrive
+        // off the UI thread — the activation callback especially, which comes from the notification
+        // platform — so the settings mutation is marshalled.
+        Toast.Initialize(word => _dispatcher.TryEnqueue(() => AddNeverConvert(word)));
+        _engine.Notify += m => { Diagnostics.Log($"notify: {m}"); Toast.ShowError(m); };
+        _engine.Undone += (original, converted) => Toast.OfferNeverConvert(original, converted);
+
         // Conversions are raised from the engine's worker thread — marshal to the UI thread.
         _engine.Converted += info => _dispatcher.TryEnqueue(() =>
             _chip.Show(info.Original, info.Converted, _settings.TriggerLabel));
@@ -137,6 +143,17 @@ internal sealed class Tray : IDisposable
         }
     }
 
+    /// <summary>
+    /// Diagnostics only (`diagcaret`): focus the Settings search box as a WinUI caret target and return
+    /// that window's handle, so the probe can query it directly instead of the foreground window.
+    /// </summary>
+    internal IntPtr DiagFocusSettingsSearch()
+    {
+        if (_settingsWindow is null) return IntPtr.Zero;
+        _settingsWindow.FocusSearchForDiagnostics();
+        return WinRT.Interop.WindowNative.GetWindowHandle(_settingsWindow);
+    }
+
     private SettingsWindow? _settingsWindow;
     internal void OpenSettings()
     {
@@ -180,11 +197,26 @@ internal sealed class Tray : IDisposable
         Microsoft.UI.Xaml.Application.Current.Exit();
     }
 
+    /// <summary>
+    /// Accept the notification's offer: suppress this word in future. Runs on the UI thread (the
+    /// activation callback marshals here), so it can touch settings and the open Settings window safely.
+    /// </summary>
+    private void AddNeverConvert(string word)
+    {
+        if (_settings.NeverConvertWords.Any(w => string.Equals(w, word, StringComparison.OrdinalIgnoreCase)))
+            return;
+        _settings.NeverConvertWords.Add(word);
+        _settings.Save();
+        RefreshIcon();
+        _settingsWindow?.ReloadExceptions();   // if it happens to be open, show the new row
+    }
+
     public void Dispose()
     {
         _poll.Stop();
         _engine.Stop();
         _chip.Dispose();
         _tray.Dispose();
+        Toast.Shutdown();
     }
 }

@@ -6,7 +6,7 @@ namespace Switcher3way.App;
 
 /// <summary>
 /// Renders the tray flag icon (Ukraine/Russia bitmaps, an "EN"-style badge fallback) with the dimmed
-/// + pause-bars treatment when conversion is off. Lifted from the WinForms TrayApp so the WinUI tray
+/// + pause-bars treatment when conversion is off. Carried over from the pre-WinUI tray so the icon
 /// reuses the exact rendering. Icons are cached by "lang:dim".
 /// </summary>
 internal static class FlagIcon

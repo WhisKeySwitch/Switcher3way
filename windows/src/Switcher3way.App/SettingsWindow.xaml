@@ -181,7 +181,10 @@
                         <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                 CornerRadius="6">
-                            <Grid RowDefinitions="Auto,*,Auto">
+                            <!-- Dropping an .exe (or a shortcut to one) anywhere on this panel adds it to
+                                 the Apps list — the picker only offers apps that are running right now. -->
+                            <Grid RowDefinitions="Auto,*,Auto" AllowDrop="True"
+                                  DragOver="ExcList_DragOver" Drop="ExcList_Drop" Background="Transparent">
                                 <!-- Toolbar: segments + search -->
                                 <Grid Grid.Row="0" Padding="12,10" ColumnDefinitions="*,Auto"
                                       BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">

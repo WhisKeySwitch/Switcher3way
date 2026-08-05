@@ -2,6 +2,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Graphics;
 
 namespace Switcher3way.App;
@@ -25,11 +26,18 @@ public sealed partial class SettingsWindow : Window
 
     private sealed record Lang(string Code, string Name) { public override string ToString() => Name; }
     /// <summary>
-    /// Language names stay in their own language. Anything that isn't fully translated yet is labelled
-    /// as partial rather than quietly serving English — see <see cref="Loc.IsComplete"/>.
+    /// Language names stay in their own language. Fully translated ones come first — English, Ukrainian
+    /// and Russian, the languages the app converts between — and the rest keep their relative order with
+    /// a "partly translated" tag, rather than quietly serving English (see <see cref="Loc.IsComplete"/>).
+    ///
+    /// The incomplete thirteen are inherited from the macOS app's string table, not chosen for this app:
+    /// someone installing an English/Ukrainian/Russian layout fixer almost certainly wants one of those
+    /// three for the interface too. They are kept because removing them would take a partly-translated UI
+    /// away from anyone using one today, but they are not worth translating on spec.
     /// </summary>
     private static Lang[] BuildLanguages() => LanguageNames
         .Select(l => Loc.IsComplete(l.Code) ? l : l with { Name = $"{l.Name} — {Loc.T("settings.language.partial")}" })
+        .OrderBy(l => Loc.IsComplete(l.Code) ? 0 : 1)   // stable: complete first, original order within each
         .ToArray();
 
     private static readonly Lang[] LanguageNames =
@@ -251,6 +259,24 @@ public sealed partial class SettingsWindow : Window
         _ => _s.DeniedApps,
     };
 
+    /// <summary>Re-read the exception lists — used when something outside this window changes them,
+    /// such as accepting the "never convert this word" offer from a notification.</summary>
+    internal void ReloadExceptions() => RefreshExceptions();
+
+    /// <summary>
+    /// Diagnostics only (`diagcaret`): put the caret in this window's search box. A WinUI TextBox creates
+    /// no classic Win32 caret, which makes it a stand-in for Chrome/Electron when testing where the
+    /// feedback chip anchors — and unlike another app's window, we can focus it without fighting Windows'
+    /// foreground rules.
+    /// </summary>
+    internal void FocusSearchForDiagnostics()
+    {
+        Tabs.SelectedItem = TabAutoFix;
+        ExcSearch.Text = "тест";
+        ExcSearch.Focus(FocusState.Programmatic);
+        ExcSearch.Select(ExcSearch.Text.Length, 0);
+    }
+
     private void RefreshExceptions()
     {
         // Live counts on the segments.
@@ -390,5 +416,70 @@ public sealed partial class SettingsWindow : Window
         }
         Commit();
         RefreshExceptions();
+    }
+
+    // ---- drag-and-drop an .exe (or a shortcut to one) onto the list ------------------------------
+    // The picker only lists *running* apps, so an app the user wants to exclude but isn't using right
+    // now can only be added this way (or by browsing). Accepts .exe directly and resolves .lnk targets.
+
+    private void ExcList_DragOver(object sender, DragEventArgs e)
+    {
+        if (SegIndex != 0 || !e.DataView.Contains(StandardDataFormats.StorageItems)) return;   // apps tab only
+        e.AcceptedOperation = DataPackageOperation.Copy;
+        e.DragUIOverride.Caption = Loc.T("settings.exceptions.dropHint");
+        e.DragUIOverride.IsGlyphVisible = true;
+        e.Handled = true;
+    }
+
+    private async void ExcList_Drop(object sender, DragEventArgs e)
+    {
+        if (SegIndex != 0 || !e.DataView.Contains(StandardDataFormats.StorageItems)) return;   // apps tab only
+        e.Handled = true;
+        try
+        {
+            var items = await e.DataView.GetStorageItemsAsync();
+            int added = 0;
+            foreach (var exe in items.OfType<Windows.Storage.StorageFile>().Select(f => ExeNameFrom(f.Path)))
+            {
+                if (exe is null) continue;
+                if (SettingsManager.IsProtectedApp(exe)) continue;   // password managers stay locked
+                if (_s.DeniedApps.Any(x => string.Equals(x, exe, StringComparison.OrdinalIgnoreCase))) continue;
+                _s.DeniedApps.Add(exe);
+                added++;
+            }
+            if (added == 0) return;
+            Commit();
+            RefreshExceptions();
+        }
+        catch (Exception ex)
+        {
+            Diagnostics.Log("exceptions drop failed: " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// The exe file name to store for a dropped path: the file itself for an .exe, or a shortcut's
+    /// target. Anything else (a document, a folder) returns null and is ignored.
+    /// </summary>
+    private static string? ExeNameFrom(string path)
+    {
+        if (path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            return System.IO.Path.GetFileName(path).ToLowerInvariant();
+
+        if (path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                dynamic shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!)!;
+                string target = shell.CreateShortcut(path).TargetPath;
+                if (target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    return System.IO.Path.GetFileName(target).ToLowerInvariant();
+            }
+            catch (Exception ex)
+            {
+                Diagnostics.Log($"could not resolve shortcut {path}: {ex.Message}");
+            }
+        }
+        return null;
     }
 }

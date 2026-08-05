@@ -49,12 +49,18 @@ internal sealed class Engine
     private void RaiseConverted(string original, string converted, string layoutId) =>
         Converted?.Invoke(new ConversionInfo(original.TrimEnd(), converted.TrimEnd(), LangOf(layoutId)));
 
+    /// <summary>
+    /// A conversion the user undid: the text and layout are back to what they typed. Carries the
+    /// original and the converted form so the UI can offer to leave that word alone in future.
+    /// </summary>
+    public event Action<string, string>? Undone;
+
     private void NotifyProtected()
     {
         var now = DateTime.Now;
         if ((now - _lastNotify).TotalSeconds < 30) return; // throttle so an elevated window can't spam
         _lastNotify = now;
-        Notify?.Invoke("Can't change text in this window — it may be running as administrator.");
+        Notify?.Invoke(Loc.T("notify.protected"));
     }
 
     private sealed class Cycle
@@ -421,6 +427,10 @@ internal sealed class Engine
         if (res != TextRewriter.Result.Ok) NotifyProtected();
         // Feedback on manual conversions too, but not on the final restore-to-original step.
         else if (!restore) RaiseConverted(cyc.Plan.Original, text, targetId);
+        // The restore step is the user rejecting a conversion — the moment to offer to remember it.
+        // The first candidate is what had been on screen, so that is the word to suppress.
+        else if (cyc.Plan.Candidates.Count > 0)
+            Undone?.Invoke(cyc.Plan.Original.TrimEnd(), cyc.Plan.Candidates[0].Converted.TrimEnd());
 
         cyc.OnScreenLen = text.Length;
         cyc.Step++;
