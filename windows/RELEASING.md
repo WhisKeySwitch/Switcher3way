@@ -52,6 +52,28 @@ pwsh windows/build-msix.ps1                        # package for Partner Center
 pwsh windows/build-msix.ps1 -Sideload -Sign -Certify   # local install test + WACK (run elevated)
 ```
 
+### Architecture: x64 only, deliberately
+
+Both channels ship **x64 only**. Windows on ARM runs x64 under emulation, and the parts most likely to
+break there — a low-level keyboard hook and `SendInput` reaching native arm64 processes — are exactly the
+parts that cannot be verified without arm64 hardware. Claiming arm64 support that nobody has run would be
+worse than not offering it.
+
+The project is not hard-wired to x64, so a native build is a change of parameters rather than of code:
+
+```powershell
+# app: RuntimeIdentifier/Platform/Platforms in Switcher3way.App.csproj currently pin x64
+pwsh windows/build-msi.ps1 -Rid win-arm64      # also needs -p:Platform=ARM64 through the wixproj
+pwsh windows/build-msix.ps1                    # -p:Platform=ARM64 -p:RuntimeIdentifier=win-arm64
+```
+
+Nothing in the detection stack blocks it: `WeCantSpell.Hunspell` is a managed implementation with no
+native binary, so dictionaries and rendering are architecture-agnostic. What needs proving on real arm64
+hardware is the input layer — that the hook sees keystrokes from native arm64 applications and that
+`SendInput` rewrites text inside them — plus a Windows App SDK arm64 runtime and WiX emitting an arm64
+package. Until someone can run that, the Store's architecture matching gives arm64 users the emulated x64
+package, which is the honest position rather than an untested claim.
+
 ### Sideload testing: what bites
 
 **Trusting the dev certificate takes two stores.** `Add-AppxPackage` is satisfied by the certificate in

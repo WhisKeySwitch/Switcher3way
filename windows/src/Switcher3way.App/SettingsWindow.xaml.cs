@@ -26,11 +26,18 @@ public sealed partial class SettingsWindow : Window
 
     private sealed record Lang(string Code, string Name) { public override string ToString() => Name; }
     /// <summary>
-    /// Language names stay in their own language. Anything that isn't fully translated yet is labelled
-    /// as partial rather than quietly serving English — see <see cref="Loc.IsComplete"/>.
+    /// Language names stay in their own language. Fully translated ones come first — English, Ukrainian
+    /// and Russian, the languages the app converts between — and the rest keep their relative order with
+    /// a "partly translated" tag, rather than quietly serving English (see <see cref="Loc.IsComplete"/>).
+    ///
+    /// The incomplete thirteen are inherited from the macOS app's string table, not chosen for this app:
+    /// someone installing an English/Ukrainian/Russian layout fixer almost certainly wants one of those
+    /// three for the interface too. They are kept because removing them would take a partly-translated UI
+    /// away from anyone using one today, but they are not worth translating on spec.
     /// </summary>
     private static Lang[] BuildLanguages() => LanguageNames
         .Select(l => Loc.IsComplete(l.Code) ? l : l with { Name = $"{l.Name} — {Loc.T("settings.language.partial")}" })
+        .OrderBy(l => Loc.IsComplete(l.Code) ? 0 : 1)   // stable: complete first, original order within each
         .ToArray();
 
     private static readonly Lang[] LanguageNames =

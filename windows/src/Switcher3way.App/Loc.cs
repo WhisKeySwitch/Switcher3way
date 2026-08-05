@@ -58,10 +58,6 @@ internal static class Loc
             ["settings.language"] = "Interface language:",
             ["settings.languageAuto"] = "System default",
             ["settings.perAppLayout"] = "Remember layout per application",
-            ["win.save"] = "Save",
-            ["win.remove"] = "Remove selected",
-            ["win.show"] = "Show:",
-            ["win.addEntry"] = "Add entry, then click Add",
             ["win.openLog"] = "Open log folder",
             ["win.tagline"] = "Auto-fix your keyboard layout across English, Ukrainian, and Russian.",
             // Windows UI (WinUI): every string the Settings and welcome windows show.
