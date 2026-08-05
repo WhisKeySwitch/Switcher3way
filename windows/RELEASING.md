@@ -79,15 +79,43 @@ starts first wins; stop one before launching the other.
 **Privacy policy URL** — required, because a keyboard hook can access personal information:
 `https://whiskeyswitch.github.io/Switcher3way/privacy.html` (source: [`docs/privacy.html`](../docs/privacy.html)).
 
-**Restricted capability justification** (`runFullTrust`):
+**Restricted capability justification** (`runFullTrust`) — answers Partner Center's "Why do you need
+this capability, and how will it be used in your product?". Name the actual APIs: a reviewer can only
+approve what they can picture.
 
-> Switcher3way is a keyboard-layout utility. It installs a system-wide low-level keyboard hook
-> (`WH_KEYBOARD_LL`) to detect when a word has been typed in the wrong keyboard layout, and uses
-> `SendInput` to retype the corrected word in the right one. Neither a system-wide hook nor input
-> injection into other applications is possible inside the app container, so `runFullTrust` is
-> required. The app works entirely offline: keystrokes for the current word are held in memory only
-> and discarded at the next word boundary, nothing is stored or transmitted, and password fields are
-> explicitly excluded from processing.
+> **What the app does.** Switcher3way corrects words typed in the wrong keyboard layout across English,
+> Ukrainian and Russian: it notices that a finished word is nonsense in the active layout but a real
+> word in another installed one, retypes it correctly, and switches the layout. A manual trigger key
+> does the same on demand for the last word or the current selection.
+>
+> **Why the app container cannot do this.** The feature is inherently system-wide — it has to observe
+> and correct typing in whatever application the user is working in (Word, a browser, a chat window):
+>
+> - `SetWindowsHookEx(WH_KEYBOARD_LL)` to see keystrokes destined for *other* processes. There is no
+>   sandboxed equivalent; an app-container process only receives input directed at its own windows.
+> - `SendInput` to erase the mistyped word (backspaces) and insert the corrected text into the other
+>   application's focused field. Injecting input into another process is likewise unavailable in the
+>   container.
+> - `ActivateKeyboardLayout` / `PostMessage(WM_INPUTLANGCHANGEREQUEST)` to switch the foreground
+>   window's layout, and `GetKeyboardLayout(threadId)` to read it.
+> - `GetGUIThreadInfo` and MSAA (`AccessibleObjectFromWindow`) to locate the caret — so the small
+>   confirmation chip appears under the corrected word — and to detect password fields, which are
+>   excluded from processing.
+> - `QueryFullProcessImageName` to identify the foreground application, so per-application exclusions
+>   and layout memory work.
+> - `Shell_NotifyIcon` for the notification-area icon: the app has no main window.
+>
+> **How the data is handled.** Keystrokes for the *current word only* are held in memory and discarded
+> at the next word boundary, or on any click, arrow key or application switch. Nothing typed is written
+> to disk (an optional debug log is off by default) and nothing is transmitted: this Store build makes
+> no network connections at all — dictionary checking uses Hunspell dictionaries bundled in the package.
+> Password fields are excluded, password managers and terminals are excluded by default, and the user
+> can exclude any other application or individual words. Reading a selection for the manual trigger
+> sends one `Ctrl+C` and then restores the previous clipboard contents.
+>
+> **Verifiable.** The app is open source under the MIT licence — every use of these APIs can be read at
+> https://github.com/WhisKeySwitch/Switcher3way. Privacy policy:
+> https://whiskeyswitch.github.io/Switcher3way/privacy.html
 
 **Notes for certification** (reviewers must be told it is a tray app with no main window, or they
 report that nothing launches):
