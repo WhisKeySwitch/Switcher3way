@@ -37,8 +37,34 @@ the older **LibreOffice `uk_UA` (MPL 1.1)** lineage instead, which is genuinely 
 `Content` with `CopyToOutputDirectory`, so the files deploy with the app and flow to referencing
 projects (the tests load them for the real-dictionary smoke tests).
 
-## Quality baseline (task 3.2, open)
+## Quality baseline (measured 5 August 2026)
 
-Before shipping, compare these uk/ru dictionaries against the macOS `NSSpellChecker` baseline on a
-representative word set — including punctuation-attached (`db,fxnt`→`вибачте`) and 2-letter cases —
-and check that set in as a fixture so regressions are caught. Capture the baseline on a Mac.
+The original plan was to diff these against macOS `NSSpellChecker`. That needs a Mac, and it is also
+the less useful half of the idea: what matters is not whether Hunspell agrees with Apple but whether it
+accepts and rejects the words that decide a conversion. So the baseline is a **checked-in fixture** —
+`windows/tests/Switcher3way.Core.Tests/DictionaryQualityTests.cs` — covering both error directions,
+because they fail differently:
+
+* a **false reject** (a real word the dictionary does not know) means the fix silently never happens;
+* a **false accept** (nonsense the dictionary blesses) is worse — the resolver concludes the input is
+  already valid, or valid in two languages, and either skips the fix or corrupts good text.
+
+Measured across 171 words that must be accepted and 38 that must be rejected:
+
+| Set | Result |
+|---|---|
+| Accept — everyday, 2-letter, inflected nouns/verbs, declined adjectives, ё and ё-omitted spellings, apostrophe forms (`комп'ютер`), loanwords, proper nouns | **170 / 171** |
+| Reject — English typed on a Cyrillic layout (`руддщ`, `цщкдв`), Cyrillic typed on a US layout (`ghbdsn`, `cgfcb,j`, `db,fxnt`), Ukrainian-only letters offered as Russian, outright nonsense | **38 / 38** |
+
+Two things worth knowing from that run:
+
+1. **No false accepts at all**, which is the direction that would visibly break text. Cross-layout
+   renders are reliably rejected, so the "exactly one language accepts it" rule holds in practice.
+2. **The single false reject is `Kyiv`** — absent from en_US (SCOWL). English proper nouns are thin in
+   general, while the ru/uk dictionaries do carry `Москва`, `Київ`, `Україна`, `Львів`. A name the
+   dictionary does not know is never auto-fixed; the manual trigger still converts it, and the
+   always-convert list exists for words worth forcing. Not worth swapping a dictionary over.
+
+Ukrainian and Russian morphology — the thing most likely to be weak in a free dictionary — came through
+clean: every inflected noun, conjugated verb and declined adjective in the set was accepted, as were the
+ё-omitted spellings most people actually type (`еще`, `ее`, `все`).

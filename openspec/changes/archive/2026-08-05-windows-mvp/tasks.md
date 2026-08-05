@@ -33,9 +33,14 @@ decision 13 in the archived redesign.
 
 - [x] 3.1 `WeCantSpell.Hunspell` (managed, no native binary) + bundled en/ru/uk dictionaries with their
   licences. Still true, and it is why an arm64 build would not need native rebuilds.
-- [ ] 3.2 Compare dictionary quality against a macOS `NSSpellChecker` baseline on a representative word
-  set — **still open.** Real dictionaries are bundled and smoke-tested, but no captured baseline
-  comparison has been run. This is the one substantive quality gap left from the MVP.
+- [x] 3.2 Dictionary quality measured 5 August 2026, against a checked-in fixture rather than a macOS
+  `NSSpellChecker` capture: the point was never agreement with Apple but whether the dictionaries accept
+  and reject the words that decide a conversion. **170/171 accept · 38/38 reject** across everyday
+  vocabulary, 2-letter words, inflected nouns and verbs, declined adjectives, ё and ё-omitted spellings,
+  apostrophe forms, loanwords, proper nouns, and the cross-layout renders that must be refused. No false
+  accepts — the direction that would corrupt text. The one false reject is `Kyiv`, absent from en_US
+  (SCOWL); English proper nouns are thin while ru/uk carry Москва/Київ/Україна/Львів. Fixture:
+  `windows/tests/Switcher3way.Core.Tests/DictionaryQualityTests.cs`; findings in `DICTIONARIES.md`.
 - [x] 3.3 Validation behind `IDictionaryValidator`; end-to-end test through `NWayResolver`.
 
 ## 4. Live detection loop
