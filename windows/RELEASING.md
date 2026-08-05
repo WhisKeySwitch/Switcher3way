@@ -83,7 +83,19 @@ starts first wins; stop one before launching the other.
 this capability, and how will it be used in your product?". Name the actual APIs: a reviewer can only
 approve what they can picture.
 
-*Short form (~1,260 characters) for the submission field — this is the one to paste:*
+**The field takes exactly 500 characters** (Submission options → Restricted capabilities) and truncates
+silently rather than warning, so paste this version — it is 500 on the nose, single paragraph, no line
+breaks:
+
+> Switcher3way retypes words typed in the wrong keyboard layout (English/Ukrainian/Russian) and switches
+> the layout. It must act inside whatever app the user types in, which the app container forbids:
+> SetWindowsHookEx(WH_KEYBOARD_LL) to see keystrokes sent to other apps, SendInput to fix the text there,
+> ActivateKeyboardLayout to switch its layout, Shell_NotifyIcon for the tray icon. Only the current word
+> is held in memory, to the next word boundary. Password fields skipped. Nothing stored or sent.
+
+The API list and the current-word-only lifetime are what earn the approval; drop anything else first.
+
+*Medium form (~1,260 characters), if a future field is more generous:*
 
 > Switcher3way fixes words typed in the wrong keyboard layout across English, Ukrainian and Russian: it
 > detects that a finished word is nonsense in the active layout but a real word in another installed one,
@@ -142,9 +154,13 @@ approve what they can picture.
 > https://github.com/WhisKeySwitch/Switcher3way. Privacy policy:
 > https://whiskeyswitch.github.io/Switcher3way/privacy.html
 
-**Notes for certification.** Three things will make a reviewer conclude the app is broken unless they
-are told: it has no main window, it does nothing until a second keyboard layout is installed, and it
-ignores synthetic input, so an automated test harness sees no reaction at all.
+**Notes for certification** — these go on **Supplemental info → Additional Testing Information**, not on
+the Submission options page. That page only links to it, and leaving it empty is what keeps Submission
+options marked *Incomplete* when a restricted capability is declared.
+
+Three things will make a reviewer conclude the app is broken unless they are told: it has no main window,
+it does nothing until a second keyboard layout is installed, and it ignores synthetic input, so an
+automated test harness sees no reaction at all.
 
 > **No main window.** Switcher3way runs in the notification area. On first launch a short welcome flow
 > appears; finishing it leaves the app in the tray. Windows 11 hides new tray icons by default — if the
