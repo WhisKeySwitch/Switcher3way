@@ -83,6 +83,31 @@ starts first wins; stop one before launching the other.
 this capability, and how will it be used in your product?". Name the actual APIs: a reviewer can only
 approve what they can picture.
 
+*Short form (~1,260 characters) for the submission field — this is the one to paste:*
+
+> Switcher3way fixes words typed in the wrong keyboard layout across English, Ukrainian and Russian: it
+> detects that a finished word is nonsense in the active layout but a real word in another installed one,
+> retypes it and switches the layout.
+>
+> That has to work in whatever application the user is typing in, which the app container prevents:
+>
+> - SetWindowsHookEx(WH_KEYBOARD_LL): see keystrokes going to other processes; a container app only gets
+>   input aimed at its own windows.
+> - SendInput: backspace the mistyped word and insert the corrected text into that application.
+> - ActivateKeyboardLayout / WM_INPUTLANGCHANGEREQUEST: switch the foreground window's layout.
+> - GetGUIThreadInfo and MSAA: locate the caret for the confirmation chip, and detect password fields so
+>   they are skipped.
+> - Shell_NotifyIcon: the notification-area icon (the app has no main window).
+>
+> Only the current word is held, in memory, and discarded at the next word boundary. Nothing typed is
+> written to disk or transmitted — this build makes no network connections; dictionaries are bundled.
+> Password fields, password managers and terminals are excluded, and the user can exclude any app.
+>
+> Open source (MIT), so every use of these APIs is verifiable:
+> github.com/WhisKeySwitch/Switcher3way
+
+*Long form, for a reviewer who comes back with questions:*
+
 > **What the app does.** Switcher3way corrects words typed in the wrong keyboard layout across English,
 > Ukrainian and Russian: it notices that a finished word is nonsense in the active layout but a real
 > word in another installed one, retypes it correctly, and switches the layout. A manual trigger key
