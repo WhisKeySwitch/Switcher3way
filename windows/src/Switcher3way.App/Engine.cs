@@ -147,6 +147,9 @@ internal sealed class Engine
     private void AutoConvert(IReadOnlyList<TypedKey> word, char boundary)
     {
         if (_settings.IsDeniedApp(LayoutSwitcher.Foreground().Exe)) { _phrase.Reset(); return; } // terminals / RDP / pw
+        // Log what the guard saw, not just when it fires: "no suppression" is indistinguishable from
+        // "guard broken" otherwise, which is exactly how the browser case hid for four releases.
+        if (_settings.DebugLog) Diagnostics.Log("  secure: " + SecureField.Describe());
         if (SecureField.IsFocusedPassword())                                 // never touch a password field
         { Diagnostics.Log("  auto: suppressed — password field"); _phrase.Reset(); return; }
 

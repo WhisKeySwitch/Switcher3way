@@ -186,7 +186,13 @@ internal sealed class KeyboardMonitor
                     _bufferHwnd = Native.GetForegroundWindow();
                     n = _current.Count;
                 }
-                Diagnostics.Log($"  buf: +vk{vk:X2} (len={n})");
+                // Length only, never the key itself. This runs on the hook for every keystroke, long
+                // before anything knows whether the focused field is a password — logging vk codes here
+                // meant that switching on "debug logging" wrote down everything typed, including
+                // credentials, in trivially decodable form. The buffer length is what the reset guards
+                // actually need to be diagnosable; the conversion decision logs the word, and that path
+                // is already blocked for password fields.
+                Diagnostics.Log($"  buf: +1 (len={n})");
                 break;
             case KeyKind.Boundary:
                 CompleteWord(vk);

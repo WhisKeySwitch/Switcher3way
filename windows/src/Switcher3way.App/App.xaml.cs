@@ -76,7 +76,11 @@ public partial class App : Application
                 probe.Interval = TimeSpan.FromSeconds(2);
                 probe.Tick += (t, _) =>
                 {
-                    Diagnostics.LogAlways($"diagpw: {SecureField.Describe()}");
+                    Diagnostics.LogAlways($"diagpw[ui]:     {SecureField.Describe()}");
+                    // The real guard runs on the Engine's worker thread, not here. UIA is
+                    // apartment-sensitive, so a UI-thread-only check can pass while production fails.
+                    System.Threading.Tasks.Task.Run(() =>
+                        Diagnostics.LogAlways($"diagpw[worker]: {SecureField.Describe()}"));
                     if (--left <= 0) t.Stop();
                 };
                 probe.Start();
