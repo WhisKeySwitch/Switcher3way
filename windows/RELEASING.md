@@ -79,29 +79,117 @@ starts first wins; stop one before launching the other.
 **Privacy policy URL** — required, because a keyboard hook can access personal information:
 `https://whiskeyswitch.github.io/Switcher3way/privacy.html` (source: [`docs/privacy.html`](../docs/privacy.html)).
 
-**Restricted capability justification** (`runFullTrust`):
+**Restricted capability justification** (`runFullTrust`) — answers Partner Center's "Why do you need
+this capability, and how will it be used in your product?". Name the actual APIs: a reviewer can only
+approve what they can picture.
 
-> Switcher3way is a keyboard-layout utility. It installs a system-wide low-level keyboard hook
-> (`WH_KEYBOARD_LL`) to detect when a word has been typed in the wrong keyboard layout, and uses
-> `SendInput` to retype the corrected word in the right one. Neither a system-wide hook nor input
-> injection into other applications is possible inside the app container, so `runFullTrust` is
-> required. The app works entirely offline: keystrokes for the current word are held in memory only
-> and discarded at the next word boundary, nothing is stored or transmitted, and password fields are
-> explicitly excluded from processing.
+**The field takes exactly 500 characters** (Submission options → Restricted capabilities) and truncates
+silently rather than warning, so paste this version — it is 500 on the nose, single paragraph, no line
+breaks:
 
-**Notes for certification** (reviewers must be told it is a tray app with no main window, or they
-report that nothing launches):
+> Switcher3way retypes words typed in the wrong keyboard layout (English/Ukrainian/Russian) and switches
+> the layout. It must act inside whatever app the user types in, which the app container forbids:
+> SetWindowsHookEx(WH_KEYBOARD_LL) to see keystrokes sent to other apps, SendInput to fix the text there,
+> ActivateKeyboardLayout to switch its layout, Shell_NotifyIcon for the tray icon. Only the current word
+> is held in memory, to the next word boundary. Password fields skipped. Nothing stored or sent.
 
-> Switcher3way runs in the notification area — it has no main window. On first launch a short
-> welcome flow appears; finish it to reach the tray icon.
+The API list and the current-word-only lifetime are what earn the approval; drop anything else first.
+
+*Medium form (~1,260 characters), if a future field is more generous:*
+
+> Switcher3way fixes words typed in the wrong keyboard layout across English, Ukrainian and Russian: it
+> detects that a finished word is nonsense in the active layout but a real word in another installed one,
+> retypes it and switches the layout.
 >
-> To test: add both an English and a Ukrainian (or Russian) keyboard layout in Windows. With the
-> English layout active, open Notepad and type `ghbdsn` followed by a space — the text is replaced
-> with `привіт` and the layout switches. Alternatively select any wrong-layout text and press the
-> trigger key (a double tap of Ctrl by default) to convert it; press it again to cycle or undo.
+> That has to work in whatever application the user is typing in, which the app container prevents:
 >
-> The tray icon's menu provides enable/disable, pause, Settings and Help. The app makes no network
-> connections in this (Store) build.
+> - SetWindowsHookEx(WH_KEYBOARD_LL): see keystrokes going to other processes; a container app only gets
+>   input aimed at its own windows.
+> - SendInput: backspace the mistyped word and insert the corrected text into that application.
+> - ActivateKeyboardLayout / WM_INPUTLANGCHANGEREQUEST: switch the foreground window's layout.
+> - GetGUIThreadInfo and MSAA: locate the caret for the confirmation chip, and detect password fields so
+>   they are skipped.
+> - Shell_NotifyIcon: the notification-area icon (the app has no main window).
+>
+> Only the current word is held, in memory, and discarded at the next word boundary. Nothing typed is
+> written to disk or transmitted — this build makes no network connections; dictionaries are bundled.
+> Password fields, password managers and terminals are excluded, and the user can exclude any app.
+>
+> Open source (MIT), so every use of these APIs is verifiable:
+> github.com/WhisKeySwitch/Switcher3way
+
+*Long form, for a reviewer who comes back with questions:*
+
+> **What the app does.** Switcher3way corrects words typed in the wrong keyboard layout across English,
+> Ukrainian and Russian: it notices that a finished word is nonsense in the active layout but a real
+> word in another installed one, retypes it correctly, and switches the layout. A manual trigger key
+> does the same on demand for the last word or the current selection.
+>
+> **Why the app container cannot do this.** The feature is inherently system-wide — it has to observe
+> and correct typing in whatever application the user is working in (Word, a browser, a chat window):
+>
+> - `SetWindowsHookEx(WH_KEYBOARD_LL)` to see keystrokes destined for *other* processes. There is no
+>   sandboxed equivalent; an app-container process only receives input directed at its own windows.
+> - `SendInput` to erase the mistyped word (backspaces) and insert the corrected text into the other
+>   application's focused field. Injecting input into another process is likewise unavailable in the
+>   container.
+> - `ActivateKeyboardLayout` / `PostMessage(WM_INPUTLANGCHANGEREQUEST)` to switch the foreground
+>   window's layout, and `GetKeyboardLayout(threadId)` to read it.
+> - `GetGUIThreadInfo` and MSAA (`AccessibleObjectFromWindow`) to locate the caret — so the small
+>   confirmation chip appears under the corrected word — and to detect password fields, which are
+>   excluded from processing.
+> - `QueryFullProcessImageName` to identify the foreground application, so per-application exclusions
+>   and layout memory work.
+> - `Shell_NotifyIcon` for the notification-area icon: the app has no main window.
+>
+> **How the data is handled.** Keystrokes for the *current word only* are held in memory and discarded
+> at the next word boundary, or on any click, arrow key or application switch. Nothing typed is written
+> to disk (an optional debug log is off by default) and nothing is transmitted: this Store build makes
+> no network connections at all — dictionary checking uses Hunspell dictionaries bundled in the package.
+> Password fields are excluded, password managers and terminals are excluded by default, and the user
+> can exclude any other application or individual words. Reading a selection for the manual trigger
+> sends one `Ctrl+C` and then restores the previous clipboard contents.
+>
+> **Verifiable.** The app is open source under the MIT licence — every use of these APIs can be read at
+> https://github.com/WhisKeySwitch/Switcher3way. Privacy policy:
+> https://whiskeyswitch.github.io/Switcher3way/privacy.html
+
+**Notes for certification** — these go on **Supplemental info → Additional Testing Information**, not on
+the Submission options page. That page only links to it, and leaving it empty is what keeps Submission
+options marked *Incomplete* when a restricted capability is declared.
+
+Three things will make a reviewer conclude the app is broken unless they are told: it has no main window,
+it does nothing until a second keyboard layout is installed, and it ignores synthetic input, so an
+automated test harness sees no reaction at all.
+
+> **No main window.** Switcher3way runs in the notification area. On first launch a short welcome flow
+> appears; finishing it leaves the app in the tray. Windows 11 hides new tray icons by default — if the
+> flag icon is not visible, expand the notification area with the "^" chevron next to the clock. Click
+> the icon for the menu (enable/disable, pause, Settings, Help).
+>
+> **Set-up needed before it can do anything.** The app converts between the keyboard layouts Windows
+> has installed, so please add a second layout first: Settings → Time & language → Language & region →
+> add **Ukrainian** or **Russian** alongside English. With only one layout installed there is nothing
+> to convert and the app will correctly appear to do nothing.
+>
+> **Please test by typing on a real keyboard.** The app deliberately ignores injected input
+> (`LLKHF_INJECTED`) so that it never reacts to its own corrections — a script, a remote-control tool or
+> the on-screen touch keyboard will produce no response. This is by design, not a fault.
+>
+> **Test — automatic:** with the English layout active, open Notepad and type `ghbdsn` then a space. The
+> text is replaced with `привіт`, the layout switches to Ukrainian, and a small chip appears under the
+> word showing the change and the undo key.
+>
+> **Test — manual trigger:** select any text typed in the wrong layout and tap **Ctrl twice**. It
+> converts in place; tapping again steps through the other layouts and then back to the original. The
+> trigger is configurable in Settings → General.
+>
+> **Other notes.** No account, sign-in or credentials of any kind are required, and there are no
+> purchases. This build makes no network connections. `runFullTrust` is used for a system-wide keyboard
+> hook and `SendInput`; password fields are excluded from processing. x64 only.
+>
+> If you want a record of what the app detected, Settings → Advanced → Debug logging (off by default)
+> writes to `%APPDATA%\Switcher3way\Logs\switcher3way.log`.
 
 **Also needed for the listing:** screenshots (1366×768 or larger) — the tray flyout, the Settings
 window, and the conversion feedback chip are the useful three.
