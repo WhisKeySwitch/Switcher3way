@@ -1,3 +1,19 @@
+# Windows Platform Support — Delta (windows-mvp)
+
+> **Reconciled 5 August 2026.** This change is the original Windows MVP; the WinUI 3 redesign
+> (archived as `2026-08-05-windows-winui3-redesign`) shipped after it and superseded part of it.
+>
+> The distribution requirement that used to live here — Authenticode-signed exe *and* installer via
+> SignPath, RFC-3161 timestamped, launching on EDR-managed devices — has been **removed from this
+> delta**, because it no longer describes the product and syncing it would undo the accurate version.
+> Distribution moved to the Microsoft Store, which signs the package itself; that is what makes the
+> "unknown publisher" warning go away, and it is why the SignPath application was never pursued. The
+> direct-download MSI is deliberately unsigned, with a SmartScreen click-through. The main spec's
+> "Distribute as a signed, offline application" requirement already carries this, synced from the
+> redesign — see decision 13 in the archived change.
+>
+> What remains below is the part of the MVP that shipped and that the main spec still understates.
+
 ## MODIFIED Requirements
 
 ### Requirement: Observe keystrokes and buffer words globally
@@ -18,18 +34,3 @@ The Windows build SHALL observe keystrokes system-wide without requiring focus i
 #### Scenario: Ignore the app's own synthesized input
 - **WHEN** the application synthesizes keystrokes to rewrite text (backspaces and Unicode characters)
 - **THEN** the system SHALL not let those synthesized events alter the keystroke buffer
-
-### Requirement: Distribute as a signed, offline application
-The Windows build SHALL be distributed as a code-signed installer and SHALL operate entirely offline at runtime. Both the executable and the installer SHALL be Authenticode-signed and timestamped so the signature outlives the certificate, and the signed executable SHALL launch on endpoint-protection-managed devices where an unsigned build is blocked.
-
-#### Scenario: Signed, timestamped distribution
-- **WHEN** the application is packaged for release
-- **THEN** the executable and the installer SHALL both be Authenticode-signed and RFC-3161 timestamped
-
-#### Scenario: Launches on a managed (EDR) device
-- **WHEN** the signed application is launched on a device whose endpoint protection blocks unsigned or low-reputation executables
-- **THEN** the signature SHALL establish the publisher so the executable is permitted to start
-
-#### Scenario: No runtime network dependency
-- **WHEN** the application performs detection, validation, or conversion
-- **THEN** it SHALL do so without any network access

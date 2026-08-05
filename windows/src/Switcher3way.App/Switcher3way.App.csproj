@@ -59,6 +59,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Interop.UIAutomationClient" Version="10.19041.0" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.*" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.*" />
   </ItemGroup>
@@ -80,10 +81,9 @@
            strings and scale-qualified assets, which our XAML does not currently rely on). -->
       <_XamlResource Include="$(OutDir)resources.pri" Condition="Exists('$(OutDir)resources.pri')" />
     </ItemGroup>
-    <Error Condition="'@(_XamlResource)' == ''"
-           Text="No compiled XAML (.xbf) found in $(OutDir) — the published app would fail to open any window." />
+    <Error Condition="'@(_XamlResource)' == ''" Text="No compiled XAML (.xbf) found in $(OutDir) — the published app would fail to open any window." />
     <Copy SourceFiles="@(_XamlResource)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
-    <Message Importance="high" Text="Published @(_XamlResource->Count()) XAML resource file(s)." />
+    <Message Importance="high" Text="Published @(_XamlResource-&gt;Count()) XAML resource file(s)." />
   </Target>
 
   <!-- MIT requires the notice to accompany copies of the software, so it ships next to the exe in

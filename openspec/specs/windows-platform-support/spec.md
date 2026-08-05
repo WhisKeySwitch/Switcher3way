@@ -5,7 +5,7 @@
 The system SHALL, on Windows, reproduce Switcher3way's N-way wrong-layout detection and correction behavior across English, Ukrainian, and Russian — observing keystrokes, rendering them through every installed layout, validating against bundled offline dictionaries, and switching/rewriting only on a single unambiguous winner — while adapting to Windows-specific input, layout, and distribution mechanisms. Implemented and shipping: a WinUI 3 application distributed as a direct-download MSI and submitted to the Microsoft Store. Where a requirement here is not yet met — notifications, for instance — the gap is recorded in the archived change that introduced it.
 ## Requirements
 ### Requirement: Observe keystrokes and buffer words globally
-The Windows build SHALL observe keystrokes system-wide without requiring focus in the app, and SHALL buffer the current word and detect word boundaries so that finished words can be evaluated, mirroring the macOS keystroke buffer.
+The Windows build SHALL observe keystrokes system-wide without requiring focus in the app, and SHALL buffer the current word and detect word boundaries so that finished words can be evaluated, mirroring the macOS keystroke buffer. The buffer SHALL retain punctuation and digit keys that produce letters in another installed layout as part of the token, and SHALL ignore the application's own synthesized keystrokes so a rewrite does not corrupt the buffer.
 
 #### Scenario: Buffer a word up to a boundary
 - **WHEN** the user types letters followed by a space or other word-boundary key in any foreground application
@@ -14,6 +14,14 @@ The Windows build SHALL observe keystrokes system-wide without requiring focus i
 #### Scenario: Reset the buffer on unsafe cursor movement
 - **WHEN** the user moves the caret with arrows, clicks the mouse, or switches applications
 - **THEN** the system SHALL discard the current keystroke buffer so a later rewrite cannot delete unrelated text
+
+#### Scenario: Keep punctuation keys that are letters in another layout
+- **WHEN** the user types a key that is punctuation in the current layout but a letter in another installed layout (for example the `,` key, which is `б` on a Ukrainian/Russian layout)
+- **THEN** the system SHALL keep that key in the current word's buffer rather than treating it as a word boundary or reset
+
+#### Scenario: Ignore the app's own synthesized input
+- **WHEN** the application synthesizes keystrokes to rewrite text (backspaces and Unicode characters)
+- **THEN** the system SHALL not let those synthesized events alter the keystroke buffer
 
 ### Requirement: Enumerate installed layouts and their languages
 The Windows build SHALL enumerate the installed keyboard layouts and determine each layout's language so that conversion decisions can be made against the available layouts.

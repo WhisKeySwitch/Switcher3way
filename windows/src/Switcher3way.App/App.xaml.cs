@@ -67,6 +67,21 @@ public partial class App : Application
                 probe.Start();
                 Diagnostics.LogAlways("diagcaret: probing every 2s for 30s — move focus between apps");
             }
+            // Password-field detection, probed live. This exists because the guard shipped broken for four
+            // releases on an untested assumption: focus a real password field and read the answer.
+            if (args2.Any(a => a.Equals("diagpw", StringComparison.OrdinalIgnoreCase)))
+            {
+                var probe = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+                int left = 15;
+                probe.Interval = TimeSpan.FromSeconds(2);
+                probe.Tick += (t, _) =>
+                {
+                    Diagnostics.LogAlways($"diagpw: {SecureField.Describe()}");
+                    if (--left <= 0) t.Stop();
+                };
+                probe.Start();
+                Diagnostics.LogAlways("diagpw: probing every 2s for 30s — focus a password field");
+            }
             // Same probe, but against our own WinUI text box: it has no classic caret, so it exercises the
             // accessibility tiers the way Chrome and Electron do, without needing to steal the foreground.
             if (args2.Any(a => a.Equals("diagcaretwinui", StringComparison.OrdinalIgnoreCase)))

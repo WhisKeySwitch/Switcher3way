@@ -1,3 +1,17 @@
+> **Reconciled 5 August 2026.** Everything below is the plan as written before the app shipped. Two of its
+> premises no longer hold, and `tasks.md` marks the affected items `[—]`:
+>
+> * **Code signing as phase-1 infrastructure** — this drove the SignPath Foundation plan (M4) and the CI
+>   pipeline. Distribution went to the **Microsoft Store** instead, which signs submitted packages itself,
+>   so no certificate of ours is needed and SignPath was never applied for. The direct-download MSI is
+>   unsigned by choice, with a SmartScreen click-through.
+> * **Shell framework undecided (WPF vs WinForms)** — the app shipped on **WinUI 3**. The WinForms tray and
+>   settings window this change built were replaced by the redesign and their files have been deleted.
+>
+> The detection core, dictionaries, live loop and exception model described here are what shipped and are
+> still in use. See the archived `2026-08-05-windows-winui3-redesign` for the decisions that superseded
+> the rest.
+
 ## Why
 
 The `windows-win32-spike` (archived 2026-07-21) proved the Win32 mechanics on real Windows and
