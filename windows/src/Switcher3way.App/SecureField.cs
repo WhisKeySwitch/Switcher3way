@@ -8,15 +8,27 @@ namespace Switcher3way.App;
 /// Whether the focused control is a password field — auto and manual conversion must never rewrite
 /// in one, including in-browser login fields the denied-apps list can't catch.
 ///
-/// The WinForms/WPF build used <c>System.Windows.Automation</c>, which went away with the WPF app
-/// model. This replacement uses two cheap, dependency-free checks on the focused window:
-///   1. a classic Win32 edit control with the <c>ES_PASSWORD</c> style, and
-///   2. the MSAA (oleacc) focused object carrying <c>STATE_SYSTEM_PROTECTED</c> — this is what
-///      catches password &lt;input&gt;s in Chromium/Firefox/Electron, which mark them protected.
-/// MSAA is reached through IDispatch by name, so no interop assembly is needed.
+/// Three checks, in the order of what actually catches what:
+///   1. **UI Automation <c>IsPassword</c>** — the only signal that works for a browser
+///      <c>&lt;input type="password"&gt;</c>. Verified in Chrome on 5 Aug 2026 against a local test page:
+///      `password=True (uia=True es_password=False msaa=False)` on the password input, and `False` on the
+///      plain text field beside it. Run `Switcher3way.exe diagpw` to re-check in any app.
+///   2. a classic Win32 edit control with the <c>ES_PASSWORD</c> style — Win32 dialogs.
+///   3. the MSAA focused object carrying <c>STATE_SYSTEM_PROTECTED</c> — some non-Chromium hosts.
+///
+/// **History worth keeping.** The WinForms build used `System.Windows.Automation.IsPassword` and worked.
+/// Dropping the WPF app model for WinUI took that assembly away, so this class was stubbed to `false`;
+/// it was then "restored" with checks 2 and 3 only, on the assumption that Chromium marks password
+/// inputs via MSAA. It does not — `accFocus` returns the document node (`accRole=15`) with the protected
+/// bit clear — so from 0.2.0 to 0.2.3 the guard never fired once, and conversion happened inside browser
+/// password fields. Proven by a user report and by zero `suppressed - password field` lines in a 275 KB
+/// log. UIA is back, this time through the `Interop.UIAutomationClient` interop assembly, which works
+/// without the WPF app model.
 ///
 /// Best-effort by design: any failure returns false (the denied-apps list still guards password
-/// *managers*), but a positive result always suppresses conversion.
+/// *managers*), but a positive result always suppresses conversion. Detection must never throw into the
+/// conversion path — but it must also never silently answer "not a password" because a query failed, so
+/// failures are logged.
 /// </summary>
 internal static class SecureField
 {
@@ -24,14 +36,78 @@ internal static class SecureField
     {
         try
         {
+            if (UiaIsPassword()) return true;               // browsers: the only check that sees them
+
             IntPtr focus = FocusedWindow();
             if (focus == IntPtr.Zero) return false;
             return HasPasswordStyle(focus) || MsaaProtected(focus);
         }
-        catch
+        catch (Exception ex)
         {
+            Diagnostics.Log("secure: detection failed, treating as not-a-password: " + ex.Message);
             return false; // never let detection block or crash conversion
         }
+    }
+
+    // The UIA client object is expensive to create and safe to reuse, and this runs on every word.
+    private static Interop.UIAutomationClient.IUIAutomation? _uia;
+    private static bool _uiaBroken;
+
+    /// <summary>
+    /// UI Automation's <c>IsPassword</c> on the focused element. This is what recognises
+    /// <c>&lt;input type="password"&gt;</c> in Chrome, Edge, Firefox and Electron apps.
+    /// </summary>
+    private static bool UiaIsPassword()
+    {
+        if (_uiaBroken) return false;
+        try
+        {
+            _uia ??= new Interop.UIAutomationClient.CUIAutomation();
+            var focused = _uia.GetFocusedElement();
+            // The typed member, not GetCurrentPropertyValue with a literal id: the first attempt at this
+            // passed 30097, which is not IsPassword (30019), so it read false for every field on earth
+            // while looking perfectly reasonable.
+            return focused is not null && focused.CurrentIsPassword != 0;
+        }
+        catch (Exception ex)
+        {
+            // Don't retry forever if the UIA client itself cannot be created — but say so once, because
+            // the consequence is that browser password fields stop being recognised.
+            _uiaBroken = true;
+            Diagnostics.LogAlways("secure: UI Automation unavailable, browser password fields will NOT be " +
+                                  "detected: " + ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Each signal separately, for the `diagpw` diagnostic. The verdict alone is not enough to trust:
+    /// knowing *which* check answered is what distinguishes a working guard from one that happens to be
+    /// right for the wrong reason — which is how the browser case went unnoticed for four releases.
+    /// </summary>
+    internal static string Describe()
+    {
+        IntPtr focus = FocusedWindow();
+        var cls = new StringBuilder(64);
+        GetClassNameW(focus, cls, cls.Capacity);
+        bool uia = UiaIsPassword();
+        bool style = focus != IntPtr.Zero && HasPasswordStyle(focus);
+        bool msaa = focus != IntPtr.Zero && MsaaProtected(focus);
+
+        // What UIA thinks has focus — if this is the browser window rather than the input, the client is
+        // not reaching web content and IsPassword can never be true.
+        string uiaElement = "n/a";
+        try
+        {
+            _uia ??= new Interop.UIAutomationClient.CUIAutomation();
+            var el = _uia.GetFocusedElement();
+            uiaElement = el is null ? "null"
+                : $"name='{el.CurrentName}' type={el.CurrentControlType} class='{el.CurrentClassName}'";
+        }
+        catch (Exception ex) { uiaElement = "threw: " + ex.Message; }
+
+        return $"password={uia || style || msaa}  (uia={uia} es_password={style} msaa={msaa})  " +
+               $"focus=0x{focus:X} class={cls}  uiaFocused[{uiaElement}]";
     }
 
     /// <summary>The focused control of the foreground thread (falls back to the foreground window).</summary>
