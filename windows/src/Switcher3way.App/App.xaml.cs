@@ -51,6 +51,38 @@ public partial class App : Application
                 Diagnostics.LogAlways("diagtoastoffer: remember-word notification…");
                 Toast.OfferNeverConvert("ghbdsn", "привіт");
             }
+            // Which source the chip's position comes from, probed repeatedly so focus can be moved
+            // between apps while it runs — the chip itself only appears after a real conversion, which
+            // synthetic input cannot trigger.
+            if (args2.Any(a => a.Equals("diagcaret", StringComparison.OrdinalIgnoreCase)))
+            {
+                var probe = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+                int left = 15;
+                probe.Interval = TimeSpan.FromSeconds(2);
+                probe.Tick += (t, _) =>
+                {
+                    CaretChip.Probe();
+                    if (--left <= 0) t.Stop();
+                };
+                probe.Start();
+                Diagnostics.LogAlways("diagcaret: probing every 2s for 30s — move focus between apps");
+            }
+            // Same probe, but against our own WinUI text box: it has no classic caret, so it exercises the
+            // accessibility tiers the way Chrome and Electron do, without needing to steal the foreground.
+            if (args2.Any(a => a.Equals("diagcaretwinui", StringComparison.OrdinalIgnoreCase)))
+            {
+                _tray.OpenSettings();
+                var probe = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+                int left = 6;
+                probe.Interval = TimeSpan.FromSeconds(2);
+                probe.Tick += (t, _) =>
+                {
+                    CaretChip.Probe(_tray?.DiagFocusSettingsSearch() ?? IntPtr.Zero);
+                    if (--left <= 0) t.Stop();
+                };
+                probe.Start();
+                Diagnostics.LogAlways("diagcaretwinui: probing our own WinUI text box…");
+            }
         }
         catch (Exception ex)
         {

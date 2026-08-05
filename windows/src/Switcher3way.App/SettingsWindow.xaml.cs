@@ -256,6 +256,20 @@ public sealed partial class SettingsWindow : Window
     /// such as accepting the "never convert this word" offer from a notification.</summary>
     internal void ReloadExceptions() => RefreshExceptions();
 
+    /// <summary>
+    /// Diagnostics only (`diagcaret`): put the caret in this window's search box. A WinUI TextBox creates
+    /// no classic Win32 caret, which makes it a stand-in for Chrome/Electron when testing where the
+    /// feedback chip anchors — and unlike another app's window, we can focus it without fighting Windows'
+    /// foreground rules.
+    /// </summary>
+    internal void FocusSearchForDiagnostics()
+    {
+        Tabs.SelectedItem = TabAutoFix;
+        ExcSearch.Text = "тест";
+        ExcSearch.Focus(FocusState.Programmatic);
+        ExcSearch.Select(ExcSearch.Text.Length, 0);
+    }
+
     private void RefreshExceptions()
     {
         // Live counts on the segments.

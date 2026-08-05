@@ -168,15 +168,60 @@ internal sealed class CaretChip : IDisposable
     }
 
     /// <summary>
-    /// Just below the caret. Many modern apps (WinUI/Electron/browser text boxes) expose no classic
-    /// caret, so the fallback anchors to the focused window's bottom-left — over the app you are
-    /// typing in — rather than the mouse pointer, which is unrelated to where the text went.
-    /// (A UIA-based caret rect, which would be accurate everywhere, is a later milestone.)
+    /// Just below the caret, trying four sources in descending accuracy. The classic Win32 caret covers
+    /// Notepad and Win32 edits; apps built on WinUI, Chromium or Electron expose none, so the caret comes
+    /// from the accessibility tree instead; failing that the focused *field* still puts the chip against
+    /// the right text; and only then does it fall back to a window corner.
     /// </summary>
-    private static (int X, int Y) PositionFor(Size size, int leftShift)
+    /// <summary>
+    /// Diagnostics for the position chain (`diagcaret`): what the foreground window is, what each source
+    /// answered, and where the chip would land. The chip only appears after a real conversion, and
+    /// synthetic keystrokes are ignored by the hook, so this is the only way to test placement.
+    /// </summary>
+    /// <param name="target">
+    /// Query this window instead of the foreground one. Needed to test the accessibility tiers when a
+    /// window cannot be brought to the front — Windows refuses foreground changes from a background
+    /// process, and <c>GetGUIThreadInfo(0)</c> always reads the foreground thread.
+    /// </param>
+    internal static void Probe(IntPtr target = default)
+    {
+        IntPtr fg = target != IntPtr.Zero ? target : GetForegroundWindow();
+        var cls = new System.Text.StringBuilder(96);
+        var title = new System.Text.StringBuilder(96);
+        GetClassNameW(fg, cls, cls.Capacity);
+        GetWindowTextW(fg, title, title.Capacity);
+
+        var gti = new GUITHREADINFO { cbSize = (uint)Marshal.SizeOf<GUITHREADINFO>() };
+        bool haveGti = GetGUIThreadInfo(0, ref gti);
+        // Same handle production uses: the focused child. A WinUI window answers nothing at the top level
+        // but returns a real rect for the child that has focus, so overriding this with a window handle
+        // would test the wrong thing.
+        IntPtr focus = haveGti && gti.hwndFocus != IntPtr.Zero ? gti.hwndFocus : fg;
+
+        Diagnostics.LogAlways($"diagcaret: fg=0x{fg:X} class={cls} title=\"{title}\" gti={haveGti} " +
+                              $"hwndFocus=0x{(haveGti ? gti.hwndFocus : IntPtr.Zero):X} hwndCaret=0x{(haveGti ? gti.hwndCaret : IntPtr.Zero):X}");
+        // Log against the same handle PositionFor uses (the focused child), and the top-level window too —
+        // they answer differently: a WinUI window returns nothing at the top level but a real rect for the
+        // focused child.
+        Diagnostics.LogAlways($"diagcaret:   focus=0x{focus:X} caret={Fmt(AccessibleCaret.CaretRect(focus))} " +
+                              $"field={Fmt(AccessibleCaret.FocusedRect(focus))}");
+        if (target != IntPtr.Zero && target != focus)
+            Diagnostics.LogAlways($"diagcaret:   toplevel=0x{target:X} caret={Fmt(AccessibleCaret.CaretRect(target))} " +
+                                  $"field={Fmt(AccessibleCaret.FocusedRect(target))}");
+        var pos = PositionFor(new Size(200, 40), 60);
+        Diagnostics.LogAlways($"diagcaret:   placed=({pos.X},{pos.Y})");
+
+        static string Fmt((int X, int Y, int W, int H)? r) =>
+            r is { } v ? $"({v.X},{v.Y},{v.W}x{v.H})" : "none";
+    }
+
+    internal static (int X, int Y) PositionFor(Size size, int leftShift)
     {
         var gti = new GUITHREADINFO { cbSize = (uint)Marshal.SizeOf<GUITHREADINFO>() };
-        if (GetGUIThreadInfo(0, ref gti) && gti.hwndCaret != IntPtr.Zero
+        bool haveGti = GetGUIThreadInfo(0, ref gti);
+
+        // 1. classic caret
+        if (haveGti && gti.hwndCaret != IntPtr.Zero
             && (gti.rcCaret.right - gti.rcCaret.left) >= 0 && gti.rcCaret.bottom > 0)
         {
             var pt = new POINT { x = gti.rcCaret.left, y = gti.rcCaret.bottom };
@@ -189,11 +234,29 @@ internal sealed class CaretChip : IDisposable
             }
         }
 
-        _ = leftShift; // only meaningful relative to a caret
+        IntPtr focus = haveGti && gti.hwndFocus != IntPtr.Zero ? gti.hwndFocus : GetForegroundWindow();
+
+        // 2. caret from the accessibility tree (Chrome, Electron, VS Code, WinUI text boxes)
+        if (AccessibleCaret.CaretRect(focus) is { } c)
+        {
+            var placed = Clamp(c.X - leftShift, c.Y + c.H + 6, size);
+            Diagnostics.Log($"chip: a11y caret=({c.X},{c.Y},{c.W}x{c.H}) shift={leftShift} placed=({placed.X},{placed.Y})");
+            return placed;
+        }
+
+        // 3. the focused text field: not the caret, but the right control
+        if (AccessibleCaret.FocusedRect(focus) is { } f)
+        {
+            var placed = Clamp(f.X + 4, f.Y + f.H + 6, size);
+            Diagnostics.Log($"chip: a11y focused field=({f.X},{f.Y},{f.W}x{f.H}) placed=({placed.X},{placed.Y})");
+            return placed;
+        }
+
+        // 4. the focused window
         IntPtr fg = GetForegroundWindow();
         if (fg != IntPtr.Zero && GetWindowRect(fg, out RECT wr))
         {
-            Diagnostics.Log("chip: no caret — anchored to the focused window");
+            Diagnostics.Log("chip: no caret and no accessible field — anchored to the focused window");
             return Clamp(wr.left + 24, wr.bottom - size.Height - 24, size);
         }
 
@@ -365,6 +428,10 @@ internal sealed class CaretChip : IDisposable
     [DllImport("user32.dll")] private static extern bool EndPaint(IntPtr h, ref PAINTSTRUCT ps);
     [DllImport("user32.dll")] private static extern bool GetClientRect(IntPtr h, out RECT r);
     [DllImport("user32.dll")] private static extern bool GetGUIThreadInfo(uint thread, ref GUITHREADINFO gti);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassNameW(IntPtr h, System.Text.StringBuilder s, int n);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetWindowTextW(IntPtr h, System.Text.StringBuilder s, int n);
     [DllImport("user32.dll")] private static extern bool ClientToScreen(IntPtr h, ref POINT p);
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr h, out RECT r);

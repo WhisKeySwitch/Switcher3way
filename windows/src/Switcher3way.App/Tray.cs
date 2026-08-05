@@ -143,6 +143,17 @@ internal sealed class Tray : IDisposable
         }
     }
 
+    /// <summary>
+    /// Diagnostics only (`diagcaret`): focus the Settings search box as a WinUI caret target and return
+    /// that window's handle, so the probe can query it directly instead of the foreground window.
+    /// </summary>
+    internal IntPtr DiagFocusSettingsSearch()
+    {
+        if (_settingsWindow is null) return IntPtr.Zero;
+        _settingsWindow.FocusSearchForDiagnostics();
+        return WinRT.Interop.WindowNative.GetWindowHandle(_settingsWindow);
+    }
+
     private SettingsWindow? _settingsWindow;
     internal void OpenSettings()
     {
