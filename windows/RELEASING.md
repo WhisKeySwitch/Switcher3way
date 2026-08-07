@@ -184,15 +184,15 @@ Three things will make a reviewer conclude the app is broken unless they are tol
 it does nothing until a second keyboard layout is installed, and it ignores synthetic input, so an
 automated test harness sees no reaction at all.
 
+> **First, add a second keyboard layout.** Settings → Time & language → Language & region → Add a
+> language → **Ukrainian** (or Russian), alongside English. Switcher3way converts a word from one
+> installed layout to another, so on a PC with a single layout there is nothing for it to convert
+> between. **This step is required before any of the tests below will do anything.**
+>
 > **No main window.** Switcher3way runs in the notification area. On first launch a short welcome flow
 > appears; finishing it leaves the app in the tray. Windows 11 hides new tray icons by default — if the
 > flag icon is not visible, expand the notification area with the "^" chevron next to the clock. Click
 > the icon for the menu (enable/disable, pause, Settings, Help).
->
-> **Set-up needed before it can do anything.** The app converts between the keyboard layouts Windows
-> has installed, so please add a second layout first: Settings → Time & language → Language & region →
-> add **Ukrainian** or **Russian** alongside English. With only one layout installed there is nothing
-> to convert and the app will correctly appear to do nothing.
 >
 > **Please test by typing on a real keyboard.** The app deliberately ignores injected input
 > (`LLKHF_INJECTED`) so that it never reacts to its own corrections — a script, a remote-control tool or
