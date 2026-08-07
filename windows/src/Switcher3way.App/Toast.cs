@@ -61,6 +61,18 @@ internal static class Toast
     }
 
     /// <summary>
+    /// The trigger was pressed and there was nothing to do — no second layout, nothing typed, nothing
+    /// convertible. Not an error, but it must be visible: silence here is indistinguishable from a
+    /// broken app, and Store certification rejected the app for exactly that.
+    /// </summary>
+    public static void ShowHint(string title, string message)
+    {
+        Show(new AppNotificationBuilder()
+            .AddText(title)
+            .AddText(message));
+    }
+
+    /// <summary>
     /// After an undo: offer to leave this word alone in future. The word carried in the button argument
     /// is the *converted* form, which is what the never-convert rule matches on, so accepting suppresses
     /// exactly this conversion rather than every conversion of the same keystrokes.

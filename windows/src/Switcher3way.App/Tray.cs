@@ -32,6 +32,7 @@ internal sealed class Tray : IDisposable
         Toast.Initialize(word => _dispatcher.TryEnqueue(() => AddNeverConvert(word)));
         _engine.Notify += m => { Diagnostics.Log($"notify: {m}"); Toast.ShowError(m); };
         _engine.Undone += (original, converted) => Toast.OfferNeverConvert(original, converted);
+        _engine.Hint += (title, body) => { Diagnostics.Log($"hint: {title} — {body}"); Toast.ShowHint(title, body); };
 
         // Conversions are raised from the engine's worker thread — marshal to the UI thread.
         _engine.Converted += info => _dispatcher.TryEnqueue(() =>

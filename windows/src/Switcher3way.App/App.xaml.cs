@@ -67,6 +67,13 @@ public partial class App : Application
                 probe.Start();
                 Diagnostics.LogAlways("diagcaret: probing every 2s for 30s — move focus between apps");
             }
+            // The trigger's "nothing to do" feedback. The trigger itself cannot be pressed synthetically
+            // (the hook ignores injected keys), so this shows what the reviewer's machine would show.
+            if (args2.Any(a => a.Equals("diaghint", StringComparison.OrdinalIgnoreCase)))
+            {
+                Diagnostics.LogAlways("diaghint: showing the one-layout hint…");
+                Toast.ShowHint(Loc.T("hint.setup.title"), Loc.T("hint.setup.body"));
+            }
             // Password-field detection, probed live. This exists because the guard shipped broken for four
             // releases on an untested assumption: focus a real password field and read the answer.
             if (args2.Any(a => a.Equals("diagpw", StringComparison.OrdinalIgnoreCase)))
