@@ -45,19 +45,13 @@ final class SoftGatesTests: XCTestCase {
         XCTAssertTrue(SoftGates.passes("camelCase", capsLock: true))
     }
 
-    func testRejectsMixedScript() {
-        // Latin + Cyrillic in one token is almost always code, never a word.
+    func testRejectsMixedScriptInEitherShiftState() {
+        // Latin + Cyrillic in one token is almost always code, never a word — and that is true
+        // whatever the shift state was. The veto used to share a function with the camelCase one
+        // and was skipped along with it under Caps Lock.
         XCTAssertFalse(SoftGates.passes("приvit", capsLock: false))
-    }
-
-    func testMixedScriptIsAllowedThroughUnderCapsLock() {
-        // Documents current behavior, which is arguably wrong: the mixed-alphabet veto shares a
-        // function with the camelCase veto, and BOTH are skipped under Caps Lock. Skipping
-        // camelCase is deliberate (everything is uppercase, so an internal capital means nothing);
-        // skipping mixed-script is a side effect — a Latin+Cyrillic token is code whether or not
-        // Caps Lock is down. Left as-is here: this change moves the gates, it does not redesign
-        // them. Splitting the two vetoes is its own proposal.
-        XCTAssertTrue(SoftGates.passes("приvit", capsLock: true))
+        XCTAssertFalse(SoftGates.passes("приvit", capsLock: true))
+        XCTAssertFalse(SoftGates.passes("ПРИVIT", capsLock: true))
     }
 
     func testLeadingCapitalIsFine() {

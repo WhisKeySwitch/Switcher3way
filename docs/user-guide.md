@@ -105,6 +105,13 @@ explicit request it acts even on words that Auto-fix would leave alone (for exam
 valid in more than one language) — just tap again to move to the next candidate if the first
 guess wasn't what you wanted. There is no layout pair to configure.
 
+**When two layouts spell a word the same way.** Ukrainian and Russian share most letters, so a word
+with no і/ї/є or ы/э/ъ looks identical in both. You get one cycle step for it, not two — an extra
+tap that changed nothing visible would look like the app was broken. The layout that step switches
+to is the one the dictionary points at (`хорошо` → Russian), and for a word that exists in both
+languages it follows **Language for ambiguous words** in Settings → Auto-fix, the same preference
+Auto-fix uses. Set that to *Do not convert* and the trigger simply takes the next layout in order.
+
 **Canceling an Auto-fix:** the same trigger also undoes an automatic conversion. If Auto-fix
 just converted a word, one tap — with no typing in between — brings back exactly what you typed
 and the layout you were in before the conversion.

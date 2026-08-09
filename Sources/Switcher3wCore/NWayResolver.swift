@@ -203,8 +203,7 @@ public final class NWayResolver {
         // The dictionary winner (from the same punctuation-aware evaluation the auto path uses)
         // goes first, so one tap gives the "correct" layout in the typical case. Under uk/ru
         // ambiguity the preferred ambiguity language takes that spot instead — one ⌥ tap gives
-        // the same answer auto-fix would. Match by layout ID, falling back to the rendered
-        // string in case the winner's layout was collapsed during dedup (identical render).
+        // the same answer auto-fix would.
         var promoted: (layoutID: String, converted: String)?
         switch evaluate(keys: keys, capsLock: capsLock) {
         case .convert(let d):
@@ -216,11 +215,20 @@ public final class NWayResolver {
         case .keep:
             break
         }
+        // Match by rendered text, and carry the winner's LAYOUT — not just move its text to the
+        // front. uk and ru render every word built from their shared letters identically, so the
+        // dedup above keeps only whichever came first in rotation order and the winning layout is
+        // usually NOT the survivor. Reordering alone therefore produced the right word in the wrong
+        // layout: `хорошо` is Russian-only and used to leave the user typing Ukrainian, and the
+        // ambiguity preference could never move anything at all. Rewriting the id fixes both, and
+        // keeps the cycle one step long — an extra step showing identical text would read as the
+        // trigger doing nothing. The text match IS the collapse signal: candidates are unique by
+        // rendered string, so a winner absent by id but present by text was collapsed into it.
         if let promoted,
-           let idx = candidates.firstIndex(where: { $0.targetLayoutID == promoted.layoutID })
-                  ?? candidates.firstIndex(where: { $0.converted == promoted.converted }) {
-            let w = candidates.remove(at: idx)
-            candidates.insert(w, at: 0)
+           let idx = candidates.firstIndex(where: { $0.converted == promoted.converted }) {
+            candidates.remove(at: idx)
+            candidates.insert(ManualCandidate(targetLayoutID: promoted.layoutID,
+                                              converted: promoted.converted), at: 0)
         }
 
         CoreLog.write("manual: \(candidates.count) candidate(s): " +

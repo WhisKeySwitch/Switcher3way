@@ -8,11 +8,16 @@ public enum SoftGates {
     public static func passes(_ typed: String, capsLock: Bool) -> Bool {
         guard typed.count >= 2 else { return false }                  // 1 letter (я/a/i/і): hopelessly ambiguous between layouts
         guard typed.allSatisfy({ $0.isLetter }) else { return false } // digits/punctuation/URL/code/email
-        // Under Caps Lock all text is UPPERCASE — this is NOT an acronym and NOT camelCase,
-        // so these two vetoes are applied only when Caps Lock is off.
+        // Applied whatever the shift state: a token drawn from two alphabets is a code identifier,
+        // and Caps Lock has nothing to do with alphabets. This veto used to share a function with
+        // the camelCase one below and was skipped along with it — so `приvit` passed the gates
+        // under Caps Lock, which nobody chose.
+        if isMixedScript(typed) { return false }
+        // Under Caps Lock all text is UPPERCASE, so neither "is it an acronym" nor "does it carry
+        // an internal capital" can tell us anything — that is the whole reason for this exemption.
         if !capsLock {
             if isAllCaps(typed) { return false }                      // acronyms
-            if looksLikeCodeIdentifier(typed) { return false }        // camelCase / mixed alphabets
+            if hasInternalCapital(typed) { return false }             // camelCase / PascalCase
         }
         return true
     }
@@ -21,10 +26,16 @@ public enum SoftGates {
         s == s.uppercased() && s != s.lowercased()
     }
 
-    /// Looks like a code identifier: an internal capital (camelCase/PascalCase)
-    /// or a mix of Latin and Cyrillic in one token → almost always code, not a word.
-    static func looksLikeCodeIdentifier(_ s: String) -> Bool {
+    /// An internal capital — camelCase/PascalCase, almost always code rather than a word.
+    /// Meaningless while Caps Lock is down, which is why `passes` gates it on that.
+    static func hasInternalCapital(_ s: String) -> Bool {
         for (i, c) in s.enumerated() where i > 0 && c.isUppercase { return true }
+        return false
+    }
+
+    /// Latin and Cyrillic letters in the same token → code, not a word. Independent of letter case,
+    /// so unlike the two vetoes above this one is applied in every shift state.
+    static func isMixedScript(_ s: String) -> Bool {
         var hasLatin = false, hasCyrillic = false
         for u in s.unicodeScalars {
             switch u.value {

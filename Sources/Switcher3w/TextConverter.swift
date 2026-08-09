@@ -387,6 +387,11 @@ final class TextConverter {
         }
 
         var steps: [(text: String, layoutID: String, lang: String)] = []
+        // Layouts whose text duplicates one already offered. They are NOT cycle steps — a step that
+        // changes no visible character reads as the trigger doing nothing — but the winner may be
+        // among them, and then the surviving step must carry ITS layout. Same rule as
+        // `NWayResolver.manualPlan`; keep the two in step.
+        var collapsed: [(text: String, layoutID: String, lang: String)] = []
         var seen: Set<String> = [original]   // don't offer what's already on screen, nor duplicates
         for layout in ordered {
             let id = LayoutSwitcher.sourceID(layout)
@@ -394,24 +399,36 @@ final class TextConverter {
             let map = DynamicKeyMapping.buildMap(from: source, to: layout)
             guard !map.isEmpty else { continue }
             let text = String(original.map { map[$0] ?? $0 }).precomposedStringWithCanonicalMapping
-            guard !seen.contains(text) else { continue }
-            seen.insert(text)
             let lang = String((LayoutSwitcher.languageCode(layout) ?? "").prefix(2))
+            guard !seen.contains(text) else { collapsed.append((text, id, lang)); continue }
+            seen.insert(text)
             steps.append((text, id, lang))
         }
 
-        // Dictionary-first: for a single-word selection, if exactly one candidate is a real word in
-        // its language, move it to the front so one tap gives the "correct" layout (as in auto).
+        // Dictionary-first: for a single-word selection, put the layout the evidence points at in
+        // front, so one tap gives the "correct" layout (as in auto). Candidates dropped by the dedup
+        // are considered too — uk and ru render every word made of their shared letters identically,
+        // so the winner is often not the entry that survived.
         let core = letterCore(original)
         if !core.isEmpty, !core.contains(where: { $0.isWhitespace }) {
-            let validIdxs = steps.indices.filter { i in
-                let c = letterCore(steps[i].text)
-                return !c.isEmpty && Dict.isAvailable(steps[i].lang)
-                    && Dict.isValidWord(c.lowercased(), lang: steps[i].lang)
+            let valid = (steps + collapsed).filter { c in
+                let cc = letterCore(c.text)
+                return !cc.isEmpty && Dict.isAvailable(c.lang)
+                    && Dict.isValidWord(cc.lowercased(), lang: c.lang)
             }
-            if validIdxs.count == 1 {
-                let w = steps.remove(at: validIdxs[0])
-                steps.insert(w, at: 0)
+            var winner: (text: String, layoutID: String, lang: String)?
+            if valid.count == 1 {
+                winner = valid[0]                                  // one language validates it
+            } else if valid.count > 1 {
+                // Ambiguous (uk/ru): the user's preferred language decides, exactly as for auto-fix.
+                // "off" means no preference between them here — the trigger still converts, since
+                // it is an explicit request; it just falls back to rotation order.
+                let pref = SettingsManager.shared.ambiguousLang
+                if pref != "off" { winner = valid.first { $0.lang == pref } }
+            }
+            if let winner, let idx = steps.firstIndex(where: { $0.text == winner.text }) {
+                steps.remove(at: idx)
+                steps.insert(winner, at: 0)   // the winner's layout, not just its text
             }
         }
 

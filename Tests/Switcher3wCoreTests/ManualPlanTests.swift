@@ -46,29 +46,49 @@ final class ManualPlanTests: XCTestCase {
         XCTAssertEqual(p.candidates.first?.converted, "місто")
     }
 
-    func testAmbiguousWordIgnoresThePreferenceWhenRendersCollapse() {
-        // KNOWN LIMITATION, pinned here deliberately.
-        //
-        // An "ambiguous" word is by definition one whose RENDER is valid in both uk and ru — which
-        // means the two layouts render it identically. The candidate loop dedups by rendered
-        // string, so only the first of them (OS order) ever becomes a candidate, and the promotion
-        // step can then only re-promote that same entry. The result: on the manual trigger an
-        // ambiguous word always lands on whichever of uk/ru comes first in the OS order, whatever
-        // the ambiguity preference says.
-        //
-        // The auto path is unaffected — it picks from `evaluate`'s winners by language directly,
-        // before any dedup. The manual path's own comment claims the preference "takes that spot",
-        // which overstates what the code does.
-        //
-        // Left as behavior: this change extracts the resolver, it does not redesign the cycle.
-        for preference in ["uk", "ru", "off"] {
+    func testAmbiguousWordFollowsThePreferenceEvenWhenRendersCollapse() {
+        // An "ambiguous" word is by definition one whose render is valid in both uk and ru — which
+        // means the two layouts render it identically and the dedup keeps only one entry. The
+        // preference must still decide which LAYOUT that entry carries; before the fix it could
+        // not move anything at all, so the setting did nothing on this path.
+        for (preference, expected) in [("uk", Fixture.uk), ("ru", Fixture.ru)] {
             guard let p = plan(latinFor("добре", lang: "uk"), ambiguousLang: preference) else {
                 return XCTFail("expected a plan")
             }
-            XCTAssertEqual(p.candidates.first?.targetLayoutID, Fixture.uk,
-                           "preference '\(preference)' cannot move a collapsed candidate")
-            XCTAssertEqual(p.candidates.count, 1, "identical uk/ru renders collapse to one candidate")
+            XCTAssertEqual(p.candidates.first?.targetLayoutID, expected,
+                           "preference '\(preference)' must select the layout")
+            XCTAssertEqual(p.candidates.first?.converted, "добре", "the text is the same either way")
+            XCTAssertEqual(p.candidates.count, 1,
+                           "still ONE step — a step showing identical text would look like a no-op")
         }
+    }
+
+    func testAmbiguityPreferenceOffFallsBackToRotationOrder() {
+        // "Do not convert" means "leave ambiguous words alone" for auto-fix. The trigger converts
+        // them by design (explicit request), so here it reads as "no preference between uk and ru"
+        // and the rotation order stands — unchanged behavior.
+        guard let p = plan(latinFor("добре", lang: "uk"), ambiguousLang: "off") else {
+            return XCTFail("expected a plan")
+        }
+        XCTAssertEqual(p.candidates.first?.targetLayoutID, Fixture.uk,
+                       "uk follows en in the fixture's rotation order")
+    }
+
+    func testPreferenceCannotDragAWordIntoALanguageThatDoesNotValidateIt() {
+        // "місто" is Ukrainian only. A preference of ru must not pull it into the Russian layout —
+        // the preference only chooses AMONG the languages that actually validate the render.
+        guard let p = plan(latinFor("місто", lang: "uk"), ambiguousLang: "ru") else {
+            return XCTFail("expected a plan")
+        }
+        XCTAssertEqual(p.candidates.first?.targetLayoutID, Fixture.uk)
+        XCTAssertEqual(p.candidates.first?.converted, "місто")
+    }
+
+    func testNoDictionaryEvidenceLeavesRotationOrder() {
+        // Gibberish: no language validates it, so nothing is promoted and the cycle is whatever
+        // rotation order gives — unchanged behavior.
+        guard let p = plan("qwzx") else { return XCTFail("expected a plan") }
+        XCTAssertEqual(p.candidates.first?.targetLayoutID, Fixture.uk)
     }
 
     func testPreferencePromotesWhenBothLayoutsRenderDifferently() {
@@ -82,22 +102,23 @@ final class ManualPlanTests: XCTestCase {
         XCTAssertEqual(uk.candidates.count, 2, "differing renders stay separate candidates")
     }
 
-    func testCollapsedRenderKeepsTheFirstLayoutEvenForAnUnambiguousWinner() {
-        // The same collapse as above, and this is its wider consequence. "хорошо" is Russian only
-        // (Ukrainian says добре/гарно), so the dictionary winner is unambiguously ru — but the
-        // word contains no letter the two layouts place differently (no і/ї/є/ы/э/ъ), so uk and ru
-        // render it identically and only the first in OS order survives dedup. The candidate the
-        // user gets carries the UK layout.
+    func testCollapsedRenderCarriesTheDictionaryWinnersLayout() {
+        // "хорошо" is Russian only (Ukrainian says добре/гарно) and contains no letter the two
+        // layouts place differently (no і/ї/є/ы/э/ъ), so uk and ru render it identically and the
+        // dedup keeps only the first in rotation order. The surviving candidate must nonetheless
+        // carry the RUSSIAN layout — otherwise the trigger produces the right word and leaves the
+        // user typing Ukrainian, which is what it used to do for any word of shared letters.
         //
-        // So the text is right and the layout is not: the trigger leaves the user in Ukrainian
-        // while they are typing Russian. This affects any Cyrillic word built purely from the
-        // letters the two layouts share — not a rare shape.
-        guard let off = plan(latinFor("хорошо", lang: "ru"), ambiguousLang: "off") else {
-            return XCTFail("expected a plan")
+        // Independent of the ambiguity preference: this word has one winner, not two.
+        for preference in ["uk", "ru", "off"] {
+            guard let p = plan(latinFor("хорошо", lang: "ru"), ambiguousLang: preference) else {
+                return XCTFail("expected a plan")
+            }
+            XCTAssertEqual(p.candidates.first?.converted, "хорошо")
+            XCTAssertEqual(p.candidates.first?.targetLayoutID, Fixture.ru,
+                           "the dictionary winner's layout, not the collapsed survivor's")
+            XCTAssertEqual(p.candidates.count, 1)
         }
-        XCTAssertEqual(off.candidates.first?.converted, "хорошо", "the text is correct")
-        XCTAssertEqual(off.candidates.first?.targetLayoutID, Fixture.uk,
-                       "…but the layout is the collapsed survivor, not the dictionary winner")
     }
 
     func testNoPlanForRemoteForwardedCharacters() {
