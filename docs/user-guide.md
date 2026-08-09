@@ -112,9 +112,11 @@ to is the one the dictionary points at (`хорошо` → Russian), and for a w
 languages it follows **Language for ambiguous words** in Settings → Auto-fix, the same preference
 Auto-fix uses. Set that to *Do not convert* and the trigger simply takes the next layout in order.
 
-**Canceling an Auto-fix:** the same trigger also undoes an automatic conversion. If Auto-fix
-just converted a word, one tap — with no typing in between — brings back exactly what you typed
-and the layout you were in before the conversion.
+**After an Auto-fix, the trigger keeps cycling.** Auto-fix picks one layout; tapping the trigger —
+with no typing in between — walks through the *other* installed layouts for the same word, and one
+more tap brings back exactly what you typed and the layout you were in. Type `dblyj`, let Auto-fix
+make it `видно` in Ukrainian, then tap: Russian, then back to `dblyj`. So undoing an Auto-fix takes
+one tap when there is only one other candidate, and one tap per remaining layout otherwise.
 
 **Learning from undo:** if Auto-fix converted a word and you immediately undo it with the
 trigger, Switcher3way offers to add that word to the **Never convert** list so it won't be

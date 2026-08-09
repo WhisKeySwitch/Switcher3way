@@ -29,6 +29,28 @@ altogether.
 - **WHEN** a candidate would reproduce the text already on screen in the source layout's own language
 - **THEN** the system SHALL NOT offer it
 
+### Requirement: An automatic conversion seeds the full candidate cycle
+When an automatic conversion is applied, the system SHALL record a candidate cycle containing **all**
+the layouts that render the word differently — the applied one first, then the rest — so that
+repeated trigger invocations walk through every installed layout before restoring the original text
+and the pre-conversion layout. Seeding only the applied conversion makes every other layout
+unreachable from the trigger, since no plan is built on the undo path.
+
+A conversion that also applied a **phrase correction** SHALL keep a single step: its erased span is a
+whole segment, and per-word candidates do not describe how other layouts render that segment.
+
+#### Scenario: Cycling on after an automatic conversion
+- **WHEN** Auto-fix converts a word to one of three installed layouts and the user taps the trigger repeatedly with no typing in between
+- **THEN** the system SHALL show the word in each remaining layout in turn, and only then restore the original text and the pre-conversion layout
+
+#### Scenario: Undo still reachable
+- **WHEN** the user continues tapping past the last candidate
+- **THEN** the system SHALL restore exactly what was typed and the layout that was active before the conversion, and SHALL raise the remember-this-word offer
+
+#### Scenario: Phrase correction
+- **WHEN** the applied conversion also re-converted earlier words of the phrase
+- **THEN** the cycle SHALL contain the single corrected segment, so one further tap restores the whole segment
+
 ### Requirement: Order candidates by the evidence
 The first candidate offered SHALL be the one the evidence points at, so a single trigger press gives
 the same answer auto-fix would:

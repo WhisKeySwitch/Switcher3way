@@ -546,7 +546,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             rslog("auto: convert \(keys.count) keys (+\(bc) sp) → \(decision.targetLayoutID)")
         }
 
-        let steps = [(text: insert, layoutID: decision.targetLayoutID)]
+        // The cycle continues through the REMAINING layouts, not just back to the original.
+        // Seeding one step meant that after an auto-fix the trigger could only toggle between the
+        // converted text and what you typed: for "dblyj" → "видно" (uk), Russian was unreachable,
+        // even though uk and ru are both real candidates. A phrase correction keeps the single
+        // step — its `home` is a whole segment, and the other layouts' renderings of that segment
+        // are not what these candidates describe.
+        var steps = [(text: insert, layoutID: decision.targetLayoutID)]
+        if correction == nil,
+           let plan = NWay.resolver.manualPlan(keys: keys, capsLock: capsLock,
+                                               ambiguousLang: SettingsManager.shared.ambiguousLang) {
+            steps += plan.candidates
+                .filter { $0.targetLayoutID != decision.targetLayoutID }
+                .map { (text: $0.converted + spaces, layoutID: $0.targetLayoutID) }
+            rslog("auto: cycle seeded with \(steps.count) step(s): " +
+                  steps.map { $0.layoutID.components(separatedBy: ".").last ?? "?" }.joined(separator: "→"))
+        }
         let kind = wordKind
         // Layout switch + bookkeeping only after the replacement really happened: if the user
         // kept typing, the injection aborts and both the text and the layout must stay theirs.

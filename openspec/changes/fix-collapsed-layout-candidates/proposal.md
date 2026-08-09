@@ -77,6 +77,13 @@ picks the layout the same arbitrary way.
   reached ru, which is how the gap was found. Reachable-but-quiet beats unreachable.
 - Fix applies to **both** candidate builders — `NWayResolver.manualPlan` and
   `TextConverter.buildSelectionSteps`.
+- **An automatic conversion seeds the full candidate cycle**, not just the conversion it applied.
+  This is the same reachability defect on a third path, found by the same manual testing: after
+  Auto-fix turned `dblyj` into `видно` (uk), the trigger could only toggle uk↔en, because the undo
+  path cycles the recorded steps and never builds a plan. Phrase corrections keep their single step.
+- **BREAKING (behavior):** cancelling an Auto-fix is no longer always one tap — with three layouts
+  in play the cycle passes through the third on the way back to the original. Documented in the
+  user guide, which previously promised a one-tap cancel.
 - **BREAKING (behavior):** for words made only of letters uk and ru share, one trigger tap now
   selects a different layout than before, and the cycle is one step longer. That is the point, but
   users who learned the old arbitrary result will notice.

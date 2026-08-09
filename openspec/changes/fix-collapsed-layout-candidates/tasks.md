@@ -41,7 +41,7 @@
 - [x] 4.2 Same for an ambiguous selection (`добре`) with the preference set to uk, then ru —
       **FAILED on the first implementation** (cycled uk↔en only, ru unreachable). Root cause and
       the revised D1 are in `design.md`; re-verify below
-- [ ] 4.3 Confirm repeated triggers still cycle and that the final tap restores the original text
+- [x] 4.3 Confirm repeated triggers still cycle and that the final tap restores the original text
       AND the exact pre-conversion layout
 
 ## 4b. Re-verification after the D1 reversal
@@ -53,8 +53,19 @@
       of the same language still collapse (new fixture layout `ru2`)
 - [x] 4b.4 Log the selection path's steps and the live preference, so "the preference is ignored" is
       readable from the log instead of inferred — the lesson from the Windows password guard
-- [ ] 4b.5 **User re-check:** with a Cyrillic selection of `добре` in uk, the trigger reaches ru;
+- [x] 4b.5 **User re-check:** with a Cyrillic selection of `добре` in uk, the trigger reaches ru;
       with the preference set to ru it leads
+
+## 4d. Third reachability path: the cycle seeded by an automatic conversion
+
+- [x] 4d.1 `handleAutoConvert` seeded ONE step, so after an auto-fix the trigger toggled between the
+      conversion and the original and never reached a third layout (`dblyj` → `видно` uk, ru
+      unreachable). Seed the full N-way plan, applied candidate first
+- [x] 4d.2 Keep the single step for phrase corrections — `home` is a whole segment there
+- [x] 4d.3 Log the seeded cycle so its shape is readable from the log
+- [x] 4d.4 Update the user guide in all three languages: cancelling an Auto-fix is no longer always
+      one tap
+- [x] 4d.5 **User confirmed:** `dblyj` cycles uk → ru → original → uk
 
 ## 4c. Test-suite defect found while re-verifying
 
@@ -70,4 +81,4 @@
       happens when two layouts render a word identically
 - [x] 5.2 Note the behavior change in the release notes — muscle memory attaches to the trigger, so
       this should not ship silently
-- [ ] 5.3 `openspec validate fix-collapsed-layout-candidates --strict`, then archive
+- [x] 5.3 `openspec validate fix-collapsed-layout-candidates --strict`, then archive
