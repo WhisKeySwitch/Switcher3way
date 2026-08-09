@@ -31,26 +31,41 @@ See `proposal.md — Why` for the defect. What matters for the approach:
 
 ## Decisions
 
-### D1 — Fix the survivor's layout, don't un-collapse the candidates
+### D1 — De-duplicate by text AND language (revised)
 
-When renders collide, keep one candidate and correct which layout it carries.
+**First attempt, rejected in testing.** Keep one candidate when renders collide and correct which
+layout it carries. The reasoning was that a cycle step changing no visible character reads as the
+trigger being broken, and uk/ru collide for most Cyrillic words, so the extra step would be common.
 
-*Why not offer both:* a cycle step that changes no visible character reads as the trigger being
-broken. The user taps, the word does not move, and the only difference is an input-source change
-they may not be looking at. Two of the three installed layouts producing the same text is the
-common case for uk/ru, so this would affect most Cyrillic words.
+That fixed the case where the collision was between two *candidates* — the user types in the wrong
+layout, uk and ru both render the same Cyrillic, and the winner's layout is carried by the survivor.
+It did not fix the case where the collision was with the **original**: the dedup set is seeded with
+the text already on screen, so for a selection already showing `добре` in Ukrainian, the Russian
+candidate was dropped before any candidate existed and there was nothing to correct. Russian was
+unreachable, which is exactly what the manual verification hit.
 
-*Why not pick eagerly during the loop:* the dictionary evidence comes from `evaluate`, which the
-function already calls *after* building the list. Restructuring to evaluate first would duplicate
-work; adjusting the survivor afterwards is a two-line change at the existing promotion site.
+**Revised decision.** Key the dedup on rendered text *and* language. Same-language duplicates (two
+Russian layouts) still collapse — nothing distinguishes them. Cross-language duplicates stay
+separate steps, including when they duplicate the original.
+
+*Consequence, accepted:* the cycle gains a step whose text is unchanged and whose layout differs.
+The original objection stands — that step does look like a no-op — but the alternative is that one
+of the two languages cannot be reached from the trigger at all for a large class of words.
+Reachable-but-quiet beats unreachable, and the menu-bar flag does move.
+
+*Bonus:* the special case disappears. With the winning layout always present as a real candidate,
+promotion is a plain reorder again — no rewriting of a survivor's `targetLayoutID`, on either path.
 
 ### D2 — Write the order down, even though the code already computes it
 
 Dictionary winner → ambiguity preference → rotation order. Rungs 1 and 2 are **disjoint cases**,
 not competing rules: they are the two shapes `evaluate` returns (`.convert` with a single winner,
 `.ambiguous` with several), and `manualPlan` already handles both. Nothing here is a new judgement.
-It is written out as a requirement because the current behavior is the accident of rung 3 being the
-only one that can actually take effect.
+It is written out as a requirement because the old behavior was the accident of rung 3 being the
+only one that could actually take effect.
+
+With D1 revised, this is now purely about *order* — which candidate leads — rather than about which
+layout a lone survivor carries.
 
 Rung 2 stays conditional on the preferred language being *among the winners* — the existing code's
 condition, preserved: a preference of "ru" must not drag a uk-only word into the Russian layout.
@@ -73,6 +88,10 @@ fix that makes ⌥ behave correctly on typed words but not on selected ones is a
 either consistent behavior, because it makes the rule unlearnable.
 
 ### D4 — Verification is by unit test on the core, manual on the selection path
+
+**This is what caught the D1 error.** The keystroke path's unit tests passed against the first
+attempt; the selection path, verified by hand, did not. The manual step is not ceremony here — it
+found a case the core suite structurally could not.
 
 `manualPlan` is in the core target and directly assertable, including the collapse cases that
 motivated this. `buildSelectionSteps` is AppKit- and clipboard-bound and is not reachable from the

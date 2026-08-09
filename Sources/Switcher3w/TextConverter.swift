@@ -387,12 +387,15 @@ final class TextConverter {
         }
 
         var steps: [(text: String, layoutID: String, lang: String)] = []
-        // Layouts whose text duplicates one already offered. They are NOT cycle steps — a step that
-        // changes no visible character reads as the trigger doing nothing — but the winner may be
-        // among them, and then the surviving step must carry ITS layout. Same rule as
-        // `NWayResolver.manualPlan`; keep the two in step.
-        var collapsed: [(text: String, layoutID: String, lang: String)] = []
-        var seen: Set<String> = [original]   // don't offer what's already on screen, nor duplicates
+        // Dedup by text AND language, not by text alone — same rule as `NWayResolver.manualPlan`,
+        // keep the two in step. uk and ru spell every word built from their shared letters
+        // identically, so a text-only key dropped one of them: for a selection already showing
+        // Cyrillic, the sibling language collided with the ORIGINAL and became unreachable, which
+        // is how a selected "добре" could only ever cycle uk↔en. Same-language duplicates (two
+        // Russian variants) still collapse. The price is a step whose text is unchanged and whose
+        // layout differs; that is the only way to reach the other language at all.
+        let sourceLang = String((LayoutSwitcher.languageCode(source) ?? "").prefix(2))
+        var seen: Set<String> = [sourceLang + "\u{0}" + original]   // don't re-offer what's on screen
         for layout in ordered {
             let id = LayoutSwitcher.sourceID(layout)
             guard id != sourceID else { continue }
@@ -400,8 +403,9 @@ final class TextConverter {
             guard !map.isEmpty else { continue }
             let text = String(original.map { map[$0] ?? $0 }).precomposedStringWithCanonicalMapping
             let lang = String((LayoutSwitcher.languageCode(layout) ?? "").prefix(2))
-            guard !seen.contains(text) else { collapsed.append((text, id, lang)); continue }
-            seen.insert(text)
+            let key = lang + "\u{0}" + text
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
             steps.append((text, id, lang))
         }
 
@@ -411,7 +415,7 @@ final class TextConverter {
         // so the winner is often not the entry that survived.
         let core = letterCore(original)
         if !core.isEmpty, !core.contains(where: { $0.isWhitespace }) {
-            let valid = (steps + collapsed).filter { c in
+            let valid = steps.filter { c in
                 let cc = letterCore(c.text)
                 return !cc.isEmpty && Dict.isAvailable(c.lang)
                     && Dict.isValidWord(cc.lowercased(), lang: c.lang)
@@ -426,11 +430,13 @@ final class TextConverter {
                 let pref = SettingsManager.shared.ambiguousLang
                 if pref != "off" { winner = valid.first { $0.lang == pref } }
             }
-            if let winner, let idx = steps.firstIndex(where: { $0.text == winner.text }) {
-                steps.remove(at: idx)
-                steps.insert(winner, at: 0)   // the winner's layout, not just its text
+            if let winner, let idx = steps.firstIndex(where: { $0.layoutID == winner.layoutID }) {
+                let w = steps.remove(at: idx)
+                steps.insert(w, at: 0)
             }
         }
+        rslog("  selection: steps=[" + steps.map { "\($0.lang):\($0.text)" }.joined(separator: " ") +
+              "] pref=\(SettingsManager.shared.ambiguousLang)")
 
         return steps.map { (text: $0.text, layoutID: $0.layoutID) }
     }

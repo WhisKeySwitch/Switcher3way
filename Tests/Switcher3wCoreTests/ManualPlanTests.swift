@@ -46,20 +46,20 @@ final class ManualPlanTests: XCTestCase {
         XCTAssertEqual(p.candidates.first?.converted, "місто")
     }
 
-    func testAmbiguousWordFollowsThePreferenceEvenWhenRendersCollapse() {
+    func testAmbiguousWordFollowsThePreference() {
         // An "ambiguous" word is by definition one whose render is valid in both uk and ru — which
-        // means the two layouts render it identically and the dedup keeps only one entry. The
-        // preference must still decide which LAYOUT that entry carries; before the fix it could
-        // not move anything at all, so the setting did nothing on this path.
+        // means the two layouts render it identically. They are still two separate steps (dedup is
+        // per language), and the preference decides which one comes FIRST, so a single tap gives
+        // the same answer auto-fix would.
         for (preference, expected) in [("uk", Fixture.uk), ("ru", Fixture.ru)] {
             guard let p = plan(latinFor("добре", lang: "uk"), ambiguousLang: preference) else {
                 return XCTFail("expected a plan")
             }
             XCTAssertEqual(p.candidates.first?.targetLayoutID, expected,
-                           "preference '\(preference)' must select the layout")
+                           "preference '\(preference)' must lead")
             XCTAssertEqual(p.candidates.first?.converted, "добре", "the text is the same either way")
-            XCTAssertEqual(p.candidates.count, 1,
-                           "still ONE step — a step showing identical text would look like a no-op")
+            XCTAssertEqual(p.candidates.count, 2,
+                           "both languages remain reachable by tapping again")
         }
     }
 
@@ -116,8 +116,7 @@ final class ManualPlanTests: XCTestCase {
             }
             XCTAssertEqual(p.candidates.first?.converted, "хорошо")
             XCTAssertEqual(p.candidates.first?.targetLayoutID, Fixture.ru,
-                           "the dictionary winner's layout, not the collapsed survivor's")
-            XCTAssertEqual(p.candidates.count, 1)
+                           "the dictionary winner leads, whatever the rotation order")
         }
     }
 
@@ -137,11 +136,27 @@ final class ManualPlanTests: XCTestCase {
         XCTAssertNil(r.manualPlan(keys: Fixture.keys("hello"), capsLock: false, ambiguousLang: "uk"))
     }
 
-    func testIdenticalRendersAreOfferedOnce() {
-        // "город" renders identically in uk and ru (no і/ы in it), so only one candidate survives.
-        // (It is also a real word in both languages — a vegetable garden vs a city.)
+    func testSameTextInTwoLanguagesStaysTwoSteps() {
+        // "город" renders identically in uk and ru (no і/ы in it) — and is a real word in both, a
+        // vegetable garden vs a city. Both must remain reachable: collapsing them by text alone is
+        // what used to make one of the two languages unreachable from the trigger.
         guard let p = plan(latinFor("город", lang: "ru")) else { return XCTFail("expected a plan") }
-        XCTAssertEqual(p.candidates.count, 1, "duplicate renders must be collapsed")
+        XCTAssertEqual(Set(p.candidates.map(\.targetLayoutID)), [Fixture.uk, Fixture.ru])
+        XCTAssertTrue(p.candidates.allSatisfy { $0.converted == "город" })
+    }
+
+    func testDuplicateLayoutsOfTheSameLanguageStillCollapse() {
+        // Two Russian layouts render identically and mean the same thing — offering both would be
+        // a step with nothing to distinguish it. Only cross-language duplicates survive dedup.
+        let withTwoRussian = Fixture.catalog(current: Fixture.en, langs: ["en", "uk", "ru", "ru2"])
+        let r = NWayResolver(catalog: withTwoRussian, dict: dict, exceptions: exceptions)
+        guard let p = r.manualPlan(keys: Fixture.keys(latinFor("город", lang: "ru")),
+                                   capsLock: false, ambiguousLang: "uk") else {
+            return XCTFail("expected a plan")
+        }
+        XCTAssertEqual(p.candidates.filter { $0.targetLayoutID == Fixture.ru2 }.count, 0,
+                       "the second Russian layout duplicates the first and must not be a step")
+        XCTAssertEqual(p.candidates.count, 2, "uk and ru only")
     }
 
     private func latinFor(_ word: String, lang: String) -> String {

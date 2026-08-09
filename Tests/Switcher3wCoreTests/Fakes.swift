@@ -97,18 +97,23 @@ enum Fixture {
         (18, "1", "1", "1"),
     ]
 
+    /// A SECOND Russian layout (e.g. "Russian – PC" alongside "RussianWin"): same language, same
+    /// rendering. Used to prove that same-language duplicates still collapse now that layouts of
+    /// DIFFERENT languages no longer do.
+    static let ru2 = "com.apple.keylayout.Russian-PC"
+
     static func catalog(current: String = en, langs: [String] = ["en", "uk", "ru"]) -> FakeLayoutCatalog {
         var made: [FakeLayoutCatalog.FakeLayout] = []
         for lang in langs {
-            let id = lang == "en" ? en : (lang == "uk" ? uk : ru)
+            let id = lang == "en" ? en : (lang == "uk" ? uk : (lang == "ru" ? ru : ru2))
             var keys: [UInt16: (Character, Character)] = [:]
             for (code, e, u, r) in rows {
-                let ch: Character = lang == "en" ? e : (lang == "uk" ? u : r)
+                let ch: Character = lang == "en" ? e : (lang == "uk" ? u : r)   // ru2 renders as ru
                 // Shift on the digit row gives punctuation, not an uppercase letter.
                 let shifted: Character = code == 18 ? "!" : Character(String(ch).uppercased())
                 keys[code] = (ch, shifted)
             }
-            made.append(.init(layout: Layout(id: id, lang: lang), keys: keys))
+            made.append(.init(layout: Layout(id: id, lang: lang == "ru2" ? "ru" : lang), keys: keys))
         }
         return FakeLayoutCatalog(layouts: made, current: current)
     }

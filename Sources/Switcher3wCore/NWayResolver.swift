@@ -182,20 +182,30 @@ public final class NWayResolver {
 
         let layouts = catalog.installedLayouts()
         let currentID = catalog.currentLayoutID()
-        guard layouts.contains(where: { $0.id == currentID }),
+        guard let currentLayout = layouts.first(where: { $0.id == currentID }),
               let original = rendered(keys, in: currentID) else {
             return nil
         }
 
         // Render the input in every installed layout (order as in the OS), starting from the
         // one after the current and wrapping around, so the "next" candidate is predictable.
+        //
+        // Dedup by text AND language, not by text alone. uk and ru spell every word built from
+        // their shared letters identically, so a text-only key collapsed them into one entry and
+        // made the second language unreachable — including when the collision was with the text
+        // already on screen, where there was no surviving candidate to carry the other layout.
+        // Keying on the language means same-language duplicates (two Russian variants) still
+        // collapse, while uk/ru stay separate steps. Such a step changes the layout without
+        // changing a visible character; that is the price of being able to reach it at all.
+        let currentLang = String(currentLayout.lang.prefix(2))
         let ordered = rotate(layouts, startingAfter: currentID)
         var candidates: [ManualCandidate] = []
-        var seen: Set<String> = [original]   // don't offer what's already on screen, nor duplicates
+        var seen: Set<String> = [key(original, currentLang)]   // don't re-offer what's on screen
         for layout in ordered {
             guard layout.id != currentID, let rendered = rendered(keys, in: layout.id) else { continue }
-            guard !seen.contains(rendered) else { continue }
-            seen.insert(rendered)
+            let k = key(rendered, String(layout.lang.prefix(2)))
+            guard !seen.contains(k) else { continue }
+            seen.insert(k)
             candidates.append(ManualCandidate(targetLayoutID: layout.id, converted: rendered))
         }
         guard !candidates.isEmpty else { return nil }
@@ -235,6 +245,9 @@ public final class NWayResolver {
                       candidates.map { "\($0.targetLayoutID.components(separatedBy: ".").last ?? "?")" }.joined(separator: "→"))
         return (original, currentID, candidates)
     }
+
+    /// Dedup key: the same text in two different languages is two different candidates.
+    private func key(_ text: String, _ lang: String) -> String { lang + "\u{0}" + text }
 
     /// The list of layouts rotated so it starts right AFTER the layout `afterID`.
     private func rotate(_ layouts: [Layout], startingAfter afterID: String) -> [Layout] {

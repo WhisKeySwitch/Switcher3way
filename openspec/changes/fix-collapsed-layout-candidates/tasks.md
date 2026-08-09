@@ -36,11 +36,33 @@
 
 ## 4. Manual verification (selection path — not reachable from the core suite)
 
-- [ ] 4.1 Build and install; with EN active, select text rendering as `хорошо` and trigger →
+- [x] 4.1 Build and install; with EN active, select text rendering as `хорошо` and trigger →
       Russian layout, text unchanged
-- [ ] 4.2 Same for an ambiguous selection (`добре`) with the preference set to uk, then ru
+- [x] 4.2 Same for an ambiguous selection (`добре`) with the preference set to uk, then ru —
+      **FAILED on the first implementation** (cycled uk↔en only, ru unreachable). Root cause and
+      the revised D1 are in `design.md`; re-verify below
 - [ ] 4.3 Confirm repeated triggers still cycle and that the final tap restores the original text
       AND the exact pre-conversion layout
+
+## 4b. Re-verification after the D1 reversal
+
+- [x] 4b.1 De-duplicate by text AND language in `NWayResolver.manualPlan`; drop the
+      survivor-layout rewrite, which the change makes unnecessary
+- [x] 4b.2 Same in `TextConverter.buildSelectionSteps`; drop its `collapsed` list for the same reason
+- [x] 4b.3 Tests: uk/ru remain two reachable steps; the preference decides which LEADS; two layouts
+      of the same language still collapse (new fixture layout `ru2`)
+- [x] 4b.4 Log the selection path's steps and the live preference, so "the preference is ignored" is
+      readable from the log instead of inferred — the lesson from the Windows password guard
+- [ ] 4b.5 **User re-check:** with a Cyrillic selection of `добре` in uk, the trigger reaches ru;
+      with the preference set to ru it leads
+
+## 4c. Test-suite defect found while re-verifying
+
+- [x] 4c.1 `DictionaryQualityTests` was non-deterministic: it computed `accepted` and `rejected` in
+      two separate passes over `NSSpellChecker`, which does not answer identically on back-to-back
+      calls — it reported a 0.75 rate alongside an empty accepted list, arithmetic only possible if
+      the passes disagreed. Now asks once per word, after a per-language warm-up call
+- [x] 4c.2 Confirm stability across repeated runs
 
 ## 5. Docs and close-out
 

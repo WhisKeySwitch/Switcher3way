@@ -23,6 +23,29 @@ final class DictionaryQualityTests: XCTestCase {
                                               wrap: false, inSpellDocumentWithTag: 0, wordCount: nil)
             return range.location == NSNotFound
         }
+
+        /// One verdict per word, asked ONCE.
+        ///
+        /// `NSSpellChecker` does not answer identically on back-to-back calls for the same word: an
+        /// earlier version of this test computed `accepted` and `rejected` with two separate passes
+        /// and reported a 0.75 rate alongside an empty list of accepted words — arithmetic that is
+        /// only possible if the two passes disagreed. A language also answers differently on its
+        /// first call than once it has warmed up, which is what `warmUp` below is for.
+        ///
+        /// This is a property of the system checker, not of the fixture, and the app's own `Dict`
+        /// calls the same API the same way — so it is worth knowing about beyond the test.
+        func verdicts(for words: [String], lang: String) -> [String: Bool] {
+            warmUp(lang)
+            var out: [String: Bool] = [:]
+            for w in words { out[w] = isValidWord(w.lowercased(), lang: lang) }
+            return out
+        }
+
+        /// The first query for a language can answer before its dictionary is loaded. Ask a throwaway
+        /// question first so the measured ones are asked of a warm checker.
+        private func warmUp(_ lang: String) {
+            _ = isValidWord("warmup", lang: lang)
+        }
     }
 
     func testValidWordsAreRecognised() throws {
@@ -36,9 +59,10 @@ final class DictionaryQualityTests: XCTestCase {
                 continue
             }
             measured = true
-            let accepted = words.filter { dict.isValidWord($0.lowercased(), lang: lang) }
+            let verdicts = dict.verdicts(for: words, lang: lang)
+            let accepted = verdicts.filter { $0.value }.keys.sorted()
+            let rejected = verdicts.filter { !$0.value }.keys.sorted()
             let rate = Double(accepted.count) / Double(words.count)
-            let rejected = words.filter { !dict.isValidWord($0.lowercased(), lang: lang) }
             print(String(format: "dictionary-quality: %@ valid-word rate %.2f (%d/%d)",
                          lang, rate, accepted.count, words.count))
             XCTAssertGreaterThanOrEqual(
@@ -59,9 +83,10 @@ final class DictionaryQualityTests: XCTestCase {
                 continue
             }
             measured = true
-            let rejected = words.filter { !dict.isValidWord($0.lowercased(), lang: lang) }
+            let verdicts = dict.verdicts(for: words, lang: lang)
+            let accepted = verdicts.filter { $0.value }.keys.sorted()
+            let rejected = verdicts.filter { !$0.value }.keys.sorted()
             let rate = Double(rejected.count) / Double(words.count)
-            let accepted = words.filter { dict.isValidWord($0.lowercased(), lang: lang) }
             print(String(format: "dictionary-quality: %@ reject rate %.2f (%d/%d)",
                          lang, rate, rejected.count, words.count))
             XCTAssertGreaterThanOrEqual(

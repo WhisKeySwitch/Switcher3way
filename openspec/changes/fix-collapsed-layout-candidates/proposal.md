@@ -58,24 +58,28 @@ picks the layout the same arbitrary way.
 
 ## What Changes
 
-- When several layouts render the keystrokes identically, the surviving candidate SHALL carry the
-  layout the existing promotion step already computes, instead of the first one encountered. The
-  two cases are disjoint, not competing rules — they are the two shapes `evaluate` can return:
-  1. exactly one language validates (`.convert`) → that language's layout;
-  2. several validate (`.ambiguous`) → the layout of the **preferred ambiguity language** from
-     Settings, when it is among the validating ones;
-  3. neither applies — no language validates, or the preference is "Do not convert", or the
-     preferred language is not among the winners → today's behavior, the first in rotation order.
+- **De-duplicate candidates by rendered text *and* language**, not by text alone. Same-language
+  duplicates (two Russian layouts) still collapse; uk and ru stay separate steps even when they
+  spell the word identically. The text already on screen suppresses only a candidate of the source
+  layout's own language.
+- **Order** the candidates by the evidence the code already computes, so one tap gives the same
+  answer auto-fix would: single validating language → that one; several → the **preferred ambiguity
+  language** from Settings when it is among them; otherwise rotation order.
 - "Do not convert" keeps meaning what it means for auto-fix on the auto path (leave the word alone)
   and reads as "no preference between uk and ru" on the trigger, which converts ambiguous words by
-  design because it is an explicit request. Rung 3 is therefore unchanged behavior, not a new rule.
-- The cycle keeps its current *length*. Collapsed renders stay one step: adding a step that changes
-  the layout without changing a visible character would make the trigger look broken.
+  design because it is an explicit request — the rotation order simply stands.
+- **The cycle gains a step** for words uk and ru spell identically: one whose text is unchanged and
+  whose layout differs. This reverses the first draft of this proposal, which kept a single
+  candidate carrying the winning layout on the grounds that a step changing no visible character
+  reads as the trigger doing nothing. That is still true, and it is the price of the alternative
+  being *unreachable*: with a text-only key, the sibling language could not be offered at all when
+  its render collided with the text already on screen — a selected `добре` cycled uk↔en and never
+  reached ru, which is how the gap was found. Reachable-but-quiet beats unreachable.
 - Fix applies to **both** candidate builders — `NWayResolver.manualPlan` and
   `TextConverter.buildSelectionSteps`.
 - **BREAKING (behavior):** for words made only of letters uk and ru share, one trigger tap now
-  selects a different layout than before. That is the point, but users who learned the old
-  arbitrary result will notice.
+  selects a different layout than before, and the cycle is one step longer. That is the point, but
+  users who learned the old arbitrary result will notice.
 
 ## Capabilities
 
