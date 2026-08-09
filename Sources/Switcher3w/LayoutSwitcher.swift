@@ -1,5 +1,6 @@
 import Carbon
 import Foundation
+import Switcher3wCore
 
 /// Layout control via the TIS API
 enum LayoutSwitcher {

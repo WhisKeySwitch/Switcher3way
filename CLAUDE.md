@@ -85,7 +85,29 @@ Rationale + detail: `NOTES-3WAY.md`. Summary:
    (rewritten for the fork), Homebrew cask, upstream icon assets/generators, upstream-stats
    script, `nway-3way.patch`. Only LICENSE + attribution reference upstream now.
 
-## Architecture map (`Sources/Switcher3w/`)
+## Architecture map
+
+### `Sources/Switcher3wCore/` — the testable decision core (August 2026)
+
+Foundation-only library target, extracted so the logic that decides whether to touch the user's
+text is assertable without the app, its permissions, or the machine's installed layouts. Platform
+services arrive through protocols, named after their Windows counterparts so the two ports stay
+legible side by side.
+
+- **`CoreInterfaces.swift`** — `TypedKey`, `Layout`, and the injection points:
+  `DictionaryValidating` (Windows `IDictionaryValidator`), `LayoutCatalog` (`ILayoutCatalog`),
+  `WordExceptionList`, plus `CoreLog` (the executable wires it to `rslog` at startup).
+- **`SoftGates.swift`** — `passes` (length / all-caps / camelCase / mixed-script vetoes) and
+  `letterCore` trimming, shared verbatim by the 2-way and N-way paths.
+- **`NWayResolver.swift`** — `evaluate` / `manualPlan` / `render`. Instance-based; the executable
+  owns one (`NWay.resolver`).
+- **`PhraseTracker.swift`** — phrase memory and retro-corrections; takes a renderer closure.
+
+`Tests/Switcher3wCoreTests/` covers it (55 cases, `swift test`): soft gates, evaluate outcomes,
+manual plan, phrase tracking, and a **dictionary-quality** test measuring the real NSSpellChecker
+against `WordFixture.swift`.
+
+### `Sources/Switcher3w/` — the app
 
 - **`AppDelegate.swift`** — lifecycle, menu-bar item + menu (`rebuildMenu`: status header with
   layout badge/trigger hint/version, quick toggles, Pause submenu; "Check Permissions…" appears
@@ -96,8 +118,21 @@ Rationale + detail: `NOTES-3WAY.md`. Summary:
   `SettingsManager.effectivelyEnabled` (master toggle AND not paused); pause timers live in
   `applyEnabledState()`.
 - **`NWayDetector.swift`** — the N-way decision (fork's core).
-- **`AutoSwitch.swift`** — `Dict` (NSSpellChecker), `LayoutDetector.decide` + shared
-  `passesSoftGates`, `AutoSwitchPolicy` (exception lists, denied apps, secure-input, remote).
+- **`AutoSwitch.swift`** — `Dict` (NSSpellChecker), `LayoutDetector.decide`, `AutoSwitchPolicy`
+  (exception lists, denied apps, secure-input, remote). The soft gates now live in the core.
+- **`CoreAdapters.swift`** — the production conformances (`SystemDictionary`,
+  `SystemLayoutCatalog`, `SettingsExceptionList`) and `NWay.resolver`, the app's single resolver.
+- **`SecureFieldDetector.swift`** — the password-field guard (August 2026). Three signals on the
+  focused AX element: subrole `AXSecureTextField`, a text field *labelled* as a password (12
+  languages — catches unmasked "show password" boxes and JS-masked web forms), and the original
+  `IsSecureEventInputEnabled()`. 0.05 s messaging timeout, memoized per focused element, raises
+  the Electron/Chromium tree via `AXManualAccessibility`. Gates auto, the manual trigger, and the
+  feedback badge. Every failure logs and answers "not a password". `Switcher3way diagpw` prints
+  the per-signal breakdown for whatever has focus.
+- **`ConversionNotifier.swift`** — `UNUserNotificationCenter`: the throttled "couldn't rewrite
+  here" error and the learn-from-undo offer (a notification with an action button, replacing the
+  modal alert). Guarded on `Bundle.main.bundleIdentifier != nil` so `swift run` never traps;
+  a denial degrades to logging.
 - **`KeyboardMonitor.swift`** — CGEvent tap, keystroke buffer (`currentWordKeys`/`prevWordKeys`),
   word-boundary logic, `rslog`, `TriggerConfig`. Buffer resets on arrows/mouse/app-switch (guards
   against deleting the wrong text).
@@ -135,7 +170,11 @@ Rationale + detail: `NOTES-3WAY.md`. Summary:
 - **`UpdateInstaller.swift`** — verified install: DMG download → sha256 vs the `version.json`
   release asset (release-notes fallback) → mount → codesign identity must equal the running
   app's → move-aside + `ditto` swap with rollback → relaunch.
-- Others: `CaretIndicator` (flag at cursor), `PerAppLayoutManager`, `KeyMapping`/`KeyCodes`
+- **`CaretIndicator.swift`** — two surfaces on one non-activating click-through panel: the beta
+  layout-flag badge (off by default) and the **conversion chip** (`conversionApplied`, on by
+  default — typed form struck through → converted form → the configured trigger as an undo hint).
+  Falls back to a window anchor when no caret resolves; suppressed by the password guard.
+- Others: `PerAppLayoutManager`, `KeyMapping`/`KeyCodes`
   (static fallback tables), `AppRelauncher` (used by onboarding's restart and the updater).
 
 ## Debugging
@@ -144,7 +183,18 @@ Rationale + detail: `NOTES-3WAY.md`. Summary:
 defaults write com.switcher3way.app com.switcher3w.debugLog -bool true   # enable file log
 # restart app, then:
 tail -f ~/Library/Logs/Switcher3w/switcher3w.log
+
+swift test                                            # the detection core's suite (no app needed)
+/Applications/Switcher3way.app/Contents/MacOS/Switcher3way diagpw   # password-guard breakdown
 ```
+
+`diagpw` samples after a 3 s countdown, so you can click into the field you want inspected. It
+prints the verdict AND each signal, which is the point: a guard that never fires and a guard that
+correctly finds nothing produce identical logs otherwise.
+
+`rslog(...)` is gated behind the debug flag; **`logAlways(...)`** writes regardless, for failures
+the user could otherwise never report (AX unavailable, notification registration failing). The
+log never records which key was pressed — only that one was buffered.
 Logging is gated behind that flag (off by default → no log file otherwise). Startup line reports
 permission state. `rslog(...)` is the logger; auto-convert decisions log as `auto: …`.
 

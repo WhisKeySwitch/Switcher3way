@@ -1,6 +1,6 @@
 # Capabilities
 
-This project currently centers on eleven capabilities that are reflected in the implementation and the generated specs.
+This project currently centers on fourteen capabilities that are reflected in the implementation and the generated specs.
 
 ## 1. Manual conversion and undo
 Converts the most recently typed word or selected text between keyboard layouts and reverses the previous conversion when invoked again.
@@ -34,6 +34,15 @@ Opt-in rotating file log (5 MB cap) with an Advanced-tab toggle, path display, a
 
 ## 11. Software updates
 Checks the fork's own public releases repo (daily, toggleable; plus a menu item), notifies with release notes, and installs one-click verified updates: sha256 against the release's `version.json` manifest asset plus a same-certificate codesign gate, in-place swap with rollback, relaunch. Can never offer an upstream rashn/RuSwitcher build — the source repo is the fork's.
+
+## 12. Password field protection
+Detects that the focused control is a password field by inspecting the Accessibility element — secure-text-field subrole, or a text field *labelled* as a password in any of a dozen languages — in addition to the process-global secure-input flag, and suppresses auto-conversion, the manual trigger, and the on-screen feedback when it is. Closes the gap the Windows port found in the field: an unmasked "show password" box, a JS-masked web form, and Electron hosts leave the secure-input flag clear. Best-effort and bounded (0.05 s timeout, memoized per focused element); every failure logs and answers "not a password". `diagpw` prints the per-signal breakdown.
+
+## 13. Conversion notifications
+Non-blocking notifications for the only two things the app cannot say any other way: a rewrite it could not apply (throttled at 30 s), and the offer to remember a word after the user undoes a conversion (an action button, replacing the modal alert that used to steal focus mid-typing). Never notifies on success. A denial of notification permission degrades to logging and changes nothing about conversion.
+
+## 14. Detection core testability
+The platform-independent decision logic lives in a Foundation-only `Switcher3wCore` target behind `DictionaryValidating` / `LayoutCatalog` / `WordExceptionList` protocols, and is covered by an automated suite (`swift test`) requiring no app install and no permissions: soft gates, N-way evaluate outcomes, manual-plan candidate ordering, phrase tracking, and a dictionary-quality test measuring the real system dictionary against a checked-in word fixture.
 
 ## Planned (spec exists, not yet implemented)
 **Windows platform support** — a target contract for a future Windows port of the app, capturing the platform-independent requirements (keystroke observation, layout enumeration/switching, per-layout rendering, offline validation, N-way detection semantics, text rewrite, tray UI, exclusion policy, signed offline distribution). The spec lives at `specs/windows-platform-support/`; the planning artifacts (design + API mapping + phased roadmap) are archived under `changes/archive/2026-07-20-windows-port-plan/`. A throwaway C#/.NET **feasibility spike** (`windows-spike/`, archived under `changes/archive/2026-07-21-windows-win32-spike/`) has since proven the Win32 mechanics on real Windows — hook, per-layout `ToUnicodeEx` rendering, foreground layout switch, `SendInput` rewrite, and the N-way manual cycle — verdict **GO** (see `windows-spike/FINDINGS.md`); the key blocker is Authenticode signing (Defender for Endpoint blocks the unsigned exe). No production/MVP Windows code exists yet.

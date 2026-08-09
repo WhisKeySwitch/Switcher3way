@@ -111,7 +111,17 @@ and the layout you were in before the conversion.
 
 **Learning from undo:** if Auto-fix converted a word and you immediately undo it with the
 trigger, Switcher3way offers to add that word to the **Never convert** list so it won't be
-touched again.
+touched again. The offer arrives as a notification with a **Add to exceptions** button — it
+never interrupts your typing, and ignoring it simply leaves the lists unchanged.
+
+**Password fields:** the trigger does nothing in a password field. That is deliberate — an
+explicit request still isn't a reason to read or rewrite a credential. See *Privacy* below for
+how a password field is recognised.
+
+**Seeing what changed:** when a conversion happens, a small badge appears next to the cursor
+showing what you typed, struck through, and what replaced it — plus the trigger key, as a
+reminder of how to undo it. Turn it off with **Settings → General → Show what was corrected**.
+If an app doesn't tell macOS where its cursor is, the badge appears near the window instead.
 
 ## Auto-fix: converting as you type
 
@@ -123,7 +133,7 @@ holds back when:
 
 - the frontmost app is in the **Apps** exception list (terminals, IDEs, password managers…);
 - the word is in **Never convert**;
-- macOS reports **secure input** (password fields);
+- the focused field is a **password field** (see *Privacy* below);
 - you moved the cursor, clicked, or switched apps mid-word — converting then could damage the
   wrong text;
 - the word looks like code, is ALL-CAPS, or is too short.
@@ -148,7 +158,7 @@ filter to switch between them (counts shown live), the search field to find entr
   IDEs, password managers). Password managers are marked **🔒 always off** and cannot be
   removed. Entries ending in `*` match a vendor prefix (e.g. all JetBrains apps).
 - **Never convert** — words Auto-fix must never touch: nicknames, logins, brand names. The
-  undo-learning prompt adds words here.
+  undo-learning notification adds words here.
 - **Always convert** — words to convert even though no dictionary contains them.
 
 The exception lists apply to **Auto-fix**; the manual trigger always obeys you.
@@ -162,6 +172,7 @@ Open with **⌘,** from the menu. Four tabs:
 - **Status card** — master on/off switch for the whole app (trigger + Auto-fix).
 - **Trigger** — the trigger key, right-key-only, double-tap (see above). Both the trigger and
   Auto-fix are N-way over all installed layouts; there is no layout pair to pick.
+- **Show what was corrected** — the badge next to the cursor after a conversion (on by default).
 - **System** — Launch at login, Remember layout per app (restores each app's last layout when
   you switch back to it), Interface language (16 languages; "System default" follows macOS).
 
@@ -178,7 +189,8 @@ The automatic-conversion master switch, the **Language for ambiguous words** pop
   too and enable this on both.
 - **Debug logging** — off by default; when enabled the app writes
   `~/Library/Logs/Switcher3w/switcher3w.log` (rotated at 5 MB). **Show Log File** reveals it in
-  Finder. Useful for bug reports.
+  Finder. Useful for bug reports. It records decisions, including the words being decided about —
+  see *Privacy* for exactly what does and does not reach it.
 
 ### About
 
@@ -208,9 +220,31 @@ Detection and conversion happen **entirely locally on your Mac** — no telemetr
 dictionaries downloaded (it uses the macOS system dictionaries). The only network access is
 the **optional update check** (see above): a request to GitHub for the latest release
 version, which you can switch off in Settings → General. Keystrokes are held only in a short
-in-memory buffer for the current word, are never written to disk, and auto-fix is suppressed
-entirely while macOS signals secure input (password fields). The debug log is opt-in and
-contains decision traces, not your text.
+in-memory buffer for the current word and are never written to disk.
+
+**Password fields.** Neither Auto-fix, nor the trigger, nor the badge does anything while a
+password field has focus. A field counts as one when *any* of these is true:
+
+- macOS signals **secure input** — the classic case, and until recently the only check;
+- the focused control is a **secure text field** as macOS describes it — what a masked
+  `type="password"` box in a browser publishes;
+- the focused text field is **labelled** as a password (in any of a dozen languages, matched
+  against whatever the page or app calls it) even when it is *not* masked.
+
+That last one matters: any login form with a "show password" toggle turns its box into ordinary
+text while revealed, and some sites mask in their own code and never use a real password field.
+Neither sets the secure-input flag. The check errs on the side of doing nothing — a field
+labelled "password" is left alone even if it isn't one.
+
+**The debug log.** Opt-in, and off unless you switch it on. It never records which keys you
+pressed — only that a keystroke was buffered and how many are in the buffer. It *does* record
+the word being decided about, on the line where a conversion is decided; that line cannot be
+reached for a password field, because the check above runs first. If you have had logging on
+and want the history gone, delete `~/Library/Logs/Switcher3w/`.
+
+**Notifications.** Switcher3way notifies you in exactly two cases: a rewrite it could not apply,
+and the offer to remember a word after you undo a conversion. It never notifies on success. If
+you decline notification permission, both simply go to the log and nothing else changes.
 
 ## Troubleshooting & FAQ
 

@@ -3,6 +3,7 @@ import ApplicationServices
 import Carbon
 import CoreGraphics
 import os
+import Switcher3wCore
 
 /// Text conversion between layouts
 @MainActor
@@ -151,6 +152,14 @@ final class TextConverter {
             cycleShownCount = cycleHome.count
         }
         return true
+    }
+
+    /// The original text and what the cycle currently shows in its place — the conversion feedback
+    /// needs both, and only the converter knows where the cycle stands. nil outside a buffer cycle.
+    var currentCycleText: (home: String, shown: String)? {
+        guard lastWasBuffer, !cycleSteps.isEmpty, cycleIndex >= 0, cycleIndex < cycleSteps.count else { return nil }
+        return (cycleHome.trimmingCharacters(in: .whitespaces),
+                cycleSteps[cycleIndex].text.trimmingCharacters(in: .whitespaces))
     }
 
     /// Next step of the selection cycle (second+ trigger, no input between). The buffer
