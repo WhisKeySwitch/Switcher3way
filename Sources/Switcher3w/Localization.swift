@@ -72,6 +72,51 @@ enum L10n {
     static func learnQuestion(_ word: String) -> String { String(format: s("learn.question"), word) }
     static var learnAdd: String { s("learn.add") }
     static var learnNotNow: String { s("learn.notNow") }
+
+    // MARK: - Notifications (conversion-notifications)
+    static var notifyErrorTitle: String { s("notify.error.title") }
+    static var notifyCannotActHere: String { s("notify.cannotActHere") }
+    static var notifyUndoBody: String { s("notify.undo.body") }
+
+    // MARK: - Conversion feedback chip
+    static var settingsConversionChip: String { s("settings.conversionChip") }
+    static func chipUndoHint(_ trigger: String) -> String { String(format: s("chip.undoHint"), trigger) }
+
+    /// The trigger keys offered in Settings, in order, as (settings key, display title). Key names
+    /// are deliberately NOT localized — they are standard Apple notations. Single source for the
+    /// Settings popup and the conversion chip's undo hint, so the two can never disagree about
+    /// which key the user actually chose.
+    static let triggerChoices: [(key: String, title: String)] = [
+        ("option", "Option ⌥ (Alt)"),
+        ("command", "Command ⌘"),
+        ("control", "Control ⌃"),
+        ("shift", "Shift ⇧"),
+        // Caps Lock removed: native interception is unstable (HID debounce/toggle) — see tech debt.
+    ]
+
+    /// issue #12: a combo of two modifiers (the familiar Windows-style Alt+Shift).
+    static let triggerComboChoices: [(key: String, title: String)] = [
+        ("command+shift", "⌘ + ⇧  (Command + Shift)"),
+        ("control+shift", "⌃ + ⇧  (Control + Shift)"),
+        ("command+option", "⌘ + ⌥  (Command + Option)"),
+        ("control+option", "⌃ + ⌥  (Control + Option)"),
+    ]
+
+    /// The short symbol for a trigger key — what the chip prints as a keycap ("⌥", "⌘ + ⇧").
+    /// Falls back to the configured key's raw name so a future key never renders as an empty cap.
+    static func triggerSymbol(_ key: String) -> String {
+        switch key {
+        case "option": return "⌥"
+        case "command": return "⌘"
+        case "control": return "⌃"
+        case "shift": return "⇧"
+        case "command+shift": return "⌘⇧"
+        case "control+shift": return "⌃⇧"
+        case "command+option": return "⌘⌥"
+        case "control+option": return "⌃⌥"
+        default: return key
+        }
+    }
     static var onboardAutoConvertTitle: String { s("onboard.autoConvert.title") }
     static var onboardAutoConvertText: String { s("onboard.autoConvert.text") }
 
@@ -250,6 +295,11 @@ enum L10n {
             "learn.question": "Always leave “%@” unchanged?",
             "learn.add": "Add to exceptions",
             "learn.notNow": "Not now",
+            "notify.error.title": "Switcher3way",
+            "notify.cannotActHere": "Couldn't rewrite the text in this window.",
+            "notify.undo.body": "Tap to stop converting this word.",
+            "settings.conversionChip": "Show what was corrected",
+            "chip.undoHint": "%@ to undo",
             "settings.launchAtLogin": "Launch at login",
             "settings.layout1": "Layout 1:",
             "settings.layout2": "Layout 2:",
@@ -370,6 +420,11 @@ enum L10n {
             "learn.question": "Всегда оставлять «%@» без замены?",
             "learn.add": "Добавить в исключения",
             "learn.notNow": "Не сейчас",
+            "notify.error.title": "Switcher3way",
+            "notify.cannotActHere": "Не удалось заменить текст в этом окне.",
+            "notify.undo.body": "Нажмите, чтобы больше не исправлять это слово.",
+            "settings.conversionChip": "Показывать, что исправлено",
+            "chip.undoHint": "%@ — отменить",
             "settings.launchAtLogin": "Запускать при входе",
             "settings.layout1": "Раскладка 1:",
             "settings.layout2": "Раскладка 2:",
@@ -1280,6 +1335,11 @@ enum L10n {
             "learn.question": "Завжди залишати «%@» без змін?",
             "learn.add": "Додати у винятки",
             "learn.notNow": "Не зараз",
+            "notify.error.title": "Switcher3way",
+            "notify.cannotActHere": "Не вдалося замінити текст у цьому вікні.",
+            "notify.undo.body": "Натисніть, щоб більше не виправляти це слово.",
+            "settings.conversionChip": "Показувати, що виправлено",
+            "chip.undoHint": "%@ — скасувати",
             "settings.launchAtLogin": "Запускати при вході",
             "settings.layout1": "Розкладка 1:",
             "settings.layout2": "Розкладка 2:",

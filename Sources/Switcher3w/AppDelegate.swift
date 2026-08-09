@@ -1,12 +1,19 @@
 import AppKit
 import ApplicationServices
+import Switcher3wCore
+import UserNotifications
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+// `UNUserNotificationCenterDelegate` is not annotated for the main actor even though the system
+// delivers on it, so the conformance needs @preconcurrency — same treatment AppKit's own delegates
+// get. Both callbacks below only hop into main-actor state, which is where they already run.
+final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUserNotificationCenterDelegate {
     private var statusItem: NSStatusItem!
     private let keyboardMonitor = KeyboardMonitor()
     private let textConverter = TextConverter()
-    private let phraseTracker = PhraseTracker()
+    private let phraseTracker = PhraseTracker { keys, layoutID in
+        NWay.resolver.render(keys: keys, layoutID: layoutID)
+    }
     private let settingsController = SettingsWindowController()
     private let onboardingController = OnboardingWindowController()
     private let helpController = HelpWindowController()
@@ -16,12 +23,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastPermissionsOK: Bool?   // to rebuild the menu when permissions state changes
     private var monitoringActive = false
     private var caretIndicator: CaretIndicator?   // issue #10: caret flag (beta, OFF by default)
+    private var secureFieldFocusObserver: NSObjectProtocol?   // invalidates the password-guard cache
 
     // References to the live labels of the menu status header (updated by icon polling)
     private weak var headerBadgeLabel: NSTextField?
     private weak var headerNameLabel: NSTextField?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NWay.installLogSink()   // the core logs through rslog; wire it before anything evaluates
+        ConversionNotifier.onNeverConvert = { [weak self] word in self?.addNeverConvertWord(word) }
+        ConversionNotifier.configure(delegate: self)
         setupStatusItem()
         setupSettingsCallbacks()
         setupOnboardingCallbacks()
@@ -122,16 +133,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         offeredExceptionWords.insert(key)
         guard !SettingsManager.shared.deniedWordsSet.contains(key) else { return }
 
-        let alert = NSAlert()
-        alert.messageText = L10n.learnQuestion(word)
-        alert.addButton(withTitle: L10n.learnAdd)
-        alert.addButton(withTitle: L10n.learnNotNow)
-        if alert.runModal() == .alertFirstButtonReturn {
-            var list = SettingsManager.shared.deniedWords
-            list.append(word)
-            SettingsManager.shared.deniedWords = list
-            rslog("learn: added word (len=\(word.count)) to never-convert")
-        }
+        // A notification, not a modal alert: this fires in the middle of typing, right after the
+        // app already interrupted the user by rewriting their word. A dialog that steals focus
+        // there is the worst place in the app for one.
+        ConversionNotifier.offerNeverConvert(word: word)
+    }
+
+    /// Appends a word to the never-convert list — the notification action's landing point.
+    private func addNeverConvertWord(_ word: String) {
+        var list = SettingsManager.shared.deniedWords
+        guard !list.contains(where: { $0.caseInsensitiveCompare(word) == .orderedSame }) else { return }
+        list.append(word)
+        SettingsManager.shared.deniedWords = list
+        rslog("learn: added word (len=\(word.count)) to never-convert")
+        settingsController.reloadExceptions()
     }
 
     private func startPerAppLayout() {
@@ -229,6 +244,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // Manual control invalidates the phrase memory (its conversions/undos
                 // aren't tracked, so later corrections would erase the wrong segment).
                 self.phraseTracker.reset()
+                // The trigger is an explicit user action, which is why it converts words auto
+                // declines — but that does not make it safe to read a password field through the
+                // clipboard fallback, or to retype its contents. Checked before anything reads text.
+                guard !SecureFieldDetector.isFocusedPassword else {
+                    rslog("trigger: suppressed — password field")
+                    return
+                }
                 if AutoSwitchPolicy.shouldDeferToRemoteClient {
                     // Remote desktop: the office instance converts the text using the real forwarded characters
                     // (Fix #6). Here we change OUR layout — so further input goes in
@@ -247,7 +269,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // N-way manual cycle: iterate over every layout that renders the typed text differently.
                 // Explicit user action ⇒ convert even when ambiguous; a repeated
                 // trigger (RECONVERT) pages through candidates and cycles back to the original.
-                if !mkeys.isEmpty, let plan = NWayResolver.manualPlan(keys: mkeys, capsLock: mcaps),
+                if !mkeys.isEmpty, let plan = NWay.resolver.manualPlan(keys: mkeys, capsLock: mcaps,
+                                                          ambiguousLang: SettingsManager.shared.ambiguousLang),
                    let firstTarget = plan.candidates.first?.targetLayoutID {
                     let spaces = String(repeating: " ", count: mtrailing)
                     let steps = plan.candidates.map { (text: $0.converted + spaces, layoutID: $0.targetLayoutID) }
@@ -260,6 +283,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         LayoutSwitcher.switchTo(layoutID: firstTarget)
                         self.updateStatusIcon()
                         self.lastAutoConverted = nil
+                        if let first = plan.candidates.first {
+                            self.caretIndicator?.conversionApplied(original: plan.original,
+                                                                   converted: first.converted)
+                        }
                     }
                 } else if let target = self.textConverter.convertViaClipboard(wordLength: keys.count,
                                                                               prevWordLength: prevKeys.count,
@@ -271,12 +298,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     LayoutSwitcher.switchTo(layoutID: target)
                     self.updateStatusIcon()
                     self.lastAutoConverted = nil
+                } else if !mkeys.isEmpty {
+                    // There WAS something to convert and neither path could apply it — a window
+                    // that rejects synthetic input, a non-editable focus. Until now this was a
+                    // silent no-op that reads exactly like the app being broken.
+                    rslog("trigger: nothing could be applied")
+                    ConversionNotifier.reportRewriteFailure()
                 }
             },
             onAltReconvert: { [weak self] in
                 guard let self else { return }
                 guard SettingsManager.shared.effectivelyEnabled else { return }
                 self.phraseTracker.reset()   // manual control — see onAltTap
+                guard !SecureFieldDetector.isFocusedPassword else {
+                    rslog("trigger: suppressed — password field")
+                    return
+                }
                 if AutoSwitchPolicy.shouldDeferToRemoteClient {
                     LayoutSwitcher.switchToNextInstalled()
                     self.updateStatusIcon()
@@ -292,7 +329,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     self.keyboardMonitor.markConverted()
                     LayoutSwitcher.switchTo(layoutID: layoutID)
                     self.updateStatusIcon()
-                    if restored { self.offerExceptionAfterUndo() }
+                    if restored {
+                        self.offerExceptionAfterUndo()   // no chip: this step UNDOES a conversion
+                    } else if let step = self.textConverter.currentCycleText {
+                        self.caretIndicator?.conversionApplied(original: step.home,
+                                                               converted: step.shown)
+                    }
                 }
                 if cycled {
                     // Scheduled (or aborted inside) — never fall through to the clipboard path.
@@ -322,7 +364,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // runs. Async main hop like onWordBoundary — order among these dispatches follows event
         // order; races against retype completions are caught by the tracker's generation guard.
         keyboardMonitor.onPhraseReset = { [weak self] in
-            DispatchQueue.main.async { self?.phraseTracker.reset() }
+            DispatchQueue.main.async {
+                self?.phraseTracker.reset()
+                // Same events that reset the word buffer (Enter/Tab/arrows/click/Esc) are the ones
+                // that move focus between fields — a tab from a username box to the password beside
+                // it must never be answered from the cache.
+                SecureFieldDetector.invalidate()
+            }
+        }
+        // App switches likewise change what has focus.
+        secureFieldFocusObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated { SecureFieldDetector.invalidate() }
         }
         keyboardMonitor.onExtraSpace = { [weak self] in
             DispatchQueue.main.async { self?.phraseTracker.noteExtraSpace() }
@@ -370,7 +424,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard SettingsManager.shared.autoConvert else { rslog("auto: bail flag-off"); return }
         // Contexts where words go unevaluated make the phrase memory incomplete —
         // reset it so a later correction can't be computed over a gap.
-        guard !AutoSwitchPolicy.secureInputActive else { phraseTracker.reset(); rslog("auto: bail secure-input"); return }
+        //
+        // The guard verdict is logged on EVERY word, not only when it fires: "no suppression" and
+        // "guard broken" are otherwise the same log, which is how the equivalent Windows guard went
+        // four releases without firing once.
+        let secure = SecureFieldDetector.verdict()
+        rslog("  secure: \(secure.describe)")
+        guard !secure.isPassword else {
+            phraseTracker.reset()
+            rslog("auto: bail — password field")
+            return
+        }
         let frontID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         // Remote desktop: do NOT bail immediately — run the detector over our own (clean) buffer, and on
         // "wrong layout" switch OUR layout (the instance on the other side does the conversion).
@@ -412,7 +476,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let gen = phraseTracker.generation
         var decision: NWayResolver.Decision?
         var wordKind = PhraseTracker.WordKind.neutral
-        switch NWayResolver.evaluate(keys: keys, capsLock: capsLock) {
+        switch NWay.resolver.evaluate(keys: keys, capsLock: capsLock) {
         case .keep:
             break
         case .convert(let d):
@@ -430,7 +494,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Remembers an unconverted word so phrase corrections can reproduce the segment verbatim.
         func recordAsNeutral() {
-            if let shown = NWayResolver.renderCurrent(keys: keys) {
+            if let shown = NWay.resolver.renderCurrent(keys: keys) {
                 phraseTracker.record(keys: keys, shownText: shown, spacesAfter: bc, kind: .neutral)
             } else {
                 phraseTracker.reset()   // can't account for the on-screen text exactly
@@ -482,7 +546,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             rslog("auto: convert \(keys.count) keys (+\(bc) sp) → \(decision.targetLayoutID)")
         }
 
-        let steps = [(text: insert, layoutID: decision.targetLayoutID)]
+        // The cycle continues through the REMAINING layouts, not just back to the original.
+        // Seeding one step meant that after an auto-fix the trigger could only toggle between the
+        // converted text and what you typed: for "dblyj" → "видно" (uk), Russian was unreachable,
+        // even though uk and ru are both real candidates. A phrase correction keeps the single
+        // step — its `home` is a whole segment, and the other layouts' renderings of that segment
+        // are not what these candidates describe.
+        var steps = [(text: insert, layoutID: decision.targetLayoutID)]
+        if correction == nil,
+           let plan = NWay.resolver.manualPlan(keys: keys, capsLock: capsLock,
+                                               ambiguousLang: SettingsManager.shared.ambiguousLang) {
+            steps += plan.candidates
+                .filter { $0.targetLayoutID != decision.targetLayoutID }
+                .map { (text: $0.converted + spaces, layoutID: $0.targetLayoutID) }
+            rslog("auto: cycle seeded with \(steps.count) step(s): " +
+                  steps.map { $0.layoutID.components(separatedBy: ".").last ?? "?" }.joined(separator: "→"))
+        }
         let kind = wordKind
         // Layout switch + bookkeeping only after the replacement really happened: if the user
         // kept typing, the injection aborts and both the text and the layout must stay theirs.
@@ -499,6 +578,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             LayoutSwitcher.switchTo(layoutID: decision.targetLayoutID)
             self.updateStatusIcon()
             self.lastAutoConverted = (decision.original, Date())
+            // Show what changed. Without this a successful fix is invisible: the text simply
+            // becomes different under the user, with no hint that the app did it or how to undo.
+            self.caretIndicator?.conversionApplied(original: decision.original,
+                                                   converted: decision.converted)
             if let correction { self.phraseTracker.confirm(correction, ifGeneration: gen) }
             self.phraseTracker.record(keys: keys, shownText: decision.converted,
                                       spacesAfter: bc, kind: kind, ifGeneration: gen)
@@ -755,8 +838,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// issue #10: creates/releases the caret indicator per the settings flag. Created lazily,
     /// only when the feature is on AND monitoring is running (permissions required).
     private func syncCaretIndicator() {
-        keyboardMonitor.caretFlagEnabled = SettingsManager.shared.caretFlag   // onUserInput dispatch gate
-        if SettingsManager.shared.caretFlag, monitoringActive {
+        // The panel is shared by two surfaces with separate settings: the beta flag badge (off by
+        // default) and the conversion chip (on). It must exist when EITHER is enabled.
+        let wanted = SettingsManager.shared.caretFlag || SettingsManager.shared.conversionChip
+        keyboardMonitor.caretFlagEnabled = wanted   // onUserInput dispatch gate
+        if wanted, monitoringActive {
             if caretIndicator == nil {
                 let ci = CaretIndicator()
                 ci.flagProvider = { [weak self] in self?.flagForCurrentLayout() ?? "" }
@@ -856,5 +942,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         perAppLayoutManager.stop()
         keyboardMonitor.stop()
         NSApplication.shared.terminate(nil)
+    }
+}
+
+// MARK: - Notification actions
+
+extension AppDelegate {
+    /// The "Never convert this" button on the learn-from-undo notification.
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        ConversionNotifier.handle(response: response)
+        completionHandler()
+    }
+
+    /// The app is a menu-bar agent and is always "frontmost" in the notification sense, so without
+    /// this its own notifications would never be shown.
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner])
     }
 }

@@ -1,20 +1,10 @@
 import AppKit
 import CoreGraphics
 import Foundation
+import Switcher3wCore
 
 /// Marker for synthesized events — KeyboardMonitor ignores them
 let kSwitcher3wEventMarker: Int64 = 0x52555300
-
-/// One keystroke in the conversion buffer. For normal local input the keyCode is known
-/// (char == nil). For input forwarded via remote desktop, Apple Screen Sharing
-/// sends keyCode 0 + the character itself — then char != nil, and conversion goes by the
-/// character, not by the useless keyCode 0 (keyCode 0 is what produced the runaway repeat).
-struct TypedKey {
-    let keyCode: UInt16
-    let shift: Bool
-    let caps: Bool
-    var char: Character? = nil
-}
 
 /// Dedicated queue for log file I/O — so disk writes don't block
 /// the event-handling thread (the event tap sits on the main run loop, and the log is
@@ -24,7 +14,18 @@ private let rsLogQueue = DispatchQueue(label: "com.switcher3w.log")
 func rslog(_ msg: String) {
     // Thread-safe: read UserDefaults directly (no MainActor)
     guard UserDefaults.standard.bool(forKey: "com.switcher3w.debugLog") else { return }
+    rsWrite(msg)
+}
 
+/// Writes regardless of the debug-log setting. Reserved for failures the user could otherwise never
+/// report — the Accessibility connection refusing, notification registration failing, a subsystem
+/// declining to start. With those gated behind an opt-in flag the user experiences only silence, and
+/// silence is indistinguishable from the app working. Ordinary operational messages stay in `rslog`.
+func logAlways(_ msg: String) {
+    rsWrite(msg)
+}
+
+private func rsWrite(_ msg: String) {
     let line = "\(Date()): \(msg)\n"
     rsLogQueue.async {
         let logDir = NSHomeDirectory() + "/Library/Logs/Switcher3w"

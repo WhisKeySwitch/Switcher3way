@@ -1,4 +1,5 @@
 import Carbon
+import Switcher3wCore
 
 /// Mapping keycode → character for EN and RU layouts (QWERTY / JCUKEN)
 enum KeyMapping {

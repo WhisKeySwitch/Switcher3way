@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import Switcher3wCore
 
 /// Word checking against the system dictionary (NSSpellChecker) — locally, without dependencies,
 /// without network and without a data bundle. ~0.1ms per check, 40+ languages.
@@ -32,7 +33,7 @@ enum LayoutDetector {
         if AutoSwitchPolicy.isAlwaysConvert(converted) { return .switchToConverted }
 
         // --- soft vetoes (cheap, before the dictionary) ---
-        guard passesSoftGates(typed, capsLock: capsLock) else { return .undecided }
+        guard SoftGates.passes(typed, capsLock: capsLock) else { return .undecided }
 
         let cur = String(currentLang.prefix(2))
         let oth = String(otherLang.prefix(2))
@@ -46,39 +47,10 @@ enum LayoutDetector {
         return .switchToConverted
     }
 
-    /// Soft vetoes, shared by 2-way (`decide`) and N-way (`NWayResolver`): we let
-    /// a word into the detector only if it's a "real" word, and not a single letter, an acronym,
-    /// or code. Any non-letter still vetoes; the N-way path trims edge punctuation to the letter
-    /// core before calling, so attached punctuation no longer blocks it. Precision-first — on doubt, false.
+    /// Soft vetoes now live in `SoftGates` (Switcher3wCore) so they are unit-testable and shared
+    /// verbatim with the N-way resolver. Kept as a forwarding name for the 2-way call site above.
     static func passesSoftGates(_ typed: String, capsLock: Bool) -> Bool {
-        guard typed.count >= 2 else { return false }                  // 1 letter (я/a/i/і): hopelessly ambiguous between layouts
-        guard typed.allSatisfy({ $0.isLetter }) else { return false } // digits/punctuation/URL/code/email
-        // Under Caps Lock all text is UPPERCASE — this is NOT an acronym and NOT camelCase,
-        // so these two vetoes are applied only when Caps Lock is off.
-        if !capsLock {
-            if isAllCaps(typed) { return false }                      // acronyms
-            if looksLikeCodeIdentifier(typed) { return false }        // camelCase / mixed alphabets
-        }
-        return true
-    }
-
-    private static func isAllCaps(_ s: String) -> Bool {
-        s == s.uppercased() && s != s.lowercased()
-    }
-
-    /// Looks like a code identifier: an internal capital (camelCase/PascalCase)
-    /// or a mix of Latin and Cyrillic in one token → almost always code, not a word.
-    private static func looksLikeCodeIdentifier(_ s: String) -> Bool {
-        for (i, c) in s.enumerated() where i > 0 && c.isUppercase { return true }
-        var hasLatin = false, hasCyrillic = false
-        for u in s.unicodeScalars {
-            switch u.value {
-            case 0x41...0x5A, 0x61...0x7A: hasLatin = true
-            case 0x0400...0x04FF: hasCyrillic = true
-            default: break
-            }
-        }
-        return hasLatin && hasCyrillic
+        SoftGates.passes(typed, capsLock: capsLock)
     }
 }
 

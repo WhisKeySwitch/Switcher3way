@@ -1,6 +1,7 @@
 import AppKit
 import ApplicationServices
 import CoreGraphics
+import Switcher3wCore
 
 /// issue #10: shows the current layout flag next to the text caret — briefly after
 /// a switch, hides on typing/click. The caret position is obtained via Accessibility
@@ -67,6 +68,22 @@ final class CaretIndicator {
         showAtCaret()
     }
 
+    /// A conversion happened → show WHAT changed: the typed form struck through, an arrow, the
+    /// converted form, and the configured trigger as an undo hint. Before this, a successful fix
+    /// produced no feedback at all — the text simply changed under the user.
+    func conversionApplied(original: String, converted: String) {
+        guard SettingsManager.shared.conversionChip else { return }
+        guard !original.isEmpty, !converted.isEmpty else { return }
+        guard feedbackAllowed() else { return }
+        // Unlike the flag badge, the chip falls back to the window when no caret can be resolved:
+        // knowing what was rewritten matters more than the exact position.
+        guard let rect = axCaretRectAppKit() ?? focusedWindowAnchor() else { return }
+        label.attributedStringValue = chipText(original: original, converted: converted)
+        lastFlag = ""   // the label no longer holds a flag; force a refresh on the next layout change
+        sizeToFit()
+        present(at: rect)
+    }
+
     /// Any user input/click → hide (issue #10: "hide on typing").
     func userTyped() { if visible { hide() } }
 
@@ -84,7 +101,18 @@ final class CaretIndicator {
         guard let rect = axCaretRectAppKit() else { hide(); return }   // no caret → don't show
         let flag = flagProvider()
         guard !flag.isEmpty else { hide(); return }
-        if flag != lastFlag { label.stringValue = flag; lastFlag = flag }
+        if flag != lastFlag {
+            label.attributedStringValue = NSAttributedString(
+                string: flag, attributes: [.font: NSFont.systemFont(ofSize: 14),
+                                           .foregroundColor: NSColor.white])
+            lastFlag = flag
+            sizeToFit()
+        }
+        present(at: rect)
+    }
+
+    /// Order in without stealing focus, fade up, and arm the auto-hide. Shared by both surfaces.
+    private func present(at rect: NSRect) {
         position(forCaret: rect)
         if !panel.isVisible { panel.orderFrontRegardless() }            // show WITHOUT stealing focus
         fade(to: 1, duration: 0.12)
@@ -93,6 +121,83 @@ final class CaretIndicator {
         hideTimer = Timer.scheduledTimer(withTimeInterval: showDuration, repeats: false) { [weak self] _ in
             Task { @MainActor in self?.hide() }
         }
+    }
+
+    /// `ghbdsn → привіт   ⌥` — the typed form struck through, the result, and the undo keycap.
+    private func chipText(original: String, converted: String) -> NSAttributedString {
+        let font = NSFont.systemFont(ofSize: 13)
+        let out = NSMutableAttributedString()
+        out.append(NSAttributedString(string: original, attributes: [
+            .font: font,
+            .foregroundColor: NSColor.white.withAlphaComponent(0.55),
+            .strikethroughStyle: NSUnderlineStyle.single.rawValue,
+            .strikethroughColor: NSColor.white.withAlphaComponent(0.55),
+        ]))
+        out.append(NSAttributedString(string: "  →  ", attributes: [
+            .font: font, .foregroundColor: NSColor.white.withAlphaComponent(0.55),
+        ]))
+        out.append(NSAttributedString(string: converted, attributes: [
+            .font: NSFont.systemFont(ofSize: 13, weight: .medium), .foregroundColor: NSColor.white,
+        ]))
+        // Names the key the user actually configured, not a hard-coded ⌥.
+        let hint = L10n.chipUndoHint(L10n.triggerSymbol(SettingsManager.shared.triggerKey))
+        out.append(NSAttributedString(string: "   \(hint)", attributes: [
+            .font: NSFont.systemFont(ofSize: 11),
+            .foregroundColor: NSColor.white.withAlphaComponent(0.45),
+        ]))
+        return out
+    }
+
+    /// Resize the panel around whatever the label currently holds (the flag badge is ~30pt, a chip
+    /// is as wide as the words it names).
+    private func sizeToFit() {
+        let padX: CGFloat = 10, padY: CGFloat = 6
+        let size = label.attributedStringValue.size()
+        let w = max(30, (size.width + padX * 2).rounded(.up))
+        let h = max(24, (size.height + padY * 2).rounded(.up))
+        panel.setContentSize(NSSize(width: w, height: h))
+        panel.contentView?.frame = NSRect(x: 0, y: 0, width: w, height: h)
+    }
+
+    /// The focused window's rectangle, used when no caret can be resolved (Electron hosts, WebKit
+    /// views that expose no bounds). Not the caret, but it puts the chip against the right window
+    /// rather than dropping the feedback entirely.
+    private func focusedWindowAnchor() -> NSRect? {
+        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
+        let axApp = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(axApp, 0.25)
+        var windowRaw: AnyObject?
+        guard AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &windowRaw) == .success,
+              let win = windowRaw, CFGetTypeID(win) == AXUIElementGetTypeID() else { return nil }
+        let window = win as! AXUIElement
+
+        var posRaw: AnyObject?, sizeRaw: AnyObject?
+        guard AXUIElementCopyAttributeValue(window, kAXPositionAttribute as CFString, &posRaw) == .success,
+              AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &sizeRaw) == .success,
+              let pv = posRaw, let sv = sizeRaw,
+              CFGetTypeID(pv) == AXValueGetTypeID(), CFGetTypeID(sv) == AXValueGetTypeID() else { return nil }
+        var origin = CGPoint.zero, size = CGSize.zero
+        guard AXValueGetValue(pv as! AXValue, .cgPoint, &origin),
+              AXValueGetValue(sv as! AXValue, .cgSize, &size),
+              let primary = NSScreen.screens.first else { return nil }
+
+        // AX is top-left origin on the primary screen; AppKit is bottom-left. Anchor near the
+        // window's bottom-left so the chip sits under the text rather than over the title bar.
+        let y = primary.frame.height - origin.y - size.height
+        return NSRect(x: origin.x + 24, y: y + 24, width: 1, height: 18)
+    }
+
+    /// The suppression rules the feedback surfaces share. Stricter than the flag badge's used to
+    /// be: the chip carries the text that was typed, so it must never appear anywhere conversion
+    /// itself would be refused.
+    private func feedbackAllowed() -> Bool {
+        guard AXIsProcessTrusted() else { return false }
+        guard !SecureFieldDetector.isFocusedPassword else { return false }
+        guard !AutoSwitchPolicy.shouldDeferToRemoteClient else { return false }
+        let frontID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        guard !AutoSwitchPolicy.isDeniedApp(frontID) else { return false }
+        guard frontID != Bundle.main.bundleIdentifier else { return false }
+        return true
     }
 
     private func hide() {
@@ -128,9 +233,10 @@ final class CaretIndicator {
 
     /// The caret in AppKit coordinates (bottom-left), or nil if unavailable / a guard rejected it.
     private func axCaretRectAppKit() -> NSRect? {
-        guard SettingsManager.shared.caretFlag else { return nil }
         guard AXIsProcessTrusted() else { return nil }
-        guard !AutoSwitchPolicy.secureInputActive else { return nil }          // not over a password field
+        // The focused-element guard, not just the process-global secure-input flag: an unmasked
+        // "show password" field sets neither, and the badge would otherwise appear over one.
+        guard !SecureFieldDetector.isFocusedPassword else { return nil }
         let frontID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         // We do NOT apply the auto-conversion denylist: it's about "don't change text", and the flag changes nothing —
         // in IDEs/terminals the layout indicator is actually useful. Passwords are guarded by secure-input above.

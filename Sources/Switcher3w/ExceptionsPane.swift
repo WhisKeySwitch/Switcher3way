@@ -121,6 +121,10 @@ final class ExceptionsPane: NSObject, NSTableViewDataSource, NSTableViewDelegate
     private var adapter: Adapter { adapters[activeIndex] }
 
     /// Re-reads the active list, applies the filter, and updates the segment counts.
+    /// Re-reads the lists from settings. Called when something outside this pane changes them —
+    /// the learn-from-undo notification action, for instance.
+    func refresh() { reload() }
+
     private func reload() {
         let all = adapter.get()
         if query.isEmpty {
