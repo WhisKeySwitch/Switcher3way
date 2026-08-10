@@ -180,9 +180,9 @@ The API list and the current-word-only lifetime are what earn the approval; drop
 the Submission options page. That page only links to it, and leaving it empty is what keeps Submission
 options marked *Incomplete* when a restricted capability is declared.
 
-Three things will make a reviewer conclude the app is broken unless they are told: it has no main window,
-it does nothing until a second keyboard layout is installed, and it ignores synthetic input, so an
-automated test harness sees no reaction at all.
+Two things will make a reviewer conclude the app is broken unless they are told: it has no main window,
+and it does nothing until a second keyboard layout is installed. Both caused a certification failure —
+the second one twice, so it now leads the notes.
 
 > **First, add a second keyboard layout.** Settings → Time & language → Language & region → Add a
 > language → **Ukrainian** (or Russian), alongside English. Switcher3way converts a word from one
@@ -194,9 +194,8 @@ automated test harness sees no reaction at all.
 > flag icon is not visible, expand the notification area with the "^" chevron next to the clock. Click
 > the icon for the menu (enable/disable, pause, Settings, Help).
 >
-> **Please test by typing on a real keyboard.** The app deliberately ignores injected input
-> (`LLKHF_INJECTED`) so that it never reacts to its own corrections — a script, a remote-control tool or
-> the on-screen touch keyboard will produce no response. This is by design, not a fault.
+> **Any keyboard works** — physical, the on-screen touch keyboard, or Remote Desktop. (Before 0.2.7 the
+> app ignored all synthesized input and was inert on a tablet; that is fixed.)
 >
 > **Test — automatic:** with the English layout active, open Notepad and type `ghbdsn` then a space. The
 > text is replaced with `привіт`, the layout switches to Ukrainian, and a small chip appears under the

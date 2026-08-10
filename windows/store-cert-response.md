@@ -1,48 +1,51 @@
-# Reply to Store certification — 10.1.2.10 Functionality
+# Reply to Store certification — 10.1.2.10 Functionality (second report)
 
-Product ID **9MXFXL7GG3C5** · report of 08/07/2026 · "Unusable Feature: There is no response after a
-double tap of Ctrl."
+Product ID **9MXFXL7GG3C5** · "Unusable Feature: Trigger - None of the trigger options are funtional",
+observed on a Surface Go 4, OS build 26.200.8457.
 
-Paste as the certification reply / resubmission note. Keep it short — reviewers skim, and the testing
-steps are the part that matters.
+Paste as the certification reply / resubmission note.
 
 ---
 
-**Subject:** Switcher3way (9MXFXL7GG3C5) — resubmission after 10.1.2.10 functionality failure
+**Subject:** Switcher3way (9MXFXL7GG3C5) — resubmission: root cause found and fixed
 
-Thank you for the detailed report — the tester was right, and the silence they saw was our defect.
+Thank you — the second report gave us what we needed, and the tester found a real defect.
 
-**Why there was no response.** Switcher3way corrects a word typed in the wrong keyboard layout by
-converting it to another layout the user has installed. On a PC with only one keyboard layout there is
-nothing to convert between, so the trigger genuinely had nothing to do — and the previous build simply
-did nothing at all in that situation, with no message. That is indistinguishable from a broken feature,
-so the result was fair.
+**Root cause.** Switcher3way watches keystrokes with a low-level keyboard hook. To avoid reacting to the
+corrections it types itself, it ignored every keystroke Windows marks as injected. That mark is also set
+by the **on-screen touch keyboard**, Remote Desktop and accessibility tools — so on a Surface Go 4 used
+as a tablet, the app never received a single keystroke. Nothing reached its word buffer, the trigger
+press itself was invisible to it, and so every trigger option did nothing. The tester's steps were
+correct and the conclusion was correct.
 
-**What we changed.** In this submission the trigger always responds. When it cannot convert, the app now
-shows a notification explaining why and what to do — for example, on a PC with a single keyboard layout:
-"Add a second keyboard layout — Switcher3way converts between the keyboard layouts Windows has installed,
-and there is only one it can use." The same applies when nothing has been typed yet, or when the text is
-already correct for the current layout.
+**Fix.** The app now marks its own synthesized keystrokes and ignores only those. Input from the
+on-screen keyboard, Remote Desktop and automation is treated as ordinary typing. We reproduced the
+reported steps using injected input before and after the change: before, the app logged no keystrokes at
+all; after, it receives the typed word and the trigger.
+
+**Second improvement in the same submission.** If the trigger has nothing to convert, it now says so
+instead of doing nothing. On a PC with a single keyboard layout it shows: *"Add a second keyboard layout
+— Switcher3way converts between the keyboard layouts Windows has installed, and there is only one it can
+use."* Previously that situation was silent, which is indistinguishable from a broken feature.
 
 **How to verify (about two minutes).**
 
-1. Add a second keyboard layout: **Settings → Time & language → Language & region → Add a language →
-   Ukrainian** (or Russian). This is required — with one layout the app has nothing to convert between.
+1. **Add a second keyboard layout** — Settings → Time & language → Language & region → Add a language →
+   **Ukrainian** (or Russian), alongside English. Switcher3way converts a word from one installed layout
+   to another, so with a single layout there is nothing for it to convert between. *If this step is
+   skipped, the app will now tell you so rather than appearing dead.*
 2. Start Switcher3way. It runs in the notification area and has no main window; a short welcome flow
-   appears on first launch. Windows 11 hides new tray icons, so expand the notification area with the "^"
+   appears on first launch. Windows 11 hides new tray icons — expand the notification area with the "^"
    chevron if the icon is not visible.
 3. Open Notepad. With the **English** layout active, type `ghbdsn` and press the spacebar. The text is
    replaced with `привіт` and the layout switches to Ukrainian.
-4. Or select any text typed in the wrong layout and tap **Ctrl twice** — it converts in place. Tapping
-   again cycles the other layouts and then restores the original.
+4. Or select text typed in the wrong layout and tap **Ctrl twice**; it converts in place, and tapping
+   again cycles the other layouts and restores the original.
 
-**One note on automated testing.** The app deliberately ignores synthetic input: it uses a low-level
-keyboard hook and would otherwise react to its own corrections. Keystrokes injected by a test harness,
-a remote-control tool or the on-screen touch keyboard produce no response by design. Please test by
-typing on a physical keyboard.
+Any keyboard works for these steps, including the on-screen one.
 
-`runFullTrust` is unchanged and is used only for the system-wide keyboard hook and `SendInput` needed to
-correct text in the app the user is typing in. The app is fully offline, stores nothing, and excludes
+`runFullTrust` is unchanged: a system-wide keyboard hook and `SendInput`, needed to correct text in
+whatever application the user is typing in. The app is fully offline, stores nothing, and excludes
 password fields. Source: https://github.com/WhisKeySwitch/Switcher3way
 
 Thank you for re-testing.
@@ -51,9 +54,10 @@ Thank you for re-testing.
 
 ## Notes for us, not for them
 
-- The reviewer tested on a Dell Inspiron 5379 and a Microsoft Surface Laptop, OS build 26200.7840 —
-  clean machines, so almost certainly a single English layout. That matches the failure exactly.
-- The same silence would have hit every new user whose PC has one layout. The report found a real
-  usability defect, not just a testing gap.
-- Make sure the **Additional Testing Information** page carries the four steps above. The previous
-  submission's notes were the likely gap: the prerequisite has to be the first thing a reviewer reads.
+- Surface Go 4 was the clue. A tablet with no Type Cover means the touch keyboard, which injects — and
+  our hook discarded every injected event. The first report ("no response after a double tap of Ctrl")
+  was very likely the same cause, not the single-layout one we assumed.
+- Both reports were fair. We shipped an app that could not work on a tablet at all, and gave no feedback
+  when it had nothing to do.
+- The fix also removes the "a physical keyboard is required" limitation from the docs and store listing,
+  and makes the conversion path testable without a human at the keyboard.
