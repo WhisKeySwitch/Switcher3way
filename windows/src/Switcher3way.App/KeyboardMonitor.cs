@@ -125,10 +125,10 @@ internal sealed class KeyboardMonitor
             uint msg = (uint)wParam;
             var data = Marshal.PtrToStructure<Native.KBDLLHOOKSTRUCT>(lParam);
             // Ignore only what *we* synthesized, identified by the tag we stamp into dwExtraInfo — not
-            // everything carrying LLKHF_INJECTED. That broader test also excluded the on-screen touch
-            // keyboard, Remote Desktop and accessibility tools, leaving the app completely inert on a
-            // tablet: keystrokes never reached the buffer, so the trigger had nothing to convert and
-            // appeared dead. Store certification failed on that, testing on a Surface Go 4.
+            // everything carrying LLKHF_INJECTED. That broader test also excluded Remote Desktop, virtual
+            // machines, remote-support tools, keyboard remappers and the on-screen keyboard, so the app
+            // was inert wherever input did not come from a directly attached keyboard: keystrokes never
+            // reached the buffer, the trigger press was invisible, and it looked dead.
             bool ours = data.dwExtraInfo == Native.OwnInputTag;
             if (!ours)
             {

@@ -79,7 +79,8 @@ Add both keyboard layouts in Windows first — English and Ukrainian or Russian 
 the app to switch between. Switcher3way lives in the notification area and has no main window; a short
 welcome flow appears the first time you run it.
 
-Works with any keyboard — physical, the on-screen touch keyboard, or over Remote Desktop.
+Works wherever your keystrokes come from — a directly attached keyboard, Remote Desktop, a virtual
+machine, a remapped keyboard, or the on-screen keyboard.
 
 The interface is fully translated into English, Ukrainian and Russian. Thirteen more languages are
 partly translated and fall back to English for anything not yet covered; the language picker says which

@@ -15,9 +15,15 @@ internal static class Native
     /// Stamped into <c>dwExtraInfo</c> on every keystroke this app synthesizes, so the hook can ignore
     /// its own rewrites without ignoring everyone else's injected input.
     ///
-    /// The hook used to skip anything carrying <c>LLKHF_INJECTED</c>, which also meant the on-screen
-    /// touch keyboard, Remote Desktop and automation tools — so on a tablet the app was completely inert
-    /// and appeared broken. Store certification failed on exactly that, testing on a Surface Go 4.
+    /// The hook used to skip anything carrying <c>LLKHF_INJECTED</c>, which also covers Remote Desktop,
+    /// virtual machines, remote-support tools, keyboard remappers and the on-screen keyboard — so the app
+    /// was inert wherever input did not come from a directly attached keyboard. The first three of those
+    /// are the ones that matter: people type into them on real keyboards and make exactly the wrong-layout
+    /// mistake this app fixes. Store certification failed on it twice, testing on a Surface Go 4.
+    ///
+    /// The cost, accepted: text expanders, macro tools and password-manager auto-type are now visible to
+    /// the engine too. Windows offers no way to tell a remote session's keystrokes apart from an
+    /// application injecting text, so it is accept-all or reject-all.
     /// </summary>
     public static readonly IntPtr OwnInputTag = new(0x53573357); // "SW3W"
 
