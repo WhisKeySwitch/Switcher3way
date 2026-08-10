@@ -97,7 +97,8 @@
     </div>
     <div class="cta-row">
       <a class="cta" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">⬇&nbsp; Download for macOS</a>
-      <a class="cta alt" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.2.7">⬇&nbsp; Download for Windows&nbsp; <span class="pill">PREVIEW</span></a>
+      <a class="cta alt" href="https://apps.microsoft.com/detail/9MXFXL7GG3C5">⬇&nbsp; Get it from Microsoft Store</a>
+      <a class="cta alt" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.2.7">⬇&nbsp; Windows MSI&nbsp; <span class="pill">PREVIEW</span></a>
     </div>
     <span class="subcta">Free &amp; open source · <a href="https://github.com/WhisKeySwitch/Switcher3way">View on GitHub</a></span>
   </div>
@@ -136,13 +137,14 @@
       <li>Grant two permissions when asked — <b>Accessibility</b> (retype the fixed word) and <b>Input Monitoring</b> (see keystrokes). The onboarding checklist detects grants live.</li>
     </ol>
     <h3>Windows <span style="font-size:.7em;color:var(--muted);font-weight:600">· preview</span></h3>
+    <p style="margin:0 0 10px;color:var(--muted);font-size:.95em"><b>From the Microsoft Store</b> is the easy route — <a href="https://apps.microsoft.com/detail/9MXFXL7GG3C5">open the listing</a> and click Get. It's signed by Microsoft, so no SmartScreen warning, it needs no prerequisite, and it updates itself. The steps below are for the direct MSI download.</p>
     <ol class="steps">
       <li>Install the <a href="https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe">Windows App Runtime 1.6</a> — once. The app tells you if it's missing.</li>
       <li><a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.2.7">Download the MSI</a> and double-click it; approve the <b>User Account Control</b> prompt.</li>
       <li>This preview isn't code-signed yet, so SmartScreen may warn — click <b>More info → Run anyway</b>.</li>
       <li>Launch <b>Switcher3way</b> from the Start menu; it lives in the system tray. No permissions dialog and <b>no .NET install</b> needed.</li>
     </ol>
-    <div class="note"><b>Coming to the Microsoft Store</b> — that version is 12.4 MB, needs no prerequisite, is signed by Microsoft (no SmartScreen warning) and updates itself. Prefer to build it yourself? <code class="mono">git clone</code> the repo — macOS: <code class="mono">bash build_app.sh</code>; Windows: <code class="mono">pwsh windows/build-msi.ps1</code> (or <code class="mono">build-msix.ps1</code>). See the <a href="https://github.com/WhisKeySwitch/Switcher3way#build-it-yourself">README</a>.</div>
+    <div class="note"><b>Store or MSI?</b> The Store version is signed by Microsoft, needs no prerequisite and updates itself; the MSI is a direct download you install yourself. Both are the same app. Prefer to build it yourself? <code class="mono">git clone</code> the repo — macOS: <code class="mono">bash build_app.sh</code>; Windows: <code class="mono">pwsh windows/build-msi.ps1</code> (or <code class="mono">build-msix.ps1</code>). See the <a href="https://github.com/WhisKeySwitch/Switcher3way#build-it-yourself">README</a>.</div>
   </section>
 
   <section>

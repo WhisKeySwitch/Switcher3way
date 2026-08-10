@@ -28,6 +28,7 @@ final class SettingsManager: @unchecked Sendable {
         static let autoConvertOffered = "com.switcher3w.autoConvertOffered"
         static let keySound = "com.switcher3w.keySound"
         static let caretFlag = "com.switcher3w.caretFlag"
+        static let conversionChip = "com.switcher3w.conversionChip"
         static let deniedAppsAdded = "com.switcher3w.deniedAppsAdded"
         static let deniedAppsRemoved = "com.switcher3w.deniedAppsRemoved"
         static let deniedWords = "com.switcher3w.deniedWords"
@@ -209,6 +210,18 @@ final class SettingsManager: @unchecked Sendable {
     }
 
     /// issue #10: show the layout flag at the text caret (beta). OFF by default.
+    /// Show what a conversion changed, next to the caret. Defaults to ON — the whole point is that
+    /// conversions are otherwise invisible, and unlike the beta flag badge this has a defined
+    /// fallback (the window anchor) when no caret can be resolved. `object(forKey:) == nil` is the
+    /// "never set" case; `bool(forKey:)` alone cannot tell that from an explicit false.
+    var conversionChip: Bool {
+        get {
+            guard defaults.object(forKey: Keys.conversionChip) != nil else { return true }
+            return defaults.bool(forKey: Keys.conversionChip)
+        }
+        set { defaults.set(newValue, forKey: Keys.conversionChip) }
+    }
+
     var caretFlag: Bool {
         get { defaults.bool(forKey: Keys.caretFlag) }
         set { defaults.set(newValue, forKey: Keys.caretFlag) }

@@ -11,6 +11,9 @@ final class SettingsWindowController {
     private var caretFlagSwitch: NSSwitch?
     private var exceptionsPane: ExceptionsPane?
 
+    /// Re-reads the exception lists into the open pane (if any) after an external change.
+    func reloadExceptions() { exceptionsPane?.refresh() }
+
     /// Callback for updating the menu
     var onAutoSwitchChanged: ((Bool) -> Void)?
     var onPerAppLayoutChanged: ((Bool) -> Void)?
@@ -136,6 +139,10 @@ final class SettingsWindowController {
         triggerBox.addRow(FormUI.row(title: L10n.settingsTriggerDoubleTap,
                                      control: FormUI.makeSwitch(isOn: settings.triggerDoubleTap,
                                                                 target: self, action: #selector(triggerDoubleTapChanged))))
+
+        triggerBox.addRow(FormUI.row(title: L10n.settingsConversionChip,
+                                     control: FormUI.makeSwitch(isOn: settings.conversionChip,
+                                                                target: self, action: #selector(conversionChipChanged))))
 
         // The manual trigger is now fully N-way (cycles candidates over all installed
         // layouts); the fixed Layout 1/2 pair is gone — the corresponding row was removed.
@@ -337,21 +344,9 @@ final class SettingsWindowController {
 
     private func populateTriggerPopup(_ popup: NSPopUpButton) {
         popup.removeAllItems()
-        // Key names are not localized — these are standard Apple notations.
-        let items: [(key: String, title: String)] = [
-            ("option", "Option ⌥ (Alt)"),
-            ("command", "Command ⌘"),
-            ("control", "Control ⌃"),
-            ("shift", "Shift ⇧"),
-            // Caps Lock removed: native interception is unstable (HID debounce/toggle) — see tech debt.
-        ]
-        // issue #12: a combo of two modifiers (the familiar Windows-style Alt+Shift).
-        let comboItems: [(key: String, title: String)] = [
-            ("command+shift", "⌘ + ⇧  (Command + Shift)"),
-            ("control+shift", "⌃ + ⇧  (Control + Shift)"),
-            ("command+option", "⌘ + ⌥  (Command + Option)"),
-            ("control+option", "⌃ + ⌥  (Control + Option)"),
-        ]
+        // The choices live in L10n so the conversion chip's undo hint names the same key.
+        let items = L10n.triggerChoices
+        let comboItems = L10n.triggerComboChoices
         for it in items {
             popup.addItem(withTitle: it.title)
             popup.menu?.items.last?.representedObject = it.key as NSString
@@ -365,6 +360,11 @@ final class SettingsWindowController {
     }
 
     // MARK: - Actions
+
+    @objc private func conversionChipChanged(_ sender: NSSwitch) {
+        SettingsManager.shared.conversionChip = sender.state == .on
+        onCaretFlagChanged?(SettingsManager.shared.caretFlag)   // re-syncs the shared indicator panel
+    }
 
     @objc private func autoSwitchChanged(_ sender: NSSwitch) {
         let enabled = sender.state == .on

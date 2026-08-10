@@ -3,6 +3,7 @@ import ApplicationServices
 import Carbon
 import CoreGraphics
 import os
+import Switcher3wCore
 
 /// Text conversion between layouts
 @MainActor
@@ -151,6 +152,14 @@ final class TextConverter {
             cycleShownCount = cycleHome.count
         }
         return true
+    }
+
+    /// The original text and what the cycle currently shows in its place — the conversion feedback
+    /// needs both, and only the converter knows where the cycle stands. nil outside a buffer cycle.
+    var currentCycleText: (home: String, shown: String)? {
+        guard lastWasBuffer, !cycleSteps.isEmpty, cycleIndex >= 0, cycleIndex < cycleSteps.count else { return nil }
+        return (cycleHome.trimmingCharacters(in: .whitespaces),
+                cycleSteps[cycleIndex].text.trimmingCharacters(in: .whitespaces))
     }
 
     /// Next step of the selection cycle (second+ trigger, no input between). The buffer
@@ -378,33 +387,56 @@ final class TextConverter {
         }
 
         var steps: [(text: String, layoutID: String, lang: String)] = []
-        var seen: Set<String> = [original]   // don't offer what's already on screen, nor duplicates
+        // Dedup by text AND language, not by text alone — same rule as `NWayResolver.manualPlan`,
+        // keep the two in step. uk and ru spell every word built from their shared letters
+        // identically, so a text-only key dropped one of them: for a selection already showing
+        // Cyrillic, the sibling language collided with the ORIGINAL and became unreachable, which
+        // is how a selected "добре" could only ever cycle uk↔en. Same-language duplicates (two
+        // Russian variants) still collapse. The price is a step whose text is unchanged and whose
+        // layout differs; that is the only way to reach the other language at all.
+        let sourceLang = String((LayoutSwitcher.languageCode(source) ?? "").prefix(2))
+        var seen: Set<String> = [sourceLang + "\u{0}" + original]   // don't re-offer what's on screen
         for layout in ordered {
             let id = LayoutSwitcher.sourceID(layout)
             guard id != sourceID else { continue }
             let map = DynamicKeyMapping.buildMap(from: source, to: layout)
             guard !map.isEmpty else { continue }
             let text = String(original.map { map[$0] ?? $0 }).precomposedStringWithCanonicalMapping
-            guard !seen.contains(text) else { continue }
-            seen.insert(text)
             let lang = String((LayoutSwitcher.languageCode(layout) ?? "").prefix(2))
+            let key = lang + "\u{0}" + text
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
             steps.append((text, id, lang))
         }
 
-        // Dictionary-first: for a single-word selection, if exactly one candidate is a real word in
-        // its language, move it to the front so one tap gives the "correct" layout (as in auto).
+        // Dictionary-first: for a single-word selection, put the layout the evidence points at in
+        // front, so one tap gives the "correct" layout (as in auto). Candidates dropped by the dedup
+        // are considered too — uk and ru render every word made of their shared letters identically,
+        // so the winner is often not the entry that survived.
         let core = letterCore(original)
         if !core.isEmpty, !core.contains(where: { $0.isWhitespace }) {
-            let validIdxs = steps.indices.filter { i in
-                let c = letterCore(steps[i].text)
-                return !c.isEmpty && Dict.isAvailable(steps[i].lang)
-                    && Dict.isValidWord(c.lowercased(), lang: steps[i].lang)
+            let valid = steps.filter { c in
+                let cc = letterCore(c.text)
+                return !cc.isEmpty && Dict.isAvailable(c.lang)
+                    && Dict.isValidWord(cc.lowercased(), lang: c.lang)
             }
-            if validIdxs.count == 1 {
-                let w = steps.remove(at: validIdxs[0])
+            var winner: (text: String, layoutID: String, lang: String)?
+            if valid.count == 1 {
+                winner = valid[0]                                  // one language validates it
+            } else if valid.count > 1 {
+                // Ambiguous (uk/ru): the user's preferred language decides, exactly as for auto-fix.
+                // "off" means no preference between them here — the trigger still converts, since
+                // it is an explicit request; it just falls back to rotation order.
+                let pref = SettingsManager.shared.ambiguousLang
+                if pref != "off" { winner = valid.first { $0.lang == pref } }
+            }
+            if let winner, let idx = steps.firstIndex(where: { $0.layoutID == winner.layoutID }) {
+                let w = steps.remove(at: idx)
                 steps.insert(w, at: 0)
             }
         }
+        rslog("  selection: steps=[" + steps.map { "\($0.lang):\($0.text)" }.joined(separator: " ") +
+              "] pref=\(SettingsManager.shared.ambiguousLang)")
 
         return steps.map { (text: $0.text, layoutID: $0.layoutID) }
     }

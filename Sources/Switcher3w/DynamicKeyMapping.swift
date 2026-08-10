@@ -1,5 +1,6 @@
 import Carbon
 import Foundation
+import Switcher3wCore
 
 /// Dynamic keycode↔character mapping for any pair of layouts via UCKeyTranslate
 enum DynamicKeyMapping {
