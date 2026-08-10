@@ -96,8 +96,9 @@
     </div>
     <div class="cta-row">
       <a class="cta" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">⬇&nbsp; Завантажити для macOS</a>
-      <a class="cta alt" href="https://apps.microsoft.com/detail/9MXFXL7GG3C5">⬇&nbsp; Завантажити з Microsoft Store</a>
-      <a class="cta alt" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.2.7">⬇&nbsp; MSI для Windows&nbsp; <span class="pill">БЕТА</span></a>
+      <!-- Store button: restore when the listing is published (apps.microsoft.com/detail/9MXFXL7GG3C5
+           returns 410 until then). -->
+      <a class="cta alt" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.2.7">⬇&nbsp; Завантажити для Windows&nbsp; <span class="pill">БЕТА</span></a>
     </div>
     <span class="subcta">Безкоштовно та з відкритим кодом · <a href="https://github.com/WhisKeySwitch/Switcher3way">Переглянути на GitHub</a></span>
   </div>
@@ -136,14 +137,13 @@
       <li>Надайте два дозволи, коли з'явиться запит, — <b>Універсальний доступ</b> (Accessibility, щоб перенабрати виправлене слово) та <b>Моніторинг введення</b> (Input Monitoring, щоб бачити натискання). Контрольний список під час налаштування виявляє надані дозволи наживо.</li>
     </ol>
     <h3>Windows <span style="font-size:.7em;color:var(--muted);font-weight:600">· попередня версія</span></h3>
-    <p style="margin:0 0 10px;color:var(--muted);font-size:.95em"><b>З Microsoft Store</b> — найпростіший шлях: <a href="https://apps.microsoft.com/detail/9MXFXL7GG3C5">відкрийте сторінку</a> й натисніть «Отримати». Ця версія підписана Microsoft, тому SmartScreen не попереджає, не потребує додаткових компонентів і оновлюється сама. Кроки нижче — для прямого завантаження MSI.</p>
     <ol class="steps">
       <li>Встановіть <a href="https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe">Windows App Runtime 1.6</a> — один раз. Застосунок повідомить, якщо його немає.</li>
       <li><a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.2.7">Завантажте MSI</a> і двічі клацніть його; підтвердіть запит <b>Контролю облікових записів</b> (UAC).</li>
       <li>Ця попередня версія ще не підписана, тож SmartScreen може попередити — натисніть <b>Докладніше → Виконати в будь-якому разі</b>.</li>
       <li>Запустіть <b>Switcher3way</b> з меню «Пуск»; він живе в системному лотку. Жодних діалогів дозволів і <b>не потрібно встановлювати .NET</b>.</li>
     </ol>
-    <div class="note"><b>Store чи MSI?</b> Версія зі Store підписана Microsoft, не потребує додаткових компонентів і оновлюється сама; MSI — пряме завантаження, яке ви встановлюєте самі. Це той самий застосунок.Волієте зібрати самостійно? <code class="mono">git clone</code> репозиторій — macOS: <code class="mono">bash build_app.sh</code>; Windows: <code class="mono">pwsh windows/build-msi.ps1</code> (або <code class="mono">build-msix.ps1</code>). Див. <a href="https://github.com/WhisKeySwitch/Switcher3way#build-it-yourself">README</a>.</div>
+    <div class="note"><b>Незабаром у Microsoft Store</b> — та версія буде підписана Microsoft (без попередження SmartScreen), не потребуватиме додаткових компонентів і оновлюватиметься сама. Волієте зібрати самостійно? <code class="mono">git clone</code> репозиторій — macOS: <code class="mono">bash build_app.sh</code>; Windows: <code class="mono">pwsh windows/build-msi.ps1</code> (або <code class="mono">build-msix.ps1</code>). Див. <a href="https://github.com/WhisKeySwitch/Switcher3way#build-it-yourself">README</a>.</div>
   </section>
 
   <section>
