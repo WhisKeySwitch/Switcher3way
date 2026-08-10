@@ -56,7 +56,7 @@ internal static class Selection
     private static Native.INPUT Key(ushort vk, uint flags) => new()
     {
         type = Native.INPUT_KEYBOARD,
-        ki = new Native.KEYBDINPUT { wVk = vk, wScan = 0, dwFlags = flags, time = 0, dwExtraInfo = IntPtr.Zero },
+        ki = new Native.KEYBDINPUT { wVk = vk, wScan = 0, dwFlags = flags, time = 0, dwExtraInfo = Native.OwnInputTag },
     };
 
     // ---- clipboard ---------------------------------------------------------------------------

@@ -79,7 +79,8 @@ Add both keyboard layouts in Windows first — English and Ukrainian or Russian 
 the app to switch between. Switcher3way lives in the notification area and has no main window; a short
 welcome flow appears the first time you run it.
 
-A physical keyboard is required: the app cannot see input from the on-screen touch keyboard.
+Works wherever your keystrokes come from — a directly attached keyboard, Remote Desktop, a virtual
+machine, a remapped keyboard, or the on-screen keyboard.
 
 The interface is fully translated into English, Ukrainian and Russian. Thirteen more languages are
 partly translated and fall back to English for anything not yet covered; the language picker says which
@@ -350,9 +351,9 @@ publisher does not own.
 active and Ukrainian preferred — the same string the self-test prints. Don't swap in an example without
 checking that it converts.
 
-**"A physical keyboard is required" earns its place.** The hook ignores injected input, and Windows'
-on-screen keyboard injects — so auto-fix genuinely does nothing on a keyboard-less tablet. Saying so
-here matches the Keyboard/Minimum hardware declaration and heads off a bad review.
+**No "physical keyboard required" claim.** It was true until 0.2.7: the hook ignored all injected input,
+which made the app inert on a tablet using the on-screen keyboard — and failed Store certification twice.
+Our own synthesized keys are now tagged, so everything else counts as real typing.
 
 **Every claim needs checking against the code, not memory.** Two were wrong in the first draft. The
 pause durations are 30 minutes / 1 hour / until restart (`TrayFlyoutWindow.xaml.cs`), not "ten minutes".

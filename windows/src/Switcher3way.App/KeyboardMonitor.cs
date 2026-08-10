@@ -5,8 +5,9 @@ namespace Switcher3way.App;
 
 /// <summary>
 /// Global low-level keyboard hook + word buffer. Buffers letters/digits/OEM keys into the current
-/// word (recording shift + caps), detects boundaries, and raises events. Ignores its own
-/// synthesized input (<c>LLKHF_INJECTED</c>) and swallows the control keys. Graduated from the spike.
+/// word (recording shift + caps), detects boundaries, and raises events. Ignores its
+/// own synthesized input (tagged via <c>dwExtraInfo</c>) and swallows the control keys. Graduated from
+/// the spike.
 /// </summary>
 internal sealed class KeyboardMonitor
 {
@@ -123,8 +124,13 @@ internal sealed class KeyboardMonitor
         {
             uint msg = (uint)wParam;
             var data = Marshal.PtrToStructure<Native.KBDLLHOOKSTRUCT>(lParam);
-            bool injected = (data.flags & Native.LLKHF_INJECTED) != 0; // ignore our own SendInput
-            if (!injected)
+            // Ignore only what *we* synthesized, identified by the tag we stamp into dwExtraInfo — not
+            // everything carrying LLKHF_INJECTED. That broader test also excluded Remote Desktop, virtual
+            // machines, remote-support tools, keyboard remappers and the on-screen keyboard, so the app
+            // was inert wherever input did not come from a directly attached keyboard: keystrokes never
+            // reached the buffer, the trigger press was invisible, and it looked dead.
+            bool ours = data.dwExtraInfo == Native.OwnInputTag;
+            if (!ours)
             {
                 if (msg == Native.WM_KEYDOWN || msg == Native.WM_SYSKEYDOWN)
                 { if (HandleKeyDown(data)) return (IntPtr)1; }          // swallow control keys

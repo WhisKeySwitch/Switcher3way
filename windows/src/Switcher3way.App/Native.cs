@@ -11,6 +11,22 @@ internal static class Native
     public const int WM_KEYDOWN = 0x0100, WM_KEYUP = 0x0101, WM_SYSKEYDOWN = 0x0104, WM_SYSKEYUP = 0x0105;
     public const uint LLKHF_INJECTED = 0x00000010; // set on synthesized (SendInput) events
 
+    /// <summary>
+    /// Stamped into <c>dwExtraInfo</c> on every keystroke this app synthesizes, so the hook can ignore
+    /// its own rewrites without ignoring everyone else's injected input.
+    ///
+    /// The hook used to skip anything carrying <c>LLKHF_INJECTED</c>, which also covers Remote Desktop,
+    /// virtual machines, remote-support tools, keyboard remappers and the on-screen keyboard — so the app
+    /// was inert wherever input did not come from a directly attached keyboard. The first three of those
+    /// are the ones that matter: people type into them on real keyboards and make exactly the wrong-layout
+    /// mistake this app fixes. Store certification failed on it twice, testing on a Surface Go 4.
+    ///
+    /// The cost, accepted: text expanders, macro tools and password-manager auto-type are now visible to
+    /// the engine too. Windows offers no way to tell a remote session's keystrokes apart from an
+    /// application injecting text, so it is accept-all or reject-all.
+    /// </summary>
+    public static readonly IntPtr OwnInputTag = new(0x53573357); // "SW3W"
+
     // ---- Low-level mouse hook (to reset the word buffer on clicks) --------------------------
     public const int WH_MOUSE_LL = 14;
     public const uint WM_LBUTTONDOWN = 0x0201, WM_RBUTTONDOWN = 0x0204, WM_MBUTTONDOWN = 0x0207, WM_XBUTTONDOWN = 0x020B;

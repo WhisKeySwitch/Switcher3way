@@ -90,6 +90,6 @@ internal static class TextRewriter
     private static Native.INPUT Key(ushort vk, char unicode, uint flags) => new()
     {
         type = Native.INPUT_KEYBOARD,
-        ki = new Native.KEYBDINPUT { wVk = vk, wScan = unicode, dwFlags = flags, time = 0, dwExtraInfo = IntPtr.Zero },
+        ki = new Native.KEYBDINPUT { wVk = vk, wScan = unicode, dwFlags = flags, time = 0, dwExtraInfo = Native.OwnInputTag },
     };
 }

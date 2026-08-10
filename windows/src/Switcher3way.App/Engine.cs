@@ -55,6 +55,31 @@ internal sealed class Engine
     /// </summary>
     public event Action<string, string>? Undone;
 
+    /// <summary>
+    /// The manual trigger was pressed but there was nothing to do, with the reason. Every one of these
+    /// paths used to return in silence, writing a line to a log that is off by default — so tapping the
+    /// trigger on a machine with one keyboard layout, or before typing anything, looked exactly like a
+    /// broken app. Store certification failed on precisely that: "no response after a double tap of Ctrl".
+    /// </summary>
+    public event Action<string, string>? Hint;
+
+    private DateTime _lastHint = DateTime.MinValue;
+
+    private void RaiseHint(string titleKey, string bodyKey, params object[] args)
+    {
+        var now = DateTime.Now;
+        if ((now - _lastHint).TotalSeconds < 8) return;   // a repeated tap must not stack notifications
+        _lastHint = now;
+        Hint?.Invoke(Loc.T(titleKey), args.Length == 0 ? Loc.T(bodyKey) : Loc.Tf(bodyKey, args));
+    }
+
+    /// <summary>
+    /// Layouts we could actually convert between: a known language with a bundled dictionary. Below two,
+    /// the app has nothing to do and should say so rather than appear inert.
+    /// </summary>
+    private int UsableLayoutCount() =>
+        _catalog.InstalledLayouts().Count(l => l.Lang is not null && _dict.IsAvailable(l.Lang));
+
     private void NotifyProtected()
     {
         var now = DateTime.Now;
@@ -316,13 +341,27 @@ internal sealed class Engine
     /// </summary>
     private Cycle? StartCycle()
     {
+        // Nothing to switch between: one layout, or none whose language we have a dictionary for. This is
+        // the state a fresh PC is in, and the state the Store reviewer tested in.
+        if (UsableLayoutCount() < 2)
+        {
+            Diagnostics.Log("(only one usable layout — nothing to convert between)");
+            RaiseHint("hint.setup.title", "hint.setup.body");
+            return null;
+        }
+
         var (cur, prev) = _monitor.Snapshot();
         if (cur.Count > 0 || prev.Count > 0)
         {
             var word = cur.Count > 0 ? cur : prev;
             var suffix = cur.Count > 0 ? "" : " ";       // finished word: the boundary space is on screen
             var plan = _resolver.ManualPlan(word, word.Any(k => k.Caps), _settings.AmbiguousLang);
-            if (plan is null) { Diagnostics.Log("(nothing to convert)"); return null; }
+            if (plan is null)
+            {
+                Diagnostics.Log("(nothing to convert)");
+                RaiseHint("hint.nothing.title", "hint.nothing.body");
+                return null;
+            }
             return new Cycle { Plan = plan, Suffix = suffix, Step = 0, OnScreenLen = (plan.Original + suffix).Length };
         }
 
@@ -330,15 +369,22 @@ internal sealed class Engine
         if (selected is null)
         {
             Diagnostics.Log($"(type a word or select text, then press {_settings.TriggerLabel})");
+            RaiseHint("hint.nothing.title", "hint.type.body", _settings.TriggerLabel);
             return null;
         }
         if (selected.Length > Selection.MaxChars)
         {
             Diagnostics.Log($"  selection: {selected.Length} chars — too long, skipped");
+            RaiseHint("hint.nothing.title", "hint.tooLong.body", Selection.MaxChars);
             return null;
         }
         var selPlan = SelectionPlan(selected);
-        if (selPlan is null) { Diagnostics.Log($"  selection: \"{selected}\" — no other layout renders it differently"); return null; }
+        if (selPlan is null)
+        {
+            Diagnostics.Log($"  selection: \"{selected}\" — no other layout renders it differently");
+            RaiseHint("hint.nothing.title", "hint.nothing.body");
+            return null;
+        }
         Diagnostics.Log($"  selection: \"{selected}\" → {selPlan.Candidates.Count} candidate(s)");
         return new Cycle { Plan = selPlan, Suffix = "", Step = 0, OnScreenLen = selected.Length, FromSelection = true };
     }
