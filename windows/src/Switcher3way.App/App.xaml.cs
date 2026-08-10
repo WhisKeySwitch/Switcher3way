@@ -68,7 +68,7 @@ public partial class App : Application
                 Diagnostics.LogAlways("diagcaret: probing every 2s for 30s — move focus between apps");
             }
             // The trigger's "nothing to do" feedback. The trigger itself cannot be pressed synthetically
-            // (the hook ignores injected keys), so this shows what the reviewer's machine would show.
+            // (it is swallowed as a control key), so this shows what the reviewer's machine would show.
             if (args2.Any(a => a.Equals("diaghint", StringComparison.OrdinalIgnoreCase)))
             {
                 Diagnostics.LogAlways("diaghint: showing the one-layout hint…");

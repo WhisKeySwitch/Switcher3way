@@ -11,6 +11,16 @@ internal static class Native
     public const int WM_KEYDOWN = 0x0100, WM_KEYUP = 0x0101, WM_SYSKEYDOWN = 0x0104, WM_SYSKEYUP = 0x0105;
     public const uint LLKHF_INJECTED = 0x00000010; // set on synthesized (SendInput) events
 
+    /// <summary>
+    /// Stamped into <c>dwExtraInfo</c> on every keystroke this app synthesizes, so the hook can ignore
+    /// its own rewrites without ignoring everyone else's injected input.
+    ///
+    /// The hook used to skip anything carrying <c>LLKHF_INJECTED</c>, which also meant the on-screen
+    /// touch keyboard, Remote Desktop and automation tools — so on a tablet the app was completely inert
+    /// and appeared broken. Store certification failed on exactly that, testing on a Surface Go 4.
+    /// </summary>
+    public static readonly IntPtr OwnInputTag = new(0x53573357); // "SW3W"
+
     // ---- Low-level mouse hook (to reset the word buffer on clicks) --------------------------
     public const int WH_MOUSE_LL = 14;
     public const uint WM_LBUTTONDOWN = 0x0201, WM_RBUTTONDOWN = 0x0204, WM_MBUTTONDOWN = 0x0207, WM_XBUTTONDOWN = 0x020B;
