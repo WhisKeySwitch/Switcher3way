@@ -72,7 +72,11 @@ public partial class App : Application
             if (args2.Any(a => a.Equals("diaghint", StringComparison.OrdinalIgnoreCase)))
             {
                 Diagnostics.LogAlways("diaghint: showing the one-layout hint…");
-                Toast.ShowHint(Loc.T("hint.setup.title"), Loc.T("hint.setup.body"));
+                // Through Tray, not Toast directly: the point of this switch is to prove what the
+                // reviewer's machine shows, and that is now two surfaces. Calling Toast here is how the
+                // 0.2.6 hint got verified while the chip — and, in the packaged build, the notification
+                // itself — went untested.
+                _tray.ShowHint(Loc.T("hint.setup.title"), Loc.T("hint.setup.body"), Loc.T("hint.setup.chip"));
             }
             // Password-field detection, probed live. This exists because the guard shipped broken for four
             // releases on an untested assumption: focus a real password field and read the answer.

@@ -96,6 +96,13 @@ this PC, and the Store channel never needs it (the Store re-signs the package).
 `%APPDATA%\Switcher3way` — the packaged app's data is *not* redirected to `LocalCache`. Whichever
 starts first wins; stop one before launching the other.
 
+**Notifications must be tested on the packaged build, not the MSI one.** `AppNotificationManager` is the
+one API whose behaviour differs between the flavours: unpackaged it creates its own activator, packaged it
+looks the activator up in the package's COM registration. A missing manifest declaration therefore breaks
+every notification in the Store build only — it shipped that way in 0.2.6 and 0.2.7 and cost two
+certification failures. `Switcher3way.exe diaghint` on a sideloaded package answers it in one line: the
+log says either `toast: registered` or `toast: registration failed`.
+
 ### Submission pack (paste into Partner Center)
 
 **Privacy policy URL** — required, because a keyboard hook can access personal information:
@@ -196,6 +203,11 @@ the second one twice, so it now leads the notes.
 >
 > **Any keyboard works** — physical, the on-screen touch keyboard, or Remote Desktop. (Before 0.2.7 the
 > app ignored all synthesized input and was inert on a tablet; that is fixed.)
+>
+> **The trigger always answers.** If it has nothing to convert — no second layout, nothing typed or
+> selected, text already correct — it says so in a chip next to the cursor and in a notification, instead
+> of doing nothing. (Before 0.2.8 the notification was discarded in the Store build, which is what the
+> third certification failure saw.)
 >
 > **Test — automatic:** with the English layout active, open Notepad and type `ghbdsn` then a space. The
 > text is replaced with `привіт`, the layout switches to Ukrainian, and a small chip appears under the

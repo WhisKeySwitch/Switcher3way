@@ -9,10 +9,15 @@ namespace Switcher3way.App;
 /// does is visible where it happens (the caret chip, the tray icon), so this is deliberately limited —
 /// a layout fixer that toasts on success would be unusable.
 ///
-/// Registration covers both flavours: <c>AppNotificationManager.Register()</c> gives an *unpackaged*
-/// build the COM activator and identity it would otherwise lack, and is required for a packaged one
-/// too. If registration fails the app carries on — notifications are a nicety, and a failure here must
-/// never stop the tray from working.
+/// Registration covers both flavours, but by opposite mechanisms, and that difference cost a Store
+/// certification cycle. Unpackaged, <c>AppNotificationManager.Register()</c> creates the COM activator
+/// and identity the process lacks. Packaged, it *looks its activator up* under
+/// <c>HKLM\SOFTWARE\Classes\PackagedCom\Package\{PFN}\Class</c> and throws if the manifest never
+/// declared one — so the two <c>windows.toastNotificationActivation</c> / <c>windows.comServer</c>
+/// extensions in <c>Package.appxmanifest</c> are what keep notifications alive in the Store build. If
+/// registration fails the app carries on — a failure here must never stop the tray from working — which
+/// is why the trigger's feedback also has an on-screen surface that needs none of this
+/// (<see cref="CaretChip.ShowMessage"/>).
 /// </summary>
 internal static class Toast
 {
@@ -22,6 +27,7 @@ internal static class Toast
 
     private static Action<string>? _onNeverConvert;
     private static bool _registered;
+    private static bool _suppressionLogged;
 
     /// <param name="onNeverConvert">
     /// Called with the word to add to the never-convert list. The callback arrives on a notification
@@ -90,7 +96,19 @@ internal static class Toast
 
     private static void Show(AppNotificationBuilder builder)
     {
-        if (!_registered) return;
+        if (!_registered)
+        {
+            // Ungated and once: registration failing is already logged, but without this the log shows no
+            // trace of the notifications that were then dropped, and "the app said nothing" reads as a
+            // decision rather than a failure. That gap is what let a packaged build ship with every
+            // notification discarded.
+            if (!_suppressionLogged)
+            {
+                _suppressionLogged = true;
+                Diagnostics.LogAlways("toast: not registered — this and any further notifications are dropped");
+            }
+            return;
+        }
         try { AppNotificationManager.Default.Show(builder.BuildNotification()); }
         catch (Exception ex) { Diagnostics.Log("toast: show failed: " + ex.Message); }
     }

@@ -26,6 +26,7 @@ internal sealed class CaretChip : IDisposable
     private readonly DispatcherQueueTimer _timer;
 
     private string _original = "", _converted = "", _trigger = "Ctrl Ctrl";
+    private string? _message; // set → draw the message pill instead of the conversion one
     private int _elapsed;
     private Phase _phase = Phase.Hidden;
     private enum Phase { Hidden, FadeIn, Hold, FadeOut }
@@ -66,7 +67,29 @@ internal sealed class CaretChip : IDisposable
         _original = original;
         _converted = converted;
         _trigger = triggerLabel;
+        _message = null;
+        Present();
+    }
 
+    /// <summary>
+    /// A one-line message pill, in the same place and with the same lifetime as the conversion chip: the
+    /// trigger's answer when it has nothing to convert.
+    ///
+    /// This exists because a notification is not a dependable answer. The user can have notifications
+    /// switched off or Do Not Disturb on, an elevated process never gets one at all, and in the packaged
+    /// build the notification registration itself used to fail — each of which turns "the trigger
+    /// explains itself" back into the silence that failed Store certification. The chip is drawn by this
+    /// process, so nothing outside it can suppress it. The notification still carries the full
+    /// explanation; this carries the short version to where the user is looking.
+    /// </summary>
+    public void ShowMessage(string text)
+    {
+        _message = text;
+        Present();
+    }
+
+    private void Present()
+    {
         // Match the DPI of the monitor we're about to appear on (the app being typed into).
         IntPtr target = GetForegroundWindow();
         uint dpi = target != IntPtr.Zero ? GetDpiForWindow(target) : 96;
@@ -136,6 +159,14 @@ internal sealed class CaretChip : IDisposable
         using var g = Graphics.FromImage(bmp);
         using var mono = MonoFont; using var hint = HintFont; using var key = KeyFont;
 
+        if (_message is not null)
+        {
+            using var text0 = TextFont;
+            int mw = PadX + S(12) + Gap + Ceil(g.MeasureString(_message, text0).Width) + PadX;
+            int mh = Ceil(g.MeasureString("Ay", text0).Height) + PadY * 2;
+            return new Size(mw, Math.Max(mh, (int)(30 * _scale)));
+        }
+
         int w = PadX
               + S(12) + Gap                                                 // tick
               + Ceil(g.MeasureString(_original, mono).Width) + Gap          // struck-through original
@@ -160,6 +191,7 @@ internal sealed class CaretChip : IDisposable
     /// </summary>
     private int LeftShiftForWord()
     {
+        if (_message is not null) return 0; // nothing was rewritten — sit at the caret, not left of it
         using var bmp = new Bitmap(1, 1);
         using var g = Graphics.FromImage(bmp);
         using var mono = MonoFont;
@@ -291,6 +323,26 @@ internal sealed class CaretChip : IDisposable
 
         float mid = bounds.Height / 2f;
         float x = PadX;
+
+        if (_message is not null)
+        {
+            // An amber dot rather than the green tick: nothing was corrected, so this must not read as
+            // a success. Same pill, same place — the difference is the mark and the single line of text.
+            float dot = S(12);
+            using (var amber = new SolidBrush(Color.FromArgb(0xE8, 0xB3, 0x39)))
+                g.FillEllipse(amber, x, mid - dot / 2, dot, dot);
+            using (var pen = new Pen(Color.FromArgb(0x3A, 0x2B, 0x08), 1.6f * _scale))
+            {
+                g.DrawLine(pen, x + dot / 2, mid - dot * 0.22f, x + dot / 2, mid + dot * 0.10f);
+                g.DrawLine(pen, x + dot / 2, mid + dot * 0.24f, x + dot / 2, mid + dot * 0.25f);
+            }
+            x += dot + Gap;
+            using var msgFont = TextFont;
+            var msgSize = g.MeasureString(_message, msgFont);
+            using var msgB = new SolidBrush(Color.FromArgb(0xEC, 0xEC, 0xEC));
+            g.DrawString(_message, msgFont, msgB, x, mid - msgSize.Height / 2f);
+            return;
+        }
 
         // success tick
         float tick = S(12);
