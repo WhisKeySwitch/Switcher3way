@@ -173,10 +173,22 @@ internal sealed class KeyboardMonitor
         }
 
         var kind = KeyClassifier.Classify(vk);
+
+        // A Ctrl/Alt chord is a command, not typing — Ctrl+A selects, Ctrl+V pastes, Ctrl+Z undoes,
+        // Ctrl+X cuts, Alt+Tab leaves — and every one of those changes the text or the selection, so
+        // nothing buffered still describes what sits at the caret. Buffering the letter instead is how
+        // "Ctrl+A, then the trigger" replaced an entire document with one word: the 'a' became the word
+        // to convert, and the rewrite's first backspace erased everything that was selected. Alt+Tab was
+        // worse in a quieter way: Tab is a word boundary, so leaving an app finished the word.
+        // AltGr arrives as Ctrl+Alt and does produce characters, so it is typing, not a command.
         if (kind != KeyKind.Modifier)
         {
             Typed?.Invoke();              // any real keystroke ends a manual cycle
             if (_rewriting) _aborted = true; // ...and aborts an in-flight rewrite
+
+            bool ctrl = (Native.GetAsyncKeyState((int)Native.VK_CONTROL) & 0x8000) != 0;
+            bool alt = (Native.GetAsyncKeyState((int)Native.VK_MENU) & 0x8000) != 0;
+            if (ctrl ^ alt) { ClearBuffer("command chord"); return false; }
         }
 
         switch (kind)
@@ -210,13 +222,21 @@ internal sealed class KeyboardMonitor
                     if (_current.Count > 0) { _current.RemoveAt(_current.Count - 1); intoPrev = false; }
                     else intoPrev = true;
                 }
-                if (intoPrev) PhraseReset?.Invoke(); // editing into an earlier word ends the phrase
+                // Backspacing past the start of the word edits the *finished* one, so its recorded form
+                // is now one character longer than what is on screen. Keeping it meant the trigger
+                // erased that phantom character too, eating whatever preceded it.
+                if (intoPrev) ClearBuffer("backspaced into an earlier word");
                 break;
             case KeyKind.Modifier:
                 break;
             case KeyKind.Reset:
-                lock (_lock) _current.Clear();
-                PhraseReset?.Invoke();       // arrows move the caret → phrase ends
+                // Arrows / Home / End / PageUp-Down / Ins / Del moved the caret, so BOTH buffers are
+                // stale — not just the word in progress. Clearing only `_current` left the last
+                // *finished* word eligible for the trigger, which then erased that word's length at the
+                // new caret position: select a line with Shift+Home, tap the trigger, and it erased the
+                // selection plus two characters of the line above it. Whatever is buffered is only ever
+                // safe to rewrite while the caret has not moved since it was typed.
+                ClearBuffer("caret moved");  // also ends the phrase
                 break;
         }
         return false;

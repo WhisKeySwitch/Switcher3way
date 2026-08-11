@@ -32,6 +32,7 @@ internal static class Native
     public const uint WM_LBUTTONDOWN = 0x0201, WM_RBUTTONDOWN = 0x0204, WM_MBUTTONDOWN = 0x0207, WM_XBUTTONDOWN = 0x020B;
 
     public const uint VK_SHIFT = 0x10, VK_CAPITAL = 0x14, VK_BACK = 0x08;
+    public const uint VK_CONTROL = 0x11, VK_MENU = 0x12;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct KBDLLHOOKSTRUCT
