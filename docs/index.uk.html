@@ -90,15 +90,13 @@
     <p class="tag">Застосунок для macOS і Windows, який помічає мову, якою ви друкуєте, і виправляє розкладку клавіатури — для <b>англійської</b>, <b>української</b> та <b>російської</b>.</p>
     <div class="badges">
       <span class="badge">macOS 13+</span>
-      <span class="badge">Windows 10/11 · попередня версія</span>
+      <span class="badge">Windows 10/11</span>
       <span class="badge">Відкритий код · MIT</span>
       <span class="badge">Безкоштовно</span>
     </div>
     <div class="cta-row">
       <a class="cta" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">⬇&nbsp; Завантажити для macOS</a>
-      <!-- Store button: restore when the listing is published (apps.microsoft.com/detail/9MXFXL7GG3C5
-           returns 410 until then). -->
-      <a class="cta alt" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.2.7">⬇&nbsp; Завантажити для Windows&nbsp; <span class="pill">БЕТА</span></a>
+      <a class="cta alt" href="https://apps.microsoft.com/detail/9MXFXL7GG3C5">⬇&nbsp; Встановити для Windows&nbsp; <span class="pill">MICROSOFT STORE</span></a>
     </div>
     <span class="subcta">Безкоштовно та з відкритим кодом · <a href="https://github.com/WhisKeySwitch/Switcher3way">Переглянути на GitHub</a></span>
   </div>
@@ -121,7 +119,7 @@
     <div class="grid">
       <div class="feat"><h3>N-way, а не дві розкладки</h3><p>Більшість перемикачів чергують лише дві розкладки. Switcher3way враховує <em>всі</em> встановлені розкладки одразу й обирає правильну.</p></div>
       <div class="feat"><h3>Спершу точність</h3><p>Слова, дійсні в кількох мовах (як-от <span class="mono">там</span> в українській і російській), залишаються незмінними — жодних хибних «виправлень».</p></div>
-      <div class="feat"><h3>Автоматично або вручну</h3><p>Виправляйте слова автоматично під час набору або натисніть клавішу-тригер, щоб перетворити останнє слово чи виділення — натисніть ще раз, щоб скасувати.</p></div>
+      <div class="feat"><h3>Автоматично або вручну</h3><p>Виправляйте слова автоматично під час набору або натисніть клавішу-тригер, щоб перетворити останнє слово чи виділення — натисніть ще раз, щоб скасувати. Коли тригеру нічого конвертувати, він скаже про це біля курсора, а не промовчить.</p></div>
       <div class="feat"><h3>Не заважає</h3><p>Винятки для окремих застосунків, списки слів «ніколи / завжди перетворювати», захист менеджерів паролів і пауза (30 хв / 1 год / до перезапуску).</p></div>
       <div class="feat"><h3>Приємні дрібниці</h3><p>Рядок стану в меню, запам'ятовування розкладки для кожного застосунку, необов'язковий прапор розкладки біля курсора та інтерфейс, локалізований 16 мовами.</p></div>
       <div class="feat"><h3>Приватно та офлайн</h3><p>Усе працює локально на вашому пристрої. Жодних облікових записів, телеметрії чи мережі.</p></div>
@@ -136,14 +134,13 @@
       <li>Перший запуск: застосунок не нотаризований, тож один раз клацніть правою кнопкою → <b>Відкрити</b> (подвійний клік блокує Gatekeeper). macOS запам'ятає вибір.</li>
       <li>Надайте два дозволи, коли з'явиться запит, — <b>Універсальний доступ</b> (Accessibility, щоб перенабрати виправлене слово) та <b>Моніторинг введення</b> (Input Monitoring, щоб бачити натискання). Контрольний список під час налаштування виявляє надані дозволи наживо.</li>
     </ol>
-    <h3>Windows <span style="font-size:.7em;color:var(--muted);font-weight:600">· попередня версія</span></h3>
+    <h3>Windows</h3>
     <ol class="steps">
-      <li>Встановіть <a href="https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe">Windows App Runtime 1.6</a> — один раз. Застосунок повідомить, якщо його немає.</li>
-      <li><a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.2.7">Завантажте MSI</a> і двічі клацніть його; підтвердіть запит <b>Контролю облікових записів</b> (UAC).</li>
-      <li>Ця попередня версія ще не підписана, тож SmartScreen може попередити — натисніть <b>Докладніше → Виконати в будь-якому разі</b>.</li>
-      <li>Запустіть <b>Switcher3way</b> з меню «Пуск»; він живе в системному лотку. Жодних діалогів дозволів і <b>не потрібно встановлювати .NET</b>.</li>
+      <li><a href="https://apps.microsoft.com/detail/9MXFXL7GG3C5">Встановіть з Microsoft Store</a> — підписано Microsoft, тож без попередження SmartScreen, нічого не треба встановлювати заздалегідь, і оновлюється сам.</li>
+      <li>Додайте другу розкладку, якщо ще не додали: <b>Параметри → Час і мова → Мова та регіон → Додати мову → українська</b> (або російська). З однією розкладкою конвертувати нічого — застосунок скаже про це, а не промовчить.</li>
+      <li>Запустіть <b>Switcher3way</b> з меню «Пуск»; він живе в області повідомлень. Windows 11 приховує нові піктограми лотка, тож розгорніть її шевроном <b>^</b>, якщо не бачите прапорця. Жодних діалогів дозволів не потрібно.</li>
     </ol>
-    <div class="note"><b>Незабаром у Microsoft Store</b> — та версія буде підписана Microsoft (без попередження SmartScreen), не потребуватиме додаткових компонентів і оновлюватиметься сама. Волієте зібрати самостійно? <code class="mono">git clone</code> репозиторій — macOS: <code class="mono">bash build_app.sh</code>; Windows: <code class="mono">pwsh windows/build-msi.ps1</code> (або <code class="mono">build-msix.ps1</code>). Див. <a href="https://github.com/WhisKeySwitch/Switcher3way#build-it-yourself">README</a>.</div>
+    <div class="note"><b>Не можете скористатися Store?</b> На <a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases">сторінці випусків</a> є MSI для прямого завантаження. Це попередня версія: потрібно один раз встановити <a href="https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe">Windows App Runtime 1.6</a>, вона не підписана (SmartScreen попередить — <b>Докладніше → Виконати в будь-якому разі</b>) і відстає від версії зі Store. Волієте зібрати самостійно? <code class="mono">git clone</code> репозиторій — macOS: <code class="mono">bash build_app.sh</code>; Windows: <code class="mono">pwsh windows/build-msix.ps1</code> (або <code class="mono">build-msi.ps1</code>). Див. <a href="https://github.com/WhisKeySwitch/Switcher3way#build-it-yourself">README</a>.</div>
   </section>
 
   <section>

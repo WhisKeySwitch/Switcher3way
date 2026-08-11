@@ -1,5 +1,18 @@
 # Releasing the Windows build
 
+> **Status (August 2026).** The app is **live on the Microsoft Store**:
+> [apps.microsoft.com/detail/9MXFXL7GG3C5](https://apps.microsoft.com/detail/9MXFXL7GG3C5). It took
+> four submissions — three were rejected under **10.1.2.10 Functionality**, each for a different
+> reason and each a real defect: the trigger answering with silence on a single-layout PC, the hook
+> discarding all injected input (so nothing worked over Remote Desktop or an on-screen keyboard), and
+> notification registration failing in the packaged flavour so every message the app produced was
+> dropped. The pattern to learn from: **verify in the flavour that ships.** All three passed testing
+> on an unpackaged build.
+>
+> Store channel is at **0.2.9**. The direct-download MSI channel is still at **0.2.7** and needs a
+> release to catch up — 0.2.8 and 0.2.9 were Store-only submissions, and 0.2.9 fixes data loss, so
+> this gap matters to anyone using the MSI.
+
 Switcher3way for Windows ships through **two channels**, built from the same project:
 
 | Channel | Build | Artifact | Signing | Updates |

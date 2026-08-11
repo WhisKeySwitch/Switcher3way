@@ -91,15 +91,13 @@
     <p class="tag">The macOS &amp; Windows app that notices the language you're typing and fixes the keyboard layout — across <b>English</b>, <b>Ukrainian</b>, and <b>Russian</b>.</p>
     <div class="badges">
       <span class="badge">macOS 13+</span>
-      <span class="badge">Windows 10/11 · preview</span>
+      <span class="badge">Windows 10/11</span>
       <span class="badge">Open source · MIT</span>
       <span class="badge">Free</span>
     </div>
     <div class="cta-row">
       <a class="cta" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest">⬇&nbsp; Download for macOS</a>
-      <!-- Store button: restore when the listing is published (apps.microsoft.com/detail/9MXFXL7GG3C5
-           returns 410 until then). Certification rejected 0.2.3 and 0.2.5; 0.2.7 is the resubmission. -->
-      <a class="cta alt" href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.2.7">⬇&nbsp; Download for Windows&nbsp; <span class="pill">PREVIEW</span></a>
+      <a class="cta alt" href="https://apps.microsoft.com/detail/9MXFXL7GG3C5">⬇&nbsp; Get it for Windows&nbsp; <span class="pill">MICROSOFT STORE</span></a>
     </div>
     <span class="subcta">Free &amp; open source · <a href="https://github.com/WhisKeySwitch/Switcher3way">View on GitHub</a></span>
   </div>
@@ -122,7 +120,7 @@
     <div class="grid">
       <div class="feat"><h3>N-way, not two-way</h3><p>Most switchers flip between two layouts. Switcher3way considers <em>all</em> your installed layouts at once and picks the right one.</p></div>
       <div class="feat"><h3>Precision-first</h3><p>Words valid in more than one language (like <span class="mono">там</span> in Ukrainian &amp; Russian) are left untouched — no wrong "corrections".</p></div>
-      <div class="feat"><h3>Auto or manual</h3><p>Fix words automatically as you type, or tap a trigger key to convert the last word or selection — tap again to undo.</p></div>
+      <div class="feat"><h3>Auto or manual</h3><p>Fix words automatically as you type, or tap a trigger key to convert the last word or selection — tap again to undo. When the trigger has nothing to convert, it says so at the cursor instead of doing nothing.</p></div>
       <div class="feat"><h3>Stays out of your way</h3><p>Per-app exceptions, never/always-convert word lists, password-manager safety, and pause (30 min / 1 h / until restart).</p></div>
       <div class="feat"><h3>Little touches</h3><p>Menu-bar status header, per-app layout memory, an optional layout flag at the cursor, and a UI localized in 16 languages.</p></div>
       <div class="feat"><h3>Private &amp; offline</h3><p>Everything runs locally on your device. No accounts, no telemetry, no network.</p></div>
@@ -137,14 +135,13 @@
       <li>First launch: the app is unnotarized, so <b>right-click → Open</b> once (double-clicking is blocked by Gatekeeper). macOS remembers the choice.</li>
       <li>Grant two permissions when asked — <b>Accessibility</b> (retype the fixed word) and <b>Input Monitoring</b> (see keystrokes). The onboarding checklist detects grants live.</li>
     </ol>
-    <h3>Windows <span style="font-size:.7em;color:var(--muted);font-weight:600">· preview</span></h3>
+    <h3>Windows</h3>
     <ol class="steps">
-      <li>Install the <a href="https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe">Windows App Runtime 1.6</a> — once. The app tells you if it's missing.</li>
-      <li><a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.2.7">Download the MSI</a> and double-click it; approve the <b>User Account Control</b> prompt.</li>
-      <li>This preview isn't code-signed yet, so SmartScreen may warn — click <b>More info → Run anyway</b>.</li>
-      <li>Launch <b>Switcher3way</b> from the Start menu; it lives in the system tray. No permissions dialog and <b>no .NET install</b> needed.</li>
+      <li><a href="https://apps.microsoft.com/detail/9MXFXL7GG3C5">Get it from the Microsoft Store</a> — signed by Microsoft, so no SmartScreen warning, nothing to install first, and it updates itself.</li>
+      <li>Add a second keyboard layout if you haven't: <b>Settings → Time &amp; language → Language &amp; region → Add a language → Ukrainian</b> (or Russian). With one layout there's nothing to convert between — the app will tell you so rather than sit silent.</li>
+      <li>Launch <b>Switcher3way</b> from the Start menu; it lives in the notification area. Windows 11 hides new tray icons, so expand it with the <b>^</b> chevron if you don't see the flag. No permissions dialog needed.</li>
     </ol>
-    <div class="note"><b>Coming to the Microsoft Store</b> — that version will be signed by Microsoft (no SmartScreen warning), need no prerequisite, and update itself. Prefer to build it yourself? <code class="mono">git clone</code> the repo — macOS: <code class="mono">bash build_app.sh</code>; Windows: <code class="mono">pwsh windows/build-msi.ps1</code> (or <code class="mono">build-msix.ps1</code>). See the <a href="https://github.com/WhisKeySwitch/Switcher3way#build-it-yourself">README</a>.</div>
+    <div class="note"><b>Can't use the Store?</b> There's a direct-download MSI on the <a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases">releases page</a>. It's a preview: it needs the <a href="https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe">Windows App Runtime 1.6</a> installed once, isn't code-signed (SmartScreen warns — <b>More info → Run anyway</b>), and lags behind the Store build. Prefer to build it yourself? <code class="mono">git clone</code> the repo — macOS: <code class="mono">bash build_app.sh</code>; Windows: <code class="mono">pwsh windows/build-msix.ps1</code> (or <code class="mono">build-msi.ps1</code>). See the <a href="https://github.com/WhisKeySwitch/Switcher3way#build-it-yourself">README</a>.</div>
   </section>
 
   <section>
