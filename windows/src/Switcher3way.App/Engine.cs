@@ -355,6 +355,21 @@ internal sealed class Engine
         }
 
         var (cur, prev) = _monitor.Snapshot();
+
+        // A live selection outranks the keystroke buffer, and not as a preference — as a safety rule.
+        // The buffer path erases its recorded length at the caret with backspaces; with something
+        // selected, the first backspace erases the selection instead and the remaining ones eat whatever
+        // precedes it. That is how a selected line came to be replaced along with two characters of the
+        // line above it. Every selection gesture now also clears the buffer, so this should be
+        // unreachable — it stays because "should be" is what shipped the bug.
+        // Buffer first: with nothing buffered the selection path runs anyway, so the probe would be wasted.
+        if ((cur.Count > 0 || prev.Count > 0) && Selection.HasSelection() == true)
+        {
+            Diagnostics.Log("  buffer ignored — text is selected, converting the selection instead");
+            cur = Array.Empty<TypedKey>();
+            prev = Array.Empty<TypedKey>();
+        }
+
         if (cur.Count > 0 || prev.Count > 0)
         {
             var word = cur.Count > 0 ? cur : prev;

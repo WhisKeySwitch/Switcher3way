@@ -28,15 +28,25 @@ internal static class Selection
         SendCtrlC();
 
         string? copied = null;
+        int waited = 0;
         for (int i = 0; i < 30; i++)             // up to ~300 ms for the app to answer the copy
         {
             Thread.Sleep(10);
+            waited = (i + 1) * 10;
             if (GetClipboardSequenceNumber() != before)
             {
                 copied = ReadClipboardText();
                 break;
             }
         }
+
+        // "No selection" and "the app was too slow to answer our copy" are indistinguishable from the
+        // outside and used to look identical from the inside too — both returned null in silence, and the
+        // trigger then reported having nothing to convert. Length only, never the text: this runs before
+        // anything knows whether the focused field holds a credential.
+        Diagnostics.Log(copied is null
+            ? $"  selection: no copy arrived within {waited} ms — treating as nothing selected"
+            : $"  selection: read {copied.Length} chars after {waited} ms");
 
         if (saved is not null && copied is not null && copied != saved) WriteClipboardText(saved);
         return string.IsNullOrWhiteSpace(copied) ? null : copied;
@@ -58,6 +68,51 @@ internal static class Selection
         type = Native.INPUT_KEYBOARD,
         ki = new Native.KEYBDINPUT { wVk = vk, wScan = 0, dwFlags = flags, time = 0, dwExtraInfo = Native.OwnInputTag },
     };
+
+    // ---- "is anything selected?" -------------------------------------------------------------
+    // The UIA client is expensive to create and safe to reuse; this runs on every trigger press.
+    private static Interop.UIAutomationClient.IUIAutomation? _uia;
+    private static bool _uiaBroken;
+    private const int UIA_TextPatternId = 10014;
+
+    /// <summary>
+    /// Whether the focused element has a non-empty text selection: true / false / <c>null</c> when it
+    /// cannot be determined. Costs one UI Automation round trip and, unlike <see cref="Read"/>, has no
+    /// side effects — no synthesized Ctrl+C and no clipboard churn.
+    ///
+    /// This exists to keep a rewrite from erasing text nobody asked it to. A buffer-driven rewrite
+    /// erases its own recorded length at the caret with backspaces, and when something is selected the
+    /// *first* backspace erases the selection instead — so the rest eat whatever precedes it. Every
+    /// gesture that makes a selection now also clears the buffer, which is the real fix; this is the
+    /// backstop for the ones that don't announce themselves, touch selection above all.
+    /// </summary>
+    public static bool? HasSelection()
+    {
+        if (_uiaBroken) return null;
+        try
+        {
+            _uia ??= new Interop.UIAutomationClient.CUIAutomation();
+            var focused = _uia.GetFocusedElement();
+            if (focused is null) return null;
+            if (focused.GetCurrentPattern(UIA_TextPatternId)
+                is not Interop.UIAutomationClient.IUIAutomationTextPattern text) return null;
+            var ranges = text.GetSelection();
+            if (ranges is null) return null;
+            for (int i = 0; i < ranges.Length; i++)
+            {
+                // Two characters is all it takes to know the range is not just a collapsed caret.
+                if (!string.IsNullOrEmpty(ranges.GetElement(i).GetText(2))) return true;
+            }
+            return false;
+        }
+        catch (Exception ex)
+        {
+            // Say so once: the consequence is that the backstop is off, so it must not be silent.
+            _uiaBroken = true;
+            Diagnostics.LogAlways("selection: UI Automation unavailable, cannot detect selections: " + ex.Message);
+            return null;
+        }
+    }
 
     // ---- clipboard ---------------------------------------------------------------------------
     private const uint CF_UNICODETEXT = 13;
