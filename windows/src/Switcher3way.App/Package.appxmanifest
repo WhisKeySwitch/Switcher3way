@@ -16,13 +16,15 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  IgnorableNamespaces="uap uap5 rescap">
+  IgnorableNamespaces="uap uap5 com desktop rescap">
 
   <Identity
     Name="IronMade.Switcher3Way"
     Publisher="CN=AF9BB38F-30B9-45AC-B73D-521C0053C310"
-    Version="0.2.7.0" />
+    Version="0.2.8.0" />
 
   <Properties>
     <DisplayName>Switcher3way</DisplayName>
@@ -62,6 +64,32 @@
                         EntryPoint="Windows.FullTrustApplication">
           <uap5:StartupTask TaskId="Switcher3wayStartup" Enabled="false" DisplayName="Switcher3way" />
         </uap5:Extension>
+
+        <!-- Notification activator. NOT optional, and not only about clicking a notification:
+             AppNotificationManager.Register() takes a different path when the process has package
+             identity — it looks up its own COM activator under
+             HKLM\SOFTWARE\Classes\PackagedCom\Package\{PFN}\Class, matching the ExeServer whose
+             Arguments are exactly the activation switch spelled out below (four hyphens, then
+             AppNotificationActivated and a colon — the SDK compares it verbatim, so do not reword
+             it). Without these two extensions that key does not exist, Register() throws, and EVERY
+             notification the app would ever show is
+             discarded — including the trigger's "nothing to convert" feedback, which in a packaged
+             build was the only response a reviewer with one keyboard layout could have seen. The
+             unpackaged (MSI) build registers its activator at runtime and is unaffected, which is
+             why this only ever failed in the Store flavour.
+
+             The CLSID is arbitrary but must stay stable and identical in both places. -->
+        <desktop:Extension Category="windows.toastNotificationActivation">
+          <desktop:ToastNotificationActivation ToastActivatorCLSID="A1429C4E-F890-4788-A651-A737F40EF475" />
+        </desktop:Extension>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="Switcher3way.exe" DisplayName="Switcher3way"
+                           Arguments="----AppNotificationActivated:">
+              <com:Class Id="A1429C4E-F890-4788-A651-A737F40EF475" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
       </Extensions>
     </Application>
   </Applications>

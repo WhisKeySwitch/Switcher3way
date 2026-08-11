@@ -32,7 +32,7 @@ internal sealed class Tray : IDisposable
         Toast.Initialize(word => _dispatcher.TryEnqueue(() => AddNeverConvert(word)));
         _engine.Notify += m => { Diagnostics.Log($"notify: {m}"); Toast.ShowError(m); };
         _engine.Undone += (original, converted) => Toast.OfferNeverConvert(original, converted);
-        _engine.Hint += (title, body) => { Diagnostics.Log($"hint: {title} — {body}"); Toast.ShowHint(title, body); };
+        _engine.Hint += (title, body, chip) => ShowHint(title, body, chip);
 
         // Conversions are raised from the engine's worker thread — marshal to the UI thread.
         _engine.Converted += info => _dispatcher.TryEnqueue(() =>
@@ -54,6 +54,19 @@ internal sealed class Tray : IDisposable
         _poll.Interval = TimeSpan.FromMilliseconds(400);
         _poll.Tick += (_, _) => RefreshIcon();
         _poll.Start();
+    }
+
+    /// <summary>
+    /// The trigger had nothing to convert: say so on both surfaces. The notification carries the full
+    /// explanation; the chip carries a short line at the caret, and the chip is what guarantees an answer
+    /// at all — it is drawn by this process, so no notification setting, Do Not Disturb, or failed
+    /// notification registration can silence it. Raised from the engine's worker thread.
+    /// </summary>
+    internal void ShowHint(string title, string body, string chip)
+    {
+        Diagnostics.Log($"hint: {title} — {body}");
+        Toast.ShowHint(title, body);
+        _dispatcher.TryEnqueue(() => _chip.ShowMessage(chip));
     }
 
     // ---- Menu (rebuilt on every open, so checkmarks are live) --------------------------------
