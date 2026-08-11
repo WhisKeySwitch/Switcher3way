@@ -47,7 +47,7 @@ On first launch the onboarding checklist asks for two macOS permissions — **Ac
 
 **[Get it from the Microsoft Store](https://apps.microsoft.com/detail/9MXFXL7GG3C5)** — signed by Microsoft, so no SmartScreen warning, nothing to install first, and it updates itself. This is the recommended way and the version that gets fixes first.
 
-There is also a direct-download MSI on the [releases page](https://github.com/WhisKeySwitch/switcher3way-releases/releases) for anyone who can't use the Store. It's a preview: it needs the [Windows App Runtime 1.6](https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe) installed once, isn't code-signed (SmartScreen will warn — **More info → Run anyway**), and **currently lags behind the Store build**.
+There is also a [direct-download MSI](https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.2.9) for anyone who can't use the Store. It needs the [Windows App Runtime 1.6](https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe) installed once and isn't code-signed (SmartScreen will warn — **More info → Run anyway**), but it updates itself and tracks the same version as the Store build.
 
 Windows needs no permission dialog. Switcher3way runs in the notification area and has no main window; Windows 11 hides new tray icons, so expand the notification area with the **^** chevron if you don't see the flag. Add a second keyboard layout first (**Settings → Time & language → Language & region**) — with only one layout there is nothing to convert between, and the app will tell you so.
 

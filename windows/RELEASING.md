@@ -9,9 +9,8 @@
 > dropped. The pattern to learn from: **verify in the flavour that ships.** All three passed testing
 > on an unpackaged build.
 >
-> Store channel is at **0.2.9**. The direct-download MSI channel is still at **0.2.7** and needs a
-> release to catch up — 0.2.8 and 0.2.9 were Store-only submissions, and 0.2.9 fixes data loss, so
-> this gap matters to anyone using the MSI.
+> Both channels are at **0.2.9**. 0.2.8 was a Store-only submission; the MSI channel skipped it and
+> went 0.2.7 → 0.2.9, so its release notes cover both.
 
 Switcher3way for Windows ships through **two channels**, built from the same project:
 
@@ -259,8 +258,8 @@ it does **not** need to match the macOS version.
 ## 2. Build the MSI
 
 ```powershell
-pwsh windows/build-msi.ps1 -Version 0.1.0
-# → windows/installer/bin/Release/Switcher3way-<version>-win-x64.msi  (~55 MB)
+pwsh windows/build-msi.ps1 -Version 0.2.9
+# → windows/installer/bin/x64/Release/Switcher3way-<version>-win-x64.msi  (~35 MB)
 ```
 
 The script publishes self-contained `win-x64` (bundles the .NET 8 Desktop runtime + `dict/`),
@@ -270,7 +269,7 @@ generates `installer/license.rtf` from the repo `LICENSE`, and builds the MSI. C
 Sanity-check the payload without installing (no admin needed):
 
 ```powershell
-$msi = "windows/installer/bin/Release/Switcher3way-0.1.0-win-x64.msi"
+$msi = "windows/installer/bin/x64/Release/Switcher3way-0.2.9-win-x64.msi"
 (Get-FileHash $msi -Algorithm SHA256).Hash.ToLower()          # note this for the release notes
 msiexec /a $msi /qn TARGETDIR="$env:TEMP\s3w-check"           # admin-install = lay out all files
 ```
@@ -294,8 +293,8 @@ Windows releases live on the **downloads repo** with a **Windows-specific tag** 
 - Tag scheme: **`windows-v<version>`** (e.g. `windows-v0.1.1`) — distinct from macOS `v<version>`.
 
 ```powershell
-$ver = "0.1.0"
-$msi = "windows/installer/bin/Release/Switcher3way-$ver-win-x64.msi"
+$ver = "0.2.9"
+$msi = "windows/installer/bin/x64/Release/Switcher3way-$ver-win-x64.msi"
 gh release create "windows-v$ver" "$msi" `
   -R WhisKeySwitch/switcher3way-releases `
   --title "Switcher3way for Windows $ver (preview)" `
