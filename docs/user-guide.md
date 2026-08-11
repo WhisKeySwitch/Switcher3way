@@ -2,10 +2,13 @@
 
 *Also available in: [Українська](user-guide.uk.md) · [Русский](user-guide.ru.md)*
 
-Switcher3way is a macOS menu-bar utility that notices when you've typed a word in the wrong
-keyboard layout and fixes it — retyping the word in the layout you meant and switching the
-keyboard for you. It works across **all** your installed layouts (e.g. English, Ukrainian,
-Russian), not just a pair.
+Switcher3way notices when you've typed a word in the wrong keyboard layout and fixes it —
+retyping the word in the layout you meant and switching the keyboard for you. It works across
+**all** your installed layouts (e.g. English, Ukrainian, Russian), not just a pair.
+
+It runs in the **menu bar** on macOS and in the **notification area** on Windows. This guide is
+written with the macOS names for menus and settings; the Windows app has the same settings under
+the same names, reached from the tray icon.
 
 - [How detection works](#how-detection-works)
 - [First launch](#first-launch)
@@ -131,6 +134,13 @@ how a password field is recognised.
 showing what you typed, struck through, and what replaced it — plus the trigger key, as a
 reminder of how to undo it. Turn it off with **Settings → General → Show what was corrected**.
 If an app doesn't tell macOS where its cursor is, the badge appears near the window instead.
+
+**When there's nothing to convert:** the trigger always answers. If it can't do anything it tells
+you why, at the cursor and as a notification, rather than appearing dead. The usual reason is that
+only one keyboard layout is installed — Switcher3way converts *between* the layouts your system
+has, so with a single one there is nothing to convert between; add Ukrainian or Russian and try
+again. You'll also see it when nothing has been typed or selected yet, when the text is already
+right for the current layout, and when a selection is longer than 200 characters.
 
 ## Auto-fix: converting as you type
 

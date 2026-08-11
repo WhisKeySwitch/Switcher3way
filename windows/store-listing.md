@@ -103,16 +103,17 @@ is which.
 
 ### What's new in this version
 
-Leave blank for the first submission. From the next update onwards:
+The app is published, so this field is now required on every submission. Current copy:
 
-Version 0.2.2
+Version 0.2.9
 
-• The trigger key is now a double tap of Ctrl by default. It needs no reach on laptop keyboards and
-  doesn't collide with anything — two taps with no other key in between. If you already chose a
-  trigger, it is left exactly as you set it.
-• Fixed: the app could quit after you finished the welcome flow instead of settling into the
-  notification area.
-• The trigger names in the welcome flow are no longer clipped.
+• Fixed: converting a selection with the trigger could delete more than you selected — including text
+  on the line above it. Whatever the app has recorded is now discarded the moment the cursor moves, so
+  a conversion can only rewrite the words it actually saw you type.
+• Fixed: selecting everything with Ctrl+A and then tapping the trigger could replace the whole
+  document. Keyboard shortcuts are no longer mistaken for typing.
+• When text is selected, the trigger now always converts the selection rather than the last word you
+  typed — what it changes is what you highlighted.
 
 ### Search terms
 
@@ -206,16 +207,17 @@ Switcher3way прибирає цей момент.
 
 ### Що нового
 
-Для першої публікації лишіть порожнім. Починаючи з наступного оновлення:
+Застосунок опубліковано, тож це поле тепер обов'язкове в кожній подачі. Поточний текст:
 
-Версія 0.2.2
+Версія 0.2.9
 
-• Тригером типово став подвійний Ctrl. До нього не треба тягтися на ноутбуці й він ні з чим не
-  конфліктує — два натискання без інших клавіш між ними. Якщо ви вже вибрали тригер, він залишається
-  таким, як ви налаштували.
-• Виправлено: застосунок міг завершити роботу після вступного екрана замість того, щоб залишитися
-  в області повідомлень.
-• Назви тригерів у вступному екрані більше не обрізаються.
+• Виправлено: конвертація виділеного тригером могла видалити більше, ніж ви виділили, — зокрема текст
+  у рядку вище. Тепер усе, що застосунок запам'ятав, скидається щойно курсор змінює позицію, тож
+  конвертація може перезаписати лише ті слова, які він справді бачив.
+• Виправлено: виділення всього тексту через Ctrl+A і натискання тригера могло замінити весь документ.
+  Комбінації клавіш більше не вважаються набором тексту.
+• Коли текст виділено, тригер тепер завжди конвертує виділення, а не останнє набране слово — змінюється
+  саме те, що ви підсвітили.
 
 ### Ключові слова
 
@@ -311,16 +313,17 @@ Switcher3way читает все раскладки, установленные 
 
 ### Что нового
 
-Для первой публикации оставьте пустым. Начиная со следующего обновления:
+Приложение опубликовано, так что это поле теперь обязательно в каждой подаче. Текущий текст:
 
-Версия 0.2.2
+Версия 0.2.9
 
-• Триггером по умолчанию стал двойной Ctrl. К нему не нужно тянуться на ноутбуке, и он ни с чем не
-  конфликтует — два нажатия без других клавиш между ними. Если вы уже выбрали триггер, он остаётся
-  таким, как вы его настроили.
-• Исправлено: программа могла завершиться после вступительного экрана вместо того, чтобы остаться
-  в области уведомлений.
-• Названия триггеров на вступительном экране больше не обрезаются.
+• Исправлено: конвертация выделенного триггером могла удалить больше, чем вы выделили, — включая текст
+  строкой выше. Теперь всё, что приложение запомнило, сбрасывается как только курсор меняет позицию,
+  так что конвертация может перезаписать только те слова, которые оно действительно видело.
+• Исправлено: выделение всего текста через Ctrl+A и нажатие триггера могло заменить весь документ.
+  Сочетания клавиш больше не принимаются за набор текста.
+• Когда текст выделен, триггер теперь всегда конвертирует выделение, а не последнее набранное слово —
+  меняется именно то, что вы подсветили.
 
 ### Ключевые слова
 

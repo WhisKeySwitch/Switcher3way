@@ -1,9 +1,18 @@
 # Switcher3way — project handover
 
-macOS menu-bar app that **auto-detects the language of what you type and switches the keyboard
-layout** across **three** languages: English (Latin), Ukrainian, Russian. It's a fork of
-[rashn/RuSwitcher](https://github.com/rashn/RuSwitcher) (MIT) that generalizes the original
-two-layout design to N-way. Pure Swift + AppKit, SwiftPM, universal (arm64 + x86_64), macOS 13+.
+App that **auto-detects the language of what you type and switches the keyboard layout** across
+**three** languages: English (Latin), Ukrainian, Russian. It ships on two platforms from this one
+repo:
+
+- **macOS** — menu-bar app, Swift + AppKit, SwiftPM, universal (arm64 + x86_64), macOS 13+, at the
+  repo root. Distributed as an unnotarized DMG. This document describes it unless a section says
+  otherwise.
+- **Windows** — tray app, C# + WinUI 3, under [`windows/`](windows/). Published on the **Microsoft
+  Store** (product `9MXFXL7GG3C5`, live since August 2026) plus a lagging direct-download MSI. See
+  "Windows build" below; `windows/RELEASING.md` is its handover.
+
+It's a fork of [rashn/RuSwitcher](https://github.com/rashn/RuSwitcher) (MIT) that generalizes the
+original two-layout design to N-way.
 
 > Naming: the **product/app is "Switcher3way"** (`com.switcher3way.app`); the **SwiftPM
 > target/module is `Switcher3w`** with sources in `Sources/Switcher3w/` (renamed from upstream's
@@ -11,6 +20,39 @@ two-layout design to N-way. Pure Swift + AppKit, SwiftPM, universal (arm64 + x86
 > of the *upstream project* rashn/RuSwitcher in URLs/attribution are intentionally untouched).
 > Code comments are in English (the upstream Russian comments were translated in July 2026);
 > write new comments in English.
+
+## Windows build (`windows/`)
+
+Its own product on its own terms, not a macOS port — describe and justify its behaviour in
+Windows terms (Win32/WinUI constraints, what the user sees), not by what macOS does.
+
+```powershell
+pwsh windows/build-msi.ps1                          # direct-download installer (WiX)
+pwsh windows/build-msix.ps1 -Version 0.2.9          # Store package → windows/dist/
+pwsh windows/build-msix.ps1 -Sideload -Sign         # a package you can actually install locally
+dotnet test windows/tests/Switcher3way.Core.Tests   # 166 tests, no app or permissions needed
+```
+
+- **Two flavours, one project.** `-p:Packaged=true` builds the MSIX (Store); the default is
+  unpackaged (MSI). `PackageInfo.IsPackaged` branches the updater and "start with Windows".
+- **`Switcher3way.Core`** is the shared decision core (resolver, soft gates, phrase tracking) with
+  the real test suite. `Switcher3way.App` is the platform shell: `KeyboardMonitor` (hook + word
+  buffer), `Engine` (auto-fix + manual cycle), `TextRewriter` (erase and retype), `Selection`,
+  `SecureField`, `CaretChip`, `Tray`, `Toast`.
+- **Debug log:** Settings → Advanced → Debug logging, then
+  `%APPDATA%\Switcher3way\Logs\switcher3way.log`. Diagnostics switches: `diaghint`, `diagtoast`,
+  `diagcaret`, `diagpw`, `diagui`, `selftest`.
+- **Notifications differ between flavours** and this cost two certification failures — see
+  `Toast.cs` and the `windows.comServer` / `windows.toastNotificationActivation` extensions in
+  `Package.appxmanifest`. Test notifications on a *packaged* build only.
+- **The rewrite is the dangerous code.** Anything buffered is only safe to rewrite while the caret
+  hasn't moved since it was typed; `KeyboardMonitor` clears both buffers on mouse click, app switch,
+  caret keys, Ctrl/Alt chords and backspace-into-an-earlier-word for that reason. `TextRewriter`'s
+  `Result.Ok` means SendInput accepted the events, **not** that the text landed — see the open
+  `openspec/changes/fix-rewrite-text-corruption`.
+- Injected input is deliberately *accepted* (only the app's own `dwExtraInfo`-tagged events are
+  ignored), so Remote Desktop and remappers work — and so trigger behaviour can be driven end to end
+  by a script.
 
 ## Quick start (IDE)
 
@@ -212,12 +254,16 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Current state
 
-- Feature-complete: 3-way auto + manual switching, renamed, custom icon, in-app updates
+- **macOS** — feature-complete: 3-way auto + manual switching, renamed, custom icon, in-app updates
   from the fork's own releases repo,
   modernized UI (toolbar-tab Settings, onboarding checklist, status-first menu with Pause),
   stable signing, abort-safe retype + phrase-aware ambiguity resolution (July 2026). Builds
-  clean; installed at `/Applications/Switcher3way.app` (v1.2.0 — fork versioning restarted from 1.0).
-- **Pending user action:** visual pass of the new UI against the W1–W4 wireframes
+  clean; latest release 1.3.0.
+- **Windows** — **live on the Microsoft Store** (August 2026) after three certification failures on
+  10.1.2.10 Functionality: silent trigger, then injected input being discarded, then notifications
+  being dropped entirely in the packaged build. 0.2.9 fixed three data-loss defects in the rewrite
+  path (see below). The direct-download MSI channel is still at 0.2.7 and needs a release to catch up.
+- **Pending user action:** visual pass of the macOS UI against the W1–W4 wireframes
   (`openspec/changes/modernize-ui/`) — behavior is verified via debug log, pixels are not.
 
 ## Known issues / next steps
