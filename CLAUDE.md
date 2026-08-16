@@ -261,13 +261,20 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   clean; latest release 1.3.0.
 - **Windows** — **live on the Microsoft Store** (August 2026) after three certification failures on
   10.1.2.10 Functionality: silent trigger, then injected input being discarded, then notifications
-  being dropped entirely in the packaged build. 0.2.9 fixed three data-loss defects in the rewrite
-  path (see below). The direct-download MSI channel is still at 0.2.7 and needs a release to catch up.
+  being dropped entirely in the packaged build. **Both channels are at 0.2.9** — Store (rolling out
+  from 12 August 2026) and the direct-download MSI (`windows-v0.2.9`, pre-release tag so the macOS
+  updater keeps resolving to the DMG). 0.2.9 fixed three data-loss defects in the rewrite path.
 - **Pending user action:** visual pass of the macOS UI against the W1–W4 wireframes
   (`openspec/changes/modernize-ui/`) — behavior is verified via debug log, pixels are not.
 
 ## Known issues / next steps
 
+- **Windows: cycling a converted selection corrupts text** (open, shipped in 0.2.9). Convert a
+  selection, cycle to the next layout, cycle back to the original — the restore step logs `Ok` but
+  lands mangled text (first ~10 characters wrong, runs collapsed onto the run's last character), and
+  the next trigger then faithfully converts the corruption. `TextRewriter.Rewrite` returns `Ok` when
+  SendInput *accepted* the events, which is not evidence the text landed. Proposed fix, with the
+  isolation experiment it needs first: `openspec/changes/fix-rewrite-text-corruption`.
 - **Icon optical balance** — S/Э/Є are fine; could optically size-match if desired.
 - **Git:** work happens on feature branches merged into `main` via PRs on
   `WhisKeySwitch/Switcher3way` (origin; the old `yaremenko2205/switcher3w` URL redirects there).
