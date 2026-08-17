@@ -248,6 +248,44 @@ user's clipboard *after* its wait, so a script that copies the document immediat
 copy overwritten and reads a stale sentinel. It looks exactly like data loss and is not. The tell is a
 run with zero mismatches and zero repairs that still reports an empty document.
 
+## Findings: replacing long text by paste
+
+Pulled into this change rather than deferred to its own, as the design originally proposed — the
+decision was to ship one coherent release rather than a fix with a known six-second edge. The existing
+requirement already contemplated "a clipboard-based fallback for selected text", so this is filling in
+a promise rather than inventing a mechanism.
+
+Above 24 characters a replacement is now one Ctrl+V instead of N keystrokes. It is both faster and, more
+importantly, **reliable in a way pacing never made it**:
+
+| | Before paste | With paste |
+|---|---|---|
+| 5-character rewrite | 234 ms | 256 ms (unchanged — still typed) |
+| 46-character rewrite | 1547 ms | **862 ms** |
+| 200-character rewrite | 6506 ms | **3419 ms** |
+| Full cycle on the reported repro | 3/5 clean, mismatches caught | **5/5 clean, 0 mismatches** |
+
+Zero mismatches is the result that matters. Before, long rewrites failed often and verification caught
+them; now they do not fail. Per-character injection *was* the unreliability, and a paste cannot be
+half-delivered or mis-rendered — there is nothing to outrun. Verification stays as the safety net, and
+it is what proved the paste works.
+
+Short text deliberately keeps the keystroke path: it was measured clean at 5, 10 and 20 characters, and
+typing leaves the user's clipboard untouched. The clipboard is only borrowed when the alternative is
+worse, and it is handed back after the paste has been seen on screen — restoring it earlier can give the
+target the old contents before it has processed the chord.
+
+**What the remaining 3.4 seconds at the 200-character cap is.** Not the paste: the erase. Two hundred
+paced backspaces cost far more than the arithmetic suggests because `Thread.Sleep(2)` does not sleep
+2 ms — Windows' timer granularity rounds it to roughly 15 ms, so 200 backspaces cost about 3 seconds of
+wall clock. That also explains the otherwise baffling earlier measurements where 5 ms and 10 ms of erase
+pacing behaved no better than 2 ms and only 20 ms looked clean: those values were all rounding to
+similar quanta, so the sweep was not measuring what it appeared to.
+
+Batching backspaces (several per sleep) would cut that, but it changes the flood characteristics that
+caused the original corruption and so needs its own measurement. Left alone deliberately: a
+200-character selection is the cap and rare, and a sentence — the realistic case — is now 862 ms.
+
 ## Open Questions
 
 - Does the threshold differ by target application? Everything above is Notepad (`RichEditD2DPT`).

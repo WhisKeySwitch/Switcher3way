@@ -9,8 +9,15 @@
 > dropped. The pattern to learn from: **verify in the flavour that ships.** All three passed testing
 > on an unpackaged build.
 >
-> Both channels are at **0.2.9**. 0.2.8 was a Store-only submission; the MSI channel skipped it and
-> went 0.2.7 → 0.2.9, so its release notes cover both.
+> Both channels are at **0.3.0**. 0.2.8 was a Store-only submission; the MSI channel skipped it and
+> went 0.2.7 → 0.2.9 → 0.3.0.
+>
+> **Reading a rewrite failure in the log.** Since 0.3.0 a replacement is verified by reading the text
+> back, so `Result` says what happened rather than only whether SendInput accepted the events:
+> `Ok` — read back and matches. `Mismatch` — landed wrong; the log carries `rewrite: MISMATCH — wanted
+> "…", landed "…"`, the text was put back, and the manual cycle was abandoned. `Unverified` — the
+> target exposes no readable text (Chromium before its accessibility tree exists, for instance); this
+> is *not* a failure and is treated as applied. A `Mismatch` in a user's log is the line to ask for.
 
 Switcher3way for Windows ships through **two channels**, built from the same project:
 

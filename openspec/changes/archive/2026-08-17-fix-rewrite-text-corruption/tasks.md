@@ -39,7 +39,7 @@
 
 ## 6. Ship
 
-- [ ] 6.1 Bump the version in `Switcher3way.App.csproj`, `Package.appxmanifest`, and `build-msi.ps1`.
-- [ ] 6.2 Build the Store MSIX and confirm the embedded executable's file version matches.
-- [ ] 6.3 Note the rewrite-verification behaviour in `windows/RELEASING.md`, including how to read a `Mismatch` in the log.
-- [ ] 6.4 Sync the delta spec into `openspec/specs/windows-platform-support/spec.md` and archive the change.
+- [x] 6.1 Bump the version in `Switcher3way.App.csproj`, `Package.appxmanifest`, and `build-msi.ps1`.
+- [x] 6.2 Build the Store MSIX and confirm the embedded executable's file version matches.
+- [x] 6.3 Note the rewrite-verification behaviour in `windows/RELEASING.md`, including how to read a `Mismatch` in the log.
+- [x] 6.4 Sync the delta spec into `openspec/specs/windows-platform-support/spec.md` and archive the change.

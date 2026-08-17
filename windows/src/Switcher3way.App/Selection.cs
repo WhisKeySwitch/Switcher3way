@@ -174,6 +174,29 @@ internal static class Selection
         }
     }
 
+    /// <summary>
+    /// Put <paramref name="text"/> on the clipboard and return what was there, for
+    /// <see cref="RestoreClipboard"/> to put back. Used by the rewriter to replace long text with a
+    /// single paste instead of hundreds of keystrokes.
+    ///
+    /// Only text is preserved. If the clipboard held something else — an image, a file list — this
+    /// cannot hand it back, which is the same limitation <see cref="Read"/> has always had. The
+    /// alternative is worse: typing two hundred characters one at a time is what takes six seconds and
+    /// what the target mis-renders.
+    /// </summary>
+    public static string? SwapClipboard(string text)
+    {
+        var previous = ReadClipboardText();
+        WriteClipboardText(text);
+        return previous;
+    }
+
+    /// <summary>Put back what <see cref="SwapClipboard"/> displaced. Null → nothing to restore.</summary>
+    public static void RestoreClipboard(string? saved)
+    {
+        if (saved is not null) WriteClipboardText(saved);
+    }
+
     // ---- clipboard ---------------------------------------------------------------------------
     private const uint CF_UNICODETEXT = 13;
 

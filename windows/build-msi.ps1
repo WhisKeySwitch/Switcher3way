@@ -17,11 +17,11 @@
   WiX is restored from NuGet by the wixproj (no global install needed).
 
 .EXAMPLE
-  pwsh windows/build-msi.ps1 -Version 0.2.9
+  pwsh windows/build-msi.ps1 -Version 0.3.0
 #>
 [CmdletBinding()]
 param(
-    [string]$Version = "0.2.9",
+    [string]$Version = "0.3.0",
     [string]$Rid = "win-x64"
 )
 

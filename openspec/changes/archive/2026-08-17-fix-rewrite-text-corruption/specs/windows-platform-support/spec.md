@@ -9,8 +9,10 @@ erased, and record no conversion — so that neither a single-word rewrite nor a
 correction can leave the on-screen text partially deleted.
 
 The Windows build SHALL inject the erase and insert streams at a rate the target application can
-consume, and SHALL complete any layout change before injecting characters rather than concurrently
-with them.
+consume. Above a threshold length it SHALL insert the replacement as a single clipboard paste rather
+than as one event per character, because per-character injection of long text is both slow and the form
+the target mis-renders. Where it borrows the clipboard it SHALL restore the previous text afterwards,
+and only once the paste has been observed on screen.
 
 The Windows build SHALL NOT report a replacement as successful on the strength of the input events
 having been accepted. It SHALL compare the text that landed against the text it intended to produce,
@@ -43,6 +45,14 @@ of conversions that demonstrably worked.
 #### Scenario: A large replacement is not corrupted by its own injection rate
 - **WHEN** a replacement erases and reinserts a selection of at least fifty characters
 - **THEN** the text that lands SHALL match the text intended, character for character
+
+#### Scenario: A long replacement borrows the clipboard and gives it back
+- **WHEN** a replacement longer than the paste threshold is applied while the user has text on the clipboard
+- **THEN** the replacement SHALL be inserted as one paste, and the user's previous clipboard text SHALL be on the clipboard again afterwards
+
+#### Scenario: A short replacement leaves the clipboard alone
+- **WHEN** a replacement at or below the paste threshold is applied
+- **THEN** it SHALL be typed rather than pasted, and the clipboard SHALL NOT be touched
 
 #### Scenario: A replacement across a change of script is not corrupted
 - **WHEN** a replacement switches the layout from one script to another immediately before inserting its characters
