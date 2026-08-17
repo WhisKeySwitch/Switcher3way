@@ -98,6 +98,11 @@ internal sealed class Engine
         public required string Suffix;   // trailing boundary char to preserve (" " if word was finished)
         public int Step;                 // 0..Candidates.Count; == Count → restore original
         public int OnScreenLen;          // chars currently displayed for the token
+        /// <summary>
+        /// What is currently displayed for the token. Needed so a step that lands wrong can be put back:
+        /// without it the rewriter can only erase what it typed and leave nothing behind.
+        /// </summary>
+        public required string OnScreenText;
         /// <summary>Started from a selection: the first replacement erases it with one backspace.</summary>
         public bool FromSelection;
     }
@@ -246,7 +251,9 @@ internal sealed class Engine
         }
         // The boundary char is already on screen; erase word+boundary, re-type converted+boundary.
         var res = ArmedRewrite(word.Count + 1, d.Converted + boundary, d.Original + boundary);
-        if (res == TextRewriter.Result.Ok)
+        // Unverified counts as applied: it means this target's text cannot be read back, not that the
+        // rewrite failed. Anything else unproven would show "couldn't rewrite here" on every browser word.
+        if (res is TextRewriter.Result.Ok or TextRewriter.Result.Unverified)
         {
             var prevLayout = _catalog.CurrentLayoutId(); // before the switch — the cancel target
             var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
@@ -260,7 +267,14 @@ internal sealed class Engine
             Diagnostics.Log($"  auto: \"{d.Original}\" -> aborted (user typed)");
             _phrase.Reset(); // screen state uncertain — drop phrase memory
         }
-        else { Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" : {res}"); NotifyProtected(); }
+        else
+        {
+            Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" : {res}");
+            // A rewrite that landed wrong, or that could not be checked, leaves the screen in a state the
+            // phrase tracker's model no longer describes — the same reasoning as an abort.
+            if (res is TextRewriter.Result.Mismatch) _phrase.Reset();
+            NotifyProtected();
+        }
     }
 
     /// <summary>Apply a phrase correction + the current word as one segment rewrite, then switch.</summary>
@@ -270,7 +284,7 @@ internal sealed class Engine
         var oldSeg = corr.OldSegment + d.Original + boundary;
         var newSeg = corr.NewSegment + d.Converted + boundary;
         var res = ArmedRewrite(oldSeg.Length, newSeg, oldSeg);
-        if (res == TextRewriter.Result.Ok)
+        if (res is TextRewriter.Result.Ok or TextRewriter.Result.Unverified)
         {
             var prevLayout = _catalog.CurrentLayoutId(); // before the switch — the cancel target
             var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
@@ -287,7 +301,12 @@ internal sealed class Engine
             Diagnostics.Log("  auto: phrase correction aborted (user typed)");
             _phrase.Reset();
         }
-        else { Diagnostics.Log($"  auto: phrase correction : {res}"); NotifyProtected(); }
+        else
+        {
+            Diagnostics.Log($"  auto: phrase correction : {res}");
+            if (res is TextRewriter.Result.Mismatch) _phrase.Reset();
+            NotifyProtected();
+        }
     }
 
     /// <summary>A rewrite guarded by the abort flag: a real keystroke mid-stream aborts and restores.</summary>
@@ -326,7 +345,8 @@ internal sealed class Engine
                                   new[] { new ManualCandidate(targetLayoutId, converted) });
         lock (_cycleLock)
             _cycle = new Cycle { Plan = plan, Suffix = boundary.ToString(), Step = 1,
-                                 OnScreenLen = converted.Length + 1 };
+                                 OnScreenLen = converted.Length + 1,
+                                 OnScreenText = converted + boundary };
     }
 
     // ---- Manual N-way cycle ----------------------------------------------------------------
@@ -381,7 +401,19 @@ internal sealed class Engine
                 RaiseHint("hint.nothing.title", "hint.nothing.body", "hint.nothing.chip");
                 return null;
             }
-            return new Cycle { Plan = plan, Suffix = suffix, Step = 0, OnScreenLen = (plan.Original + suffix).Length };
+            return new Cycle { Plan = plan, Suffix = suffix, Step = 0,
+                               OnScreenLen = (plan.Original + suffix).Length,
+                               OnScreenText = plan.Original + suffix };
+        }
+
+        // Ask first, and only synthesize a copy if the answer is not a flat no. The clipboard probe can be
+        // fooled into returning text nobody selected; a definite "nothing is selected" from the
+        // accessibility tree keeps it from being asked at all.
+        if (Selection.HasSelection() == false)
+        {
+            Diagnostics.Log($"(nothing selected — type a word or select text, then press {_settings.TriggerLabel})");
+            RaiseHint("hint.nothing.title", "hint.type.body", "hint.type.chip", _settings.TriggerLabel);
+            return null;
         }
 
         var selected = Selection.Read();
@@ -405,7 +437,8 @@ internal sealed class Engine
             return null;
         }
         Diagnostics.Log($"  selection: \"{selected}\" → {selPlan.Candidates.Count} candidate(s)");
-        return new Cycle { Plan = selPlan, Suffix = "", Step = 0, OnScreenLen = selected.Length, FromSelection = true };
+        return new Cycle { Plan = selPlan, Suffix = "", Step = 0, OnScreenLen = selected.Length,
+                           OnScreenText = selected, FromSelection = true };
     }
 
     /// <summary>
@@ -490,9 +523,30 @@ internal sealed class Engine
         var path = LayoutSwitcher.SwitchForeground(targetId);
         // A live selection is erased by a single backspace; afterwards we erase what we typed.
         int erase = cyc.FromSelection && cyc.Step == 0 ? 1 : cyc.OnScreenLen;
-        var res = TextRewriter.Rewrite(erase, text, waitForKeyUpVk: _settings.TriggerKey);
+        var res = TextRewriter.Rewrite(erase, text, waitForKeyUpVk: _settings.TriggerKey,
+                                       original: cyc.OnScreenText);
         Diagnostics.Log($"  cycle[{cyc.Step}] -> [{label}] \"{text.TrimEnd()}\" via {path} : {res}");
-        if (res != TextRewriter.Result.Ok) NotifyProtected();
+
+        // A step *proven* not to have landed ends the cycle instead of advancing it. The next step would
+        // erase `text.Length` characters on the assumption that this one put them there, so continuing
+        // from a screen we know is wrong is how one bad rewrite got worse with every further tap.
+        // Starting afresh costs the user one tap; continuing costs them text.
+        //
+        // Unverified is deliberately NOT in that set. It means the target exposes no readable text, not
+        // that anything went wrong — a Chromium text box answers nothing until its accessibility tree is
+        // built. Treating it as a failure would put an error notification in front of every conversion in
+        // a browser and break cycling there, inventing a fault where the measurement showed the text
+        // landing correctly.
+        if (res is TextRewriter.Result.Unverified)
+            Diagnostics.Log("  cycle: continuing unverified — this target's text cannot be read back");
+        else if (res is not TextRewriter.Result.Ok)
+        {
+            lock (_cycleLock) _cycle = null;
+            if (res is TextRewriter.Result.Mismatch)
+                Diagnostics.LogAlways("  cycle: abandoned after Mismatch — the next trigger will start from what is on screen");
+            NotifyProtected();
+            return;
+        }
         // Feedback on manual conversions too, but not on the final restore-to-original step.
         else if (!restore) RaiseConverted(cyc.Plan.Original, text, targetId);
         // The restore step is the user rejecting a conversion — the moment to offer to remember it.
@@ -501,6 +555,7 @@ internal sealed class Engine
             Undone?.Invoke(cyc.Plan.Original.TrimEnd(), cyc.Plan.Candidates[0].Converted.TrimEnd());
 
         cyc.OnScreenLen = text.Length;
+        cyc.OnScreenText = text;
         cyc.Step++;
         if (restore) lock (_cycleLock) _cycle = null; // full loop done; next F9 starts fresh
     }

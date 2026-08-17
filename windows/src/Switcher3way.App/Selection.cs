@@ -40,6 +40,23 @@ internal static class Selection
             }
         }
 
+        // A changed sequence number is not proof that *our* Ctrl+C copied a selection — anything on the
+        // machine can write to the clipboard, and this method then hands back that unrelated text as
+        // though the user had selected it. Observed for real: with nothing selected it returned another
+        // process's clipboard string, the trigger converted it, and the rewrite typed the result at the
+        // caret. Text nobody selected must never become text the app rewrites.
+        //
+        // So when the content did not change, fall back on the accessibility tree: if it can confirm a
+        // selection exists, the identical text is a genuine copy of it (the user had already copied the
+        // same words). Only when nothing can confirm a selection is the identical text treated as no copy
+        // at all. Comparing content alone declined a real select-all-then-convert, which is a working
+        // feature refusing to work.
+        if (copied is not null && saved is not null && copied == saved && HasSelection() != true)
+        {
+            Diagnostics.Log("  selection: clipboard unchanged and no selection confirmed — treating as nothing selected");
+            copied = null;
+        }
+
         // "No selection" and "the app was too slow to answer our copy" are indistinguishable from the
         // outside and used to look identical from the inside too — both returned null in silence, and the
         // trigger then reported having nothing to convert. Length only, never the text: this runs before
@@ -110,6 +127,49 @@ internal static class Selection
             // Say so once: the consequence is that the backstop is off, so it must not be silent.
             _uiaBroken = true;
             Diagnostics.LogAlways("selection: UI Automation unavailable, cannot detect selections: " + ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The text immediately to the left of the caret in the focused element, up to
+    /// <paramref name="length"/> characters — or <c>null</c> when it cannot be read.
+    ///
+    /// This is how a rewrite checks its own work. It reads through the UI Automation text pattern, so
+    /// unlike <see cref="Read"/> it neither synthesizes keystrokes nor touches the clipboard, and it can
+    /// run after every rewrite without the user noticing. Where the target exposes no text pattern the
+    /// answer is <c>null</c>, which callers must treat as "unverified" rather than "wrong" — an
+    /// unreadable target is not evidence of failure.
+    /// </summary>
+    public static string? TextBeforeCaret(int length)
+    {
+        if (_uiaBroken || length <= 0) return null;
+        try
+        {
+            _uia ??= new Interop.UIAutomationClient.CUIAutomation();
+            var focused = _uia.GetFocusedElement();
+            if (focused is null) return null;
+            if (focused.GetCurrentPattern(UIA_TextPatternId)
+                is not Interop.UIAutomationClient.IUIAutomationTextPattern text) return null;
+
+            // The caret is a degenerate selection range; walk its start back `length` characters and
+            // read what lies between. Cloning first keeps the user's actual selection untouched.
+            var ranges = text.GetSelection();
+            if (ranges is null || ranges.Length == 0) return null;
+            var range = ranges.GetElement(0);
+            if (range is null) return null;
+            range = range.Clone();
+            range.MoveEndpointByRange(Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_End,
+                                      range, Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_Start);
+            int moved = range.MoveEndpointByUnit(
+                Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_Start,
+                Interop.UIAutomationClient.TextUnit.TextUnit_Character, -length);
+            if (moved == 0) return null;
+            return range.GetText(length + 1);
+        }
+        catch (Exception ex)
+        {
+            Diagnostics.Log("verify: could not read back the text: " + ex.Message);
             return null;
         }
     }

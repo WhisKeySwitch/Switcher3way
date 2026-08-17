@@ -14,6 +14,14 @@ internal static class Diagnostics
 
     public static void Configure(SettingsManager settings) => _settings = settings;
 
+    /// <summary>
+    /// `diagnochip` — suppress the on-screen chip. It exists to answer one question: the isolated
+    /// rewrite (`diagrewrite`) does not corrupt at sizes where the real manual cycle does, and the
+    /// difference is work this process does around the rewrite. The chip animates on a 15 ms timer for
+    /// nearly two seconds, which spans the next rewrite in a cycle.
+    /// </summary>
+    public static bool NoChip { get; set; }
+
     public static string Dir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Switcher3way", "Logs");
     public static string FilePath => Path.Combine(Dir, "switcher3way.log");

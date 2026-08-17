@@ -32,6 +32,11 @@ public partial class App : Application
             // Diagnostic hook: `Switcher3way.exe diagui` exercises the XAML surfaces at startup so a
             // shipped build that can't open windows reports why, instead of just looking half-dead.
             var args2 = Environment.GetCommandLineArgs();
+            if (args2.Any(a => a.Equals("diagnochip", StringComparison.OrdinalIgnoreCase)))
+            {
+                Diagnostics.NoChip = true;
+                Diagnostics.LogAlways("diagnochip: the on-screen chip is suppressed for this run");
+            }
             if (args2.Any(a => a.Equals("diagui", StringComparison.OrdinalIgnoreCase)))
             {
                 Diagnostics.LogAlways("diagui: opening Settings…");
@@ -77,6 +82,49 @@ public partial class App : Application
                 // 0.2.6 hint got verified while the chip — and, in the packaged build, the notification
                 // itself — went untested.
                 _tray.ShowHint(Loc.T("hint.setup.title"), Loc.T("hint.setup.body"), Loc.T("hint.setup.chip"));
+            }
+            // One rewrite against the focused window, with the injection timing under the caller's
+            // control, so the cause of the cycling corruption can be isolated instead of guessed at.
+            // The two suspects — the erase burst going out with no delay, and the layout switch landing
+            // immediately before the insert — are varied independently here.
+            //
+            //   diagrewrite <eraseCount> <eraseMs> <settleMs> <charMs> [none|same|cross]
+            //
+            // Types a rotating a–z marker of the same length, so a corrupted run is legible on sight:
+            // the shipped failure replaces a run with the character that follows it.
+            var dr = args2.ToList().FindIndex(a => a.Equals("diagrewrite", StringComparison.OrdinalIgnoreCase));
+            if (dr >= 0)
+            {
+                int Arg(int i, int dflt) =>
+                    dr + i < args2.Length && int.TryParse(args2[dr + i], out var v) ? v : dflt;
+                int count = Arg(1, 46), eraseMs = Arg(2, 0), settleMs = Arg(3, 15), charMs = Arg(4, 2);
+                string layout = dr + 5 < args2.Length ? args2[dr + 5].ToLowerInvariant() : "none";
+
+                var marker = new string(Enumerable.Range(0, count).Select(i => (char)('a' + i % 26)).ToArray());
+                var timer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+                timer.Interval = TimeSpan.FromMilliseconds(2500);   // time to focus the target window
+                timer.IsRepeating = false;
+                timer.Tick += (_, _) =>
+                {
+                    if (layout != "none")
+                    {
+                        // "cross" = switch to a Latin layout, "same" = to a different Cyrillic one, so a
+                        // change of script can be told apart from a change of layout.
+                        var cat = new Win32LayoutCatalog();
+                        var cur = cat.CurrentLayoutId();
+                        var target = cat.InstalledLayouts().FirstOrDefault(l =>
+                            l.Id != cur && (layout == "cross" ? l.Lang == "en" : l.Lang is "uk" or "ru"));
+                        if (target is null) Diagnostics.LogAlways($"diagrewrite: no '{layout}' layout installed — skipping switch");
+                        else Diagnostics.LogAlways($"diagrewrite: layout {cur} -> {target.Id} ({target.Lang}) via {LayoutSwitcher.SwitchForeground(target.Id)}");
+                    }
+                    Diagnostics.LogAlways($"diagrewrite: erase={count} eraseMs={eraseMs} settleMs={settleMs} " +
+                                          $"charMs={charMs} layout={layout}");
+                    Diagnostics.LogAlways($"diagrewrite: intended={marker}");
+                    var res = TextRewriter.Rewrite(count, marker,
+                                                   pace: new TextRewriter.Pace(eraseMs, settleMs, charMs));
+                    Diagnostics.LogAlways($"diagrewrite: result={res}");
+                };
+                timer.Start();
             }
             // Password-field detection, probed live. This exists because the guard shipped broken for four
             // releases on an untested assumption: focus a real password field and read the answer.
