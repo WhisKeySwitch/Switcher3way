@@ -32,6 +32,11 @@ public partial class App : Application
             // Diagnostic hook: `Switcher3way.exe diagui` exercises the XAML surfaces at startup so a
             // shipped build that can't open windows reports why, instead of just looking half-dead.
             var args2 = Environment.GetCommandLineArgs();
+            if (args2.Any(a => a.Equals("diagnochip", StringComparison.OrdinalIgnoreCase)))
+            {
+                Diagnostics.NoChip = true;
+                Diagnostics.LogAlways("diagnochip: the on-screen chip is suppressed for this run");
+            }
             if (args2.Any(a => a.Equals("diagui", StringComparison.OrdinalIgnoreCase)))
             {
                 Diagnostics.LogAlways("diagui: opening Settings…");

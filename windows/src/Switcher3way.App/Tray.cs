@@ -36,7 +36,10 @@ internal sealed class Tray : IDisposable
 
         // Conversions are raised from the engine's worker thread — marshal to the UI thread.
         _engine.Converted += info => _dispatcher.TryEnqueue(() =>
-            _chip.Show(info.Original, info.Converted, _settings.TriggerLabel));
+        {
+            if (Diagnostics.NoChip) return;
+            _chip.Show(info.Original, info.Converted, _settings.TriggerLabel);
+        });
 
         _tray = new Win32Tray(BuildMenu) { CustomMenu = ShowFlyout };
         RefreshIcon();

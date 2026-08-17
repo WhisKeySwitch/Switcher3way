@@ -160,6 +160,30 @@ characters; only 20 ms was clean, and 200 × 20 ms is four seconds to erase — 
 measured justification for the design's central choice: pace the erase to make the common case
 correct, and verify the result because the tail cannot be made correct by waiting.
 
+## Findings from the fix itself (tasks 2–5)
+
+**Verification is what makes this safe, and pacing is only a mitigation.** Over 15 measured runs of the
+reported cycle across three pacing configurations, undetected corruption was **0**. Every failure was
+caught by the read-back, repaired to the text it replaced, and the cycle abandoned rather than advanced.
+That is the property worth having: the app can no longer report a conversion it did not make.
+
+**Slowing down past a point makes things worse, not better.** Measured over 5 runs of the full cycle:
+
+| Long-insert rate | Clean full cycles | Undetected corruption |
+|---|---|---|
+| 6 ms/char | **3/5** | 0/5 |
+| 12 ms/char | 1/5 | 0/5 |
+
+The same inversion showed up in the erase sweep, where 5 ms and 10 ms left *more* text behind than 2 ms
+and only 20 ms was clean. So the injection rate is not a monotonic dial and there is no constant that
+buys reliability — which is the strongest argument available for the verification pass, and the reason
+this change does not simply ship a bigger sleep and declare victory.
+
+**The caret chip is not the amplifier.** `diagrewrite` never mismatched at sizes where the real cycle
+did, and the chip animating on a 15 ms timer across the next rewrite was the obvious suspect. Suppressing
+it (`diagnochip`) changed nothing: the cycle passed with it both on and off. What remains is that a long
+selection rewrite is simply flaky in Notepad — 2 in 5 cycles are interrupted rather than corrupted.
+
 ## Open Questions
 
 - Does the threshold differ by target application? Everything above is Notepad (`RichEditD2DPT`).
