@@ -129,12 +129,42 @@ No data or settings migration. Ships as a normal version bump to both channels; 
 MSI build share the rewrite path. The verification layer is additive, so a rollback is reverting the
 commit.
 
+## Findings from the isolation run (task 1.3)
+
+Measured with `diagrewrite` against Notepad, erasing N filler characters and inserting a rotating a–z
+marker of the same length, reading the document back per cell.
+
+**The cause is the erase burst, and only the erase burst.**
+
+| Variable | Result |
+|---|---|
+| `eraseMs` 0 → 2 at N=46 | **0/4 clean → 4/4 clean** |
+| `settleMs` 15 → 150 at `eraseMs=0` | still 0/2 clean — irrelevant |
+| `charMs` 2 → 25 at `eraseMs=0` | still 0/10 clean — irrelevant |
+| Layout switch none / cross | no effect either way |
+| Length at shipping pace | N=5/10/20 clean; N=46 and N=100 always corrupt |
+
+So the layout-switch suspect is dead, and character pacing was never the problem. What shipped sends
+N backspaces with no delay whatsoever and 15 ms of settle; the target cannot consume that, and the
+threshold sits between 20 and 46 characters — which is exactly why short auto-fixes have never been
+reported to corrupt and a 46-character selection cycle does it every time.
+
+**Two distinct failure modes, not one.** Below ~46 characters with an unpaced erase, characters
+*mis-render*: a run of them all arrive as the run's last character (`vtys ` → `nnnnn`), length
+preserved. At 100–200 characters, even a paced erase *drops backspaces*, leaving filler behind and the
+inserted text otherwise intact. They need different words in the log, and only the second one is
+fixable by slowing down.
+
+**Pacing cannot be the whole fix.** At N=200 an erase pace of 2, 5 and 10 ms all still leak
+characters; only 20 ms was clean, and 200 × 20 ms is four seconds to erase — unusable. This is the
+measured justification for the design's central choice: pace the erase to make the common case
+correct, and verify the result because the tail cannot be made correct by waiting.
+
 ## Open Questions
 
-- Which of the two candidates is the cause — resolved by the isolation task, and the answer decides
-  whether the layout-switch sequencing change is required or merely tidy.
-- Does the mangling reproduce in applications other than Notepad? If it is specific to
-  `RichEditD2DPT`, the pacing fix may be unnecessary and verification alone is the answer.
-- Should auto-fix verify too, or only the manual cycle? Auto-fix rewrites are short and have not been
-  reported to corrupt, but the same code path serves both, so the default is to verify both and
-  measure the cost.
+- Does the threshold differ by target application? Everything above is Notepad (`RichEditD2DPT`).
+  Not yet run against Chromium or Word — task 1.4, still open. It calibrates the pacing constant but
+  does not change the design, since verification is target-agnostic.
+- Should auto-fix verify too, or only the manual cycle? Auto-fix rewrites sit below the measured
+  threshold, so they are not at risk today, but the same code path serves both and a threshold found
+  on one machine is not a guarantee. Default to verifying both and measure the cost.

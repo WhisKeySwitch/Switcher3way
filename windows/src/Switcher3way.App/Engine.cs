@@ -98,6 +98,11 @@ internal sealed class Engine
         public required string Suffix;   // trailing boundary char to preserve (" " if word was finished)
         public int Step;                 // 0..Candidates.Count; == Count → restore original
         public int OnScreenLen;          // chars currently displayed for the token
+        /// <summary>
+        /// What is currently displayed for the token. Needed so a step that lands wrong can be put back:
+        /// without it the rewriter can only erase what it typed and leave nothing behind.
+        /// </summary>
+        public required string OnScreenText;
         /// <summary>Started from a selection: the first replacement erases it with one backspace.</summary>
         public bool FromSelection;
     }
@@ -260,7 +265,14 @@ internal sealed class Engine
             Diagnostics.Log($"  auto: \"{d.Original}\" -> aborted (user typed)");
             _phrase.Reset(); // screen state uncertain — drop phrase memory
         }
-        else { Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" : {res}"); NotifyProtected(); }
+        else
+        {
+            Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" : {res}");
+            // A rewrite that landed wrong, or that could not be checked, leaves the screen in a state the
+            // phrase tracker's model no longer describes — the same reasoning as an abort.
+            if (res is TextRewriter.Result.Mismatch or TextRewriter.Result.Unverified) _phrase.Reset();
+            NotifyProtected();
+        }
     }
 
     /// <summary>Apply a phrase correction + the current word as one segment rewrite, then switch.</summary>
@@ -287,7 +299,12 @@ internal sealed class Engine
             Diagnostics.Log("  auto: phrase correction aborted (user typed)");
             _phrase.Reset();
         }
-        else { Diagnostics.Log($"  auto: phrase correction : {res}"); NotifyProtected(); }
+        else
+        {
+            Diagnostics.Log($"  auto: phrase correction : {res}");
+            if (res is TextRewriter.Result.Mismatch or TextRewriter.Result.Unverified) _phrase.Reset();
+            NotifyProtected();
+        }
     }
 
     /// <summary>A rewrite guarded by the abort flag: a real keystroke mid-stream aborts and restores.</summary>
@@ -326,7 +343,8 @@ internal sealed class Engine
                                   new[] { new ManualCandidate(targetLayoutId, converted) });
         lock (_cycleLock)
             _cycle = new Cycle { Plan = plan, Suffix = boundary.ToString(), Step = 1,
-                                 OnScreenLen = converted.Length + 1 };
+                                 OnScreenLen = converted.Length + 1,
+                                 OnScreenText = converted + boundary };
     }
 
     // ---- Manual N-way cycle ----------------------------------------------------------------
@@ -381,7 +399,9 @@ internal sealed class Engine
                 RaiseHint("hint.nothing.title", "hint.nothing.body", "hint.nothing.chip");
                 return null;
             }
-            return new Cycle { Plan = plan, Suffix = suffix, Step = 0, OnScreenLen = (plan.Original + suffix).Length };
+            return new Cycle { Plan = plan, Suffix = suffix, Step = 0,
+                               OnScreenLen = (plan.Original + suffix).Length,
+                               OnScreenText = plan.Original + suffix };
         }
 
         var selected = Selection.Read();
@@ -405,7 +425,8 @@ internal sealed class Engine
             return null;
         }
         Diagnostics.Log($"  selection: \"{selected}\" → {selPlan.Candidates.Count} candidate(s)");
-        return new Cycle { Plan = selPlan, Suffix = "", Step = 0, OnScreenLen = selected.Length, FromSelection = true };
+        return new Cycle { Plan = selPlan, Suffix = "", Step = 0, OnScreenLen = selected.Length,
+                           OnScreenText = selected, FromSelection = true };
     }
 
     /// <summary>
@@ -490,9 +511,22 @@ internal sealed class Engine
         var path = LayoutSwitcher.SwitchForeground(targetId);
         // A live selection is erased by a single backspace; afterwards we erase what we typed.
         int erase = cyc.FromSelection && cyc.Step == 0 ? 1 : cyc.OnScreenLen;
-        var res = TextRewriter.Rewrite(erase, text, waitForKeyUpVk: _settings.TriggerKey);
+        var res = TextRewriter.Rewrite(erase, text, waitForKeyUpVk: _settings.TriggerKey,
+                                       original: cyc.OnScreenText);
         Diagnostics.Log($"  cycle[{cyc.Step}] -> [{label}] \"{text.TrimEnd()}\" via {path} : {res}");
-        if (res != TextRewriter.Result.Ok) NotifyProtected();
+
+        // A step that did not land as intended ends the cycle instead of advancing it. The next step
+        // would erase `text.Length` characters on the assumption that this one put them there, so
+        // continuing from an unverified screen is how a single bad rewrite became progressively worse
+        // with every further tap. Starting afresh costs the user one tap; continuing costs them text.
+        if (res is not TextRewriter.Result.Ok)
+        {
+            lock (_cycleLock) _cycle = null;
+            if (res is TextRewriter.Result.Mismatch or TextRewriter.Result.Unverified)
+                Diagnostics.LogAlways($"  cycle: abandoned after {res} — the next trigger will start from what is on screen");
+            NotifyProtected();
+            return;
+        }
         // Feedback on manual conversions too, but not on the final restore-to-original step.
         else if (!restore) RaiseConverted(cyc.Plan.Original, text, targetId);
         // The restore step is the user rejecting a conversion — the moment to offer to remember it.
@@ -501,6 +535,7 @@ internal sealed class Engine
             Undone?.Invoke(cyc.Plan.Original.TrimEnd(), cyc.Plan.Candidates[0].Converted.TrimEnd());
 
         cyc.OnScreenLen = text.Length;
+        cyc.OnScreenText = text;
         cyc.Step++;
         if (restore) lock (_cycleLock) _cycle = null; // full loop done; next F9 starts fresh
     }
