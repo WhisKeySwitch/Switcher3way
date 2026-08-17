@@ -40,6 +40,23 @@ internal static class Selection
             }
         }
 
+        // A changed sequence number is not proof that *our* Ctrl+C copied a selection — anything on the
+        // machine can write to the clipboard, and this method then hands back that unrelated text as
+        // though the user had selected it. Observed for real: with nothing selected it returned another
+        // process's clipboard string, the trigger converted it, and the rewrite typed the result at the
+        // caret. Text nobody selected must never become text the app rewrites.
+        //
+        // So when the content did not change, fall back on the accessibility tree: if it can confirm a
+        // selection exists, the identical text is a genuine copy of it (the user had already copied the
+        // same words). Only when nothing can confirm a selection is the identical text treated as no copy
+        // at all. Comparing content alone declined a real select-all-then-convert, which is a working
+        // feature refusing to work.
+        if (copied is not null && saved is not null && copied == saved && HasSelection() != true)
+        {
+            Diagnostics.Log("  selection: clipboard unchanged and no selection confirmed — treating as nothing selected");
+            copied = null;
+        }
+
         // "No selection" and "the app was too slow to answer our copy" are indistinguishable from the
         // outside and used to look identical from the inside too — both returned null in silence, and the
         // trigger then reported having nothing to convert. Length only, never the text: this runs before

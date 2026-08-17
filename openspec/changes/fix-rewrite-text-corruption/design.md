@@ -218,6 +218,36 @@ clipboard paste for long replacements, which is one event instead of hundreds an
 is a larger change with its own trade-off (it borrows the user's clipboard), so it belongs in its own
 change rather than being bolted on here.
 
+## Findings from the packaged build (task 5.6)
+
+Verified on a dev-signed MSIX with package identity confirmed
+(`IronMade.Switcher3Way_0.2.9.0_x64__zb0sqvz2p7dyp`), because "it passed on the unpackaged build" is
+what cost three certification rounds. Notifications register there (`toast: registered`), the cycle
+behaves as on the unpackaged build, and across every packaged run **undetected corruption was 0**.
+
+It also turned up a defect that has nothing to do with pacing. With nothing selected, the trigger
+converted a string the user never chose:
+
+```
+selection: read 9 chars after 140 ms
+selection: "<<empty>>" → 1 candidate(s)
+```
+
+`Selection.Read()` synthesizes Ctrl+C and treats *any* change in the clipboard sequence number as proof
+that its own copy succeeded. It is not: anything on the machine can write to the clipboard, and the text
+that lands there is then converted and typed at the caret. The same fingerprint is visible in the
+original bug report's log (`selection: "рудщщ"`), so this has been happening in the field.
+
+Fixed by requiring corroboration: if the clipboard content did not actually change, the accessibility
+tree must confirm a selection exists before the text is believed. Comparing content alone was tried
+first and declined a genuine select-all-then-convert — a working feature refusing to work — which is why
+the confirmation step is there rather than a bare equality test.
+
+One measurement artifact worth writing down, since it wasted time twice: `Selection.Read()` restores the
+user's clipboard *after* its wait, so a script that copies the document immediately afterwards has its
+copy overwritten and reads a stale sentinel. It looks exactly like data loss and is not. The tell is a
+run with zero mismatches and zero repairs that still reports an empty document.
+
 ## Open Questions
 
 - Does the threshold differ by target application? Everything above is Notepad (`RichEditD2DPT`).

@@ -35,7 +35,7 @@
 - [x] 5.3 Regression: the manual trigger still cycles a short typed word, and auto-fix still converts on a word boundary.
 - [x] 5.4 Regression: the data-loss guards from 0.2.9 still hold — caret movement then trigger, and select-all then trigger, both leave the document intact.
 - [x] 5.5 `dotnet test` stays green (166 tests).
-- [ ] 5.6 Verify on the packaged build, not only the unpackaged one, since that is where the Store ships from.
+- [x] 5.6 Verify on the packaged build, not only the unpackaged one, since that is where the Store ships from.
 
 ## 6. Ship
 

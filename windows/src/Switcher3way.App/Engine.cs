@@ -406,6 +406,16 @@ internal sealed class Engine
                                OnScreenText = plan.Original + suffix };
         }
 
+        // Ask first, and only synthesize a copy if the answer is not a flat no. The clipboard probe can be
+        // fooled into returning text nobody selected; a definite "nothing is selected" from the
+        // accessibility tree keeps it from being asked at all.
+        if (Selection.HasSelection() == false)
+        {
+            Diagnostics.Log($"(nothing selected — type a word or select text, then press {_settings.TriggerLabel})");
+            RaiseHint("hint.nothing.title", "hint.type.body", "hint.type.chip", _settings.TriggerLabel);
+            return null;
+        }
+
         var selected = Selection.Read();
         if (selected is null)
         {
