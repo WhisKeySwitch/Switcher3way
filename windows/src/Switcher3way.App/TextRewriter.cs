@@ -122,6 +122,10 @@ internal static class TextRewriter
             var landed = Selection.TextBeforeCaret(replacement.Length);
             if (landed is null)
             {
+                // Retry rather than give up: Chromium builds its accessibility tree only once a client
+                // asks for it, so the first read of a browser text box legitimately returns nothing and
+                // the second succeeds. Measured in Edge — first rewrite Unverified, second Ok.
+                if (attempt == 0) continue;
                 Diagnostics.Log("  rewrite: unverified — the target exposes no readable text");
                 return Result.Unverified;
             }

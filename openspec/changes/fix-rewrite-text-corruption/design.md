@@ -184,6 +184,40 @@ did, and the chip animating on a 15 ms timer across the next rewrite was the obv
 it (`diagnochip`) changed nothing: the cycle passed with it both on and off. What remains is that a long
 selection rewrite is simply flaky in Notepad — 2 in 5 cycles are interrupted rather than corrupted.
 
+## Findings: other targets, and what it cost (tasks 1.4, 2.5, 3.4)
+
+**The corruption is Notepad-specific.** The same failing configuration — 46 characters, erase unpaced —
+was driven against a Chromium `<textarea>` in Edge and landed **correct**. So this is not a Windows-wide
+property of `SendInput`; it is what one target does with a burst. That is an argument for keeping
+verification rather than trusting any pacing constant, since the next target may behave like Notepad.
+
+**Chromium exposes no readable text until asked once.** The first rewrite in Edge came back
+`Unverified` and the second `Ok` — its accessibility tree is built lazily, on the first client query.
+Retrying the read-back once turns that into a verified `Ok`, which is now what happens.
+
+That finding forced a design correction. `Unverified` was originally specified as "do not claim
+success", which would have put an error notification in front of the *first* conversion in every browser
+and stopped cycling there — inventing a failure for a rewrite that measurably worked. `Unverified` now
+means what it says: no evidence either way, so treat it as applied, repair nothing, tell the user
+nothing, and let the cycle continue. Only a *proven* mismatch is a failure.
+
+**The cost, measured end to end including verification:**
+
+| Rewrite | Duration |
+|---|---|
+| 5 characters (a mistyped word — almost every conversion) | 234 ms |
+| 46 characters (a sentence) | 1.5 s |
+| 200 characters (the selection cap) | 6.5 s |
+
+The word case is fine. The 200-character case is not: six seconds reads as a hang, and the pacing sleeps
+only account for about 1.8 s of it — the rest is per-event overhead across 400 SendInput calls plus the
+read-back. Correctness was bought with latency, and at the cap the price is too high.
+
+The way out is not more tuning but fewer events: replace the per-character injection with a single
+clipboard paste for long replacements, which is one event instead of hundreds and cannot be outrun. That
+is a larger change with its own trade-off (it borrows the user's clipboard), so it belongs in its own
+change rather than being bolted on here.
+
 ## Open Questions
 
 - Does the threshold differ by target application? Everything above is Notepad (`RichEditD2DPT`).

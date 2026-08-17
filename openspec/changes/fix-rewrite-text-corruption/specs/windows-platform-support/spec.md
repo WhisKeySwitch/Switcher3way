@@ -15,9 +15,14 @@ with them.
 The Windows build SHALL NOT report a replacement as successful on the strength of the input events
 having been accepted. It SHALL compare the text that landed against the text it intended to produce,
 and where they differ it SHALL report the replacement as failed, restore the text to its pre-rewrite
-state where it can, and record the intended and landed text so the discrepancy is diagnosable. Where
-the landed text cannot be read at all, the Windows build SHALL report the replacement as unverified
-rather than as successful.
+state where it can, and record the intended and landed text so the discrepancy is diagnosable.
+
+Where the landed text cannot be read at all, the Windows build SHALL record the replacement as
+unverified and SHALL treat it as applied: it SHALL NOT repair the text, SHALL NOT present a failure to
+the user, and SHALL allow a cycle to continue. An unreadable target is an absence of evidence, not
+evidence of failure — several applications, including Chromium-based ones, expose no readable text
+until an accessibility client has asked once, and treating that as a fault would put an error in front
+of conversions that demonstrably worked.
 
 #### Scenario: Rewrite a buffered word
 - **WHEN** a conversion is applied to a buffered word
@@ -43,9 +48,9 @@ rather than as successful.
 - **WHEN** a replacement switches the layout from one script to another immediately before inserting its characters
 - **THEN** the text that lands SHALL match the text intended, character for character
 
-#### Scenario: An unreadable result is reported as unverified
+#### Scenario: An unreadable result is recorded, not treated as a failure
 - **WHEN** the target application exposes no way to read back the text that landed
-- **THEN** the system SHALL treat the replacement as unverified, and SHALL NOT claim a successful conversion
+- **THEN** the system SHALL record the replacement as unverified, SHALL NOT repair the text, SHALL NOT show the user a failure, and SHALL allow a cycle to continue from it
 
 ### Requirement: Provide manual conversion and undo
 The Windows build SHALL let the user convert the last word or selection on demand via a configurable
@@ -56,9 +61,10 @@ trigger invocation yields the same result automatic conversion would. The same t
 cancel an automatic conversion: an auto-fix seeds a single-candidate cycle whose candidate is
 already on screen, so the first trigger invocation after it restores the original text and layout.
 
-A cycle SHALL only continue from text the build has verified it produced. When a step of the cycle is
-reported as failed or unverified, the Windows build SHALL end the cycle rather than advance it, so
-that a corrupted result is never used as the input to a further conversion.
+A cycle SHALL NOT continue from text the build has established is wrong. When a step of the cycle is
+reported as failed, the Windows build SHALL end the cycle rather than advance it, so that a corrupted
+result is never used as the input to a further conversion. A step that merely could not be read back
+SHALL NOT end the cycle.
 
 #### Scenario: Convert on explicit trigger
 - **WHEN** the user invokes the manual trigger after typing a word
@@ -77,5 +83,9 @@ that a corrupted result is never used as the input to a further conversion.
 - **THEN** the system SHALL restore the original text and the layout that was active before the automatic conversion
 
 #### Scenario: A failed step ends the cycle instead of compounding
-- **WHEN** a step of the cycle is reported as failed or unverified
+- **WHEN** a step of the cycle is reported as failed
 - **THEN** the system SHALL end the cycle, and a subsequent trigger invocation SHALL start afresh from what is on screen rather than continue from the failed step's assumptions
+
+#### Scenario: An unverified step does not interrupt cycling
+- **WHEN** a step of the cycle lands in a target whose text cannot be read back
+- **THEN** the system SHALL continue the cycle on the next trigger invocation, so that cycling works in applications that expose no readable text

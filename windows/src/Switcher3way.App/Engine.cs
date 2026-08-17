@@ -251,7 +251,9 @@ internal sealed class Engine
         }
         // The boundary char is already on screen; erase word+boundary, re-type converted+boundary.
         var res = ArmedRewrite(word.Count + 1, d.Converted + boundary, d.Original + boundary);
-        if (res == TextRewriter.Result.Ok)
+        // Unverified counts as applied: it means this target's text cannot be read back, not that the
+        // rewrite failed. Anything else unproven would show "couldn't rewrite here" on every browser word.
+        if (res is TextRewriter.Result.Ok or TextRewriter.Result.Unverified)
         {
             var prevLayout = _catalog.CurrentLayoutId(); // before the switch — the cancel target
             var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
@@ -270,7 +272,7 @@ internal sealed class Engine
             Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" : {res}");
             // A rewrite that landed wrong, or that could not be checked, leaves the screen in a state the
             // phrase tracker's model no longer describes — the same reasoning as an abort.
-            if (res is TextRewriter.Result.Mismatch or TextRewriter.Result.Unverified) _phrase.Reset();
+            if (res is TextRewriter.Result.Mismatch) _phrase.Reset();
             NotifyProtected();
         }
     }
@@ -282,7 +284,7 @@ internal sealed class Engine
         var oldSeg = corr.OldSegment + d.Original + boundary;
         var newSeg = corr.NewSegment + d.Converted + boundary;
         var res = ArmedRewrite(oldSeg.Length, newSeg, oldSeg);
-        if (res == TextRewriter.Result.Ok)
+        if (res is TextRewriter.Result.Ok or TextRewriter.Result.Unverified)
         {
             var prevLayout = _catalog.CurrentLayoutId(); // before the switch — the cancel target
             var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
@@ -302,7 +304,7 @@ internal sealed class Engine
         else
         {
             Diagnostics.Log($"  auto: phrase correction : {res}");
-            if (res is TextRewriter.Result.Mismatch or TextRewriter.Result.Unverified) _phrase.Reset();
+            if (res is TextRewriter.Result.Mismatch) _phrase.Reset();
             NotifyProtected();
         }
     }
@@ -515,15 +517,23 @@ internal sealed class Engine
                                        original: cyc.OnScreenText);
         Diagnostics.Log($"  cycle[{cyc.Step}] -> [{label}] \"{text.TrimEnd()}\" via {path} : {res}");
 
-        // A step that did not land as intended ends the cycle instead of advancing it. The next step
-        // would erase `text.Length` characters on the assumption that this one put them there, so
-        // continuing from an unverified screen is how a single bad rewrite became progressively worse
-        // with every further tap. Starting afresh costs the user one tap; continuing costs them text.
-        if (res is not TextRewriter.Result.Ok)
+        // A step *proven* not to have landed ends the cycle instead of advancing it. The next step would
+        // erase `text.Length` characters on the assumption that this one put them there, so continuing
+        // from a screen we know is wrong is how one bad rewrite got worse with every further tap.
+        // Starting afresh costs the user one tap; continuing costs them text.
+        //
+        // Unverified is deliberately NOT in that set. It means the target exposes no readable text, not
+        // that anything went wrong — a Chromium text box answers nothing until its accessibility tree is
+        // built. Treating it as a failure would put an error notification in front of every conversion in
+        // a browser and break cycling there, inventing a fault where the measurement showed the text
+        // landing correctly.
+        if (res is TextRewriter.Result.Unverified)
+            Diagnostics.Log("  cycle: continuing unverified — this target's text cannot be read back");
+        else if (res is not TextRewriter.Result.Ok)
         {
             lock (_cycleLock) _cycle = null;
-            if (res is TextRewriter.Result.Mismatch or TextRewriter.Result.Unverified)
-                Diagnostics.LogAlways($"  cycle: abandoned after {res} — the next trigger will start from what is on screen");
+            if (res is TextRewriter.Result.Mismatch)
+                Diagnostics.LogAlways("  cycle: abandoned after Mismatch — the next trigger will start from what is on screen");
             NotifyProtected();
             return;
         }
