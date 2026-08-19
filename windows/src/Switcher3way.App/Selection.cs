@@ -132,6 +132,43 @@ internal static class Selection
     }
 
     /// <summary>
+    /// How many characters lie between the caret and the end of the text, capped at
+    /// <paramref name="max"/> — or <c>-1</c> when it cannot be determined.
+    ///
+    /// The counterpart to <see cref="CharsBeforeCaret"/>, and needed for the same reason from the other
+    /// side: text left behind *after* the caret is invisible to any check that only looks backwards. That
+    /// is exactly how a replacement that inserted itself in front of the old text instead of over it was
+    /// reported as a success — everything before the caret was perfect and the old copy sat just past it.
+    /// </summary>
+    public static int CharsAfterCaret(int max)
+    {
+        if (_uiaBroken || max <= 0) return -1;
+        try
+        {
+            _uia ??= new Interop.UIAutomationClient.CUIAutomation();
+            var focused = _uia.GetFocusedElement();
+            if (focused is null) return -1;
+            if (focused.GetCurrentPattern(UIA_TextPatternId)
+                is not Interop.UIAutomationClient.IUIAutomationTextPattern text) return -1;
+            var ranges = text.GetSelection();
+            if (ranges is null || ranges.Length == 0) return -1;
+            var range = ranges.GetElement(0)?.Clone();
+            if (range is null) return -1;
+            range.MoveEndpointByRange(Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_Start,
+                                      range, Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_End);
+            int moved = range.MoveEndpointByUnit(
+                Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_End,
+                Interop.UIAutomationClient.TextUnit.TextUnit_Character, max);
+            return Math.Abs(moved);
+        }
+        catch (Exception ex)
+        {
+            Diagnostics.Log("verify: could not count the text after the caret: " + ex.Message);
+            return -1;
+        }
+    }
+
+    /// <summary>
     /// The text immediately to the left of the caret in the focused element, up to
     /// <paramref name="length"/> characters — or <c>null</c> when it cannot be read.
     ///
@@ -159,8 +196,11 @@ internal static class Selection
             var range = ranges.GetElement(0);
             if (range is null) return null;
             range = range.Clone();
-            range.MoveEndpointByRange(Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_End,
-                                      range, Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_Start);
+            // Anchor at the END of the range, not the start. With a plain caret the two are the same; with
+            // a live selection the text being replaced lies *inside* the range, so anchoring at the start
+            // measures from before it and every figure comes out short by the length of the selection.
+            range.MoveEndpointByRange(Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_Start,
+                                      range, Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_End);
             int moved = range.MoveEndpointByUnit(
                 Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_Start,
                 Interop.UIAutomationClient.TextUnit.TextUnit_Character, -length);
@@ -171,6 +211,47 @@ internal static class Selection
         {
             Diagnostics.Log("verify: could not read back the text: " + ex.Message);
             return null;
+        }
+    }
+
+    /// <summary>
+    /// How many characters lie between the start of the text and the caret, capped at
+    /// <paramref name="max"/> — or <c>-1</c> when it cannot be determined. <c>max</c> reached means the
+    /// answer is saturated and only tells you "at least this many".
+    ///
+    /// This is a count, not text: it asks the range how far back it managed to move, so nothing is read.
+    /// It exists because comparing text cannot tell "replaced the old word" from "inserted in front of the
+    /// old word" when there is nothing before it to compare — both leave the new text at the end. The
+    /// character count distinguishes them whatever the words happen to be.
+    /// </summary>
+    public static int CharsBeforeCaret(int max)
+    {
+        if (_uiaBroken || max <= 0) return -1;
+        try
+        {
+            _uia ??= new Interop.UIAutomationClient.CUIAutomation();
+            var focused = _uia.GetFocusedElement();
+            if (focused is null) return -1;
+            if (focused.GetCurrentPattern(UIA_TextPatternId)
+                is not Interop.UIAutomationClient.IUIAutomationTextPattern text) return -1;
+            var ranges = text.GetSelection();
+            if (ranges is null || ranges.Length == 0) return -1;
+            var range = ranges.GetElement(0)?.Clone();
+            if (range is null) return -1;
+            // Anchor at the END of the range, not the start. With a plain caret the two are the same; with
+            // a live selection the text being replaced lies *inside* the range, so anchoring at the start
+            // measures from before it and every figure comes out short by the length of the selection.
+            range.MoveEndpointByRange(Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_Start,
+                                      range, Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_End);
+            int moved = range.MoveEndpointByUnit(
+                Interop.UIAutomationClient.TextPatternRangeEndpoint.TextPatternRangeEndpoint_Start,
+                Interop.UIAutomationClient.TextUnit.TextUnit_Character, -max);
+            return Math.Abs(moved);
+        }
+        catch (Exception ex)
+        {
+            Diagnostics.Log("verify: could not count the text before the caret: " + ex.Message);
+            return -1;
         }
     }
 

@@ -11,12 +11,16 @@ replacement is in progress, the Windows build SHALL abort the replacement, resto
 already removed, and record no conversion — so that neither a single-word rewrite nor a multi-word phrase
 correction can leave the on-screen text partially deleted.
 
-The Windows build SHALL inject its input at a rate the target application can consume, and SHALL NOT
-spend materially longer doing so than that rate requires. A replacement at the maximum selection length
-SHALL complete within about a second and a half, and a replacement of a single word within a quarter of a
-second, measured from the first injected event to the verified result. Correctness that takes several
-seconds to arrive is a different feature from correctness that arrives promptly: the user is typing, and
-a rewrite slow enough to type into is a rewrite that will be typed into.
+The Windows build SHALL inject its input at a rate the target application can consume. That rate is a
+measured property of the target, not a number this project may choose: at the time of writing it is about
+fifteen milliseconds per removal event against a Windows text control, so a replacement at the maximum
+selection length takes a few seconds and a single word about a quarter of a second. Attempts to go faster
+— batching the removals, or pausing accurately for a shorter interval — were measured and each of them
+lost events. Where speed and correctness conflict here, correctness wins and the delay is accepted.
+
+A replacement SHALL verify that the text it replaced is gone, not merely that the text it inserted
+arrived. Checking only the insertion passes a replacement that landed *beside* the old text instead of
+over it, which is a corruption that reports itself as a success.
 
 Above a threshold length it SHALL insert the replacement as a single clipboard paste rather
 than as one event per character, because per-character injection of long text is both slow and the form
@@ -55,13 +59,17 @@ of conversions that demonstrably worked.
 - **WHEN** a replacement removes and reinserts a selection of at least fifty characters
 - **THEN** the text that lands SHALL match the text intended, character for character
 
-#### Scenario: A replacement at the selection limit completes promptly
-- **WHEN** a replacement is applied to a selection at the maximum supported length
-- **THEN** it SHALL complete within about a second and a half from the first injected event to the verified result
-
 #### Scenario: A single-word replacement stays fast
 - **WHEN** a conversion is applied to a word of about five characters
 - **THEN** it SHALL complete within about a quarter of a second, so the common case is not slowed by accommodating the long one
+
+#### Scenario: The old text being left behind is a failure, not a success
+- **WHEN** the replacement is inserted but the text it was meant to replace is still present next to it
+- **THEN** the system SHALL report the replacement as failed, and SHALL restore the screen by removing only what it inserted — leaving the original text as it was rather than re-inserting a second copy of it
+
+#### Scenario: Removal is judged independently of what the words are
+- **WHEN** a replacement is applied in a document that repeats the same word, so that a correct result and a failed removal read alike
+- **THEN** the system SHALL still distinguish them, by measuring the text's position rather than comparing only its content
 
 #### Scenario: A long replacement borrows the clipboard and gives it back
 - **WHEN** a replacement longer than the paste threshold is applied while the user has text on the clipboard

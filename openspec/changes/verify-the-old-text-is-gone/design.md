@@ -111,6 +111,68 @@ No data or settings migration; the change is internal to the rewrite path. It sh
 bump to both channels. Rollback is reverting the commit, since the previous strategy remains a code path
 selectable by `diagrewrite`.
 
+## Findings — the premise was wrong, and something worse turned up
+
+**The latency is not an accident. The 15 ms is load-bearing.** Measured against Notepad, one fresh target
+per cell, taking the app's own verdict rather than the harness's diff:
+
+| Strategy | 46 chars | 200 chars |
+|---|---|---|
+| `perkey` — `Thread.Sleep(2)`, really ~15 ms | **Ok**, 826 ms | **Ok**, 3398 ms |
+| `batched:8` — 8 backspaces per pause | Mismatch, 336 ms | Mismatch, 796 ms |
+| `spin` — per key, a real 2 ms gap | — | Mismatch, ~1000 ms |
+| `select:50` — select the range, no backspaces | see below, 322 ms | Mismatch, 763 ms |
+
+So the proposal had it backwards. The code said 2 ms and got 15 ms, and it is the 15 ms the target needs:
+a genuine 2 ms gap fails, and a batch is simply a burst with a gap after it, which fails the same way the
+original unpaced erase did. Every route to a faster erase tried here trades correctness for speed.
+Confirmed from inside the loop as well — `rewrite: erased 200 in 3132 ms (nominal 400 ms)`.
+
+**`select` exposed a blind spot in the verification, which matters more than the latency.** At 46
+characters the app reported `Ok` while the document held *the marker followed by the original filler*: the
+selection had not taken effect, the paste inserted instead of replacing, and the old text was still there.
+Verification said success because it compares only the text it *wrote* — it never checks that what should
+be gone is gone. Every failure this project has chased has been of that shape: a surface reporting success
+for something it did not actually establish.
+
+That blind spot is not hypothetical and is not confined to `select`. Any removal that silently under-deletes
+— a dropped backspace at the tail, a target that swallows one — lands the right replacement next to text
+that should have vanished, and the current check passes it.
+
+**Also worth recording:** batching `Shift↑` into the same `SendInput` call as the arrows does not select
+anything. The asynchronous key state advances when the events are queued, so a target reading the modifier
+while processing the arrows sees Shift already released and just moves the caret. Fixed by pressing and
+releasing Shift in calls of its own — after which `select` selects, but still does not remove reliably at
+200 characters.
+
+## How the removal is verified
+
+Two probes, taken before the rewrite and again after, counting characters rather than reading them:
+how far the caret sits from the start of the text, and how far from the end. After a correct replacement
+the leading count moves by `len(replacement) - len(original)` and the trailing count does not grow. A
+replacement that inserted itself in front of the old text leaves the leading count perfect — everything
+behind the caret looks exactly right — and betrays itself only in the trailing count, which grows by the
+length of the text that should have gone.
+
+Counting rather than reading matters twice over. It is content-independent, so a document that repeats the
+same word cannot be mistaken for a failed removal and vice versa; and it does not read the document, which
+would be a poor thing for an app that promises not to.
+
+**A correction found on the way.** The existing read-back anchored at the *start* of the focused range.
+With a plain caret start and end are the same, so it worked — but the new probes run *before* the rewrite,
+while the selection is still live, and there the start is 46 characters too early. Every pre-rewrite figure
+came out short by the length of the selection, and the first version of this change failed the trigger
+cycle 4 times out of 4 with false mismatches. Anchoring at the range end fixes it and is a no-op for the
+collapsed case.
+
+**The repair had to split in two.** Erasing the insert and re-inserting the original is right when the
+replacement landed wrong, and wrong when it landed beside the original — that path would leave the user
+with the original twice. The two are told apart by the trailing count, and the second case erases only what
+was typed.
+
+**Cost:** four extra UI Automation probes per rewrite, measured at 238 / 865 / 3425 ms for 5 / 46 / 200
+characters against a baseline of 262 / 837 / 3387. Within noise; the probes are single-digit milliseconds.
+
 ## Open Questions
 
 - Which strategy wins on the combination of speed and failure mode — the matrix decides, and the answer
