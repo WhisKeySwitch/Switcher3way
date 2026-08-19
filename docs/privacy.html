@@ -43,12 +43,24 @@
   uploaded.</p>
 
   <h2>The clipboard</h2>
-  <p>When you press the trigger key, Switcher3way checks whether you have text selected — the only way
-  Windows offers to read a selection from another application is to ask it to copy. So the app sends a
-  <code>Ctrl+C</code>, reads what arrived (at most 200 characters), and <strong>puts your previous
-  clipboard contents back</strong>. This happens only at the moment you press the trigger, never while
-  you type, and the text is used solely to work out which layout it belongs to. It is not stored or
-  sent anywhere.</p>
+  <p><strong>Reading a selection.</strong> When you press the trigger key, Switcher3way checks whether you
+  have text selected — the only way Windows offers to read a selection from another application is to ask
+  it to copy. So the app sends a <code>Ctrl+C</code>, reads what arrived (at most 200 characters), and
+  <strong>puts your previous clipboard contents back</strong>. The text is used solely to work out which
+  layout it belongs to. It is not stored or sent anywhere.</p>
+
+  <p><strong>Writing a replacement.</strong> Since version 0.3.0, when the corrected text is longer than
+  about two dozen characters the app puts it on the clipboard and pastes it, then <strong>restores your
+  previous clipboard contents</strong>. Typing long text one keystroke at a time proved both slow and
+  unreliable — applications sometimes received it garbled — so a single paste is how a long correction is
+  made safely. Shorter corrections, which is nearly all of them, are typed and never touch the clipboard.
+  This can happen during an automatic correction as well as a manual one, so it is not limited to the
+  moment you press the trigger.</p>
+
+  <p>The text involved is always your own text, on its way back into the document you are editing. It is
+  not stored by this app and never leaves your device. One consequence worth knowing: if you use a
+  clipboard-history tool — including Windows' own clipboard history — it may record that momentary
+  clipboard entry, exactly as it would for anything else you copy.</p>
 
   <h2>Places the app deliberately does not look</h2>
   <ul>
