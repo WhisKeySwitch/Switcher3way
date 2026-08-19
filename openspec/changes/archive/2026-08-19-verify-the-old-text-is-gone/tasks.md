@@ -27,11 +27,8 @@
 - [x] 3.7 `dotnet test` green (166 tests).
 - [x] 3.8 Verify on the packaged build, not only the unpackaged one.
 
-## 4. Ship
+## 4. Release — deferred by decision
 
-- [ ] 4.1 Bump the version in `Switcher3way.App.csproj`, `Package.appxmanifest` and `build-msi.ps1`.
-- [ ] 4.2 Build both packages and confirm the embedded executable's file version.
-- [ ] 4.3 Release notes and Store "what's new" in en/uk/ru — the user-visible claim is that a failed conversion is now undone rather than reported as done.
-- [ ] 4.4 Publish, checking the checksum is the only 64-hex string in the notes and that `/releases/latest` still resolves to the macOS DMG.
-- [ ] 4.5 Note the `trailing`/`caret` figures in `RELEASING.md` alongside the existing `Mismatch` guidance.
-- [ ] 4.6 Sync the delta spec into the main spec and archive the change.
+- [x] 4.1 Do not cut a release for this on its own. The user-visible change is narrow — a conversion that fails now undoes itself instead of reporting success — and the failure it guards against could only be provoked with a deliberately broken erase strategy, never with the shipping one. It is defence in depth against a class of bug, not a fix for something users are hitting, so it does not justify a Store round-trip days after 0.3.0 went live.
+- [x] 4.2 Record in `windows/RELEASING.md` that `main` carries unreleased work, so the next version bump picks it up instead of discovering it.
+- [x] 4.3 Sync the delta spec into the main spec and archive the change: the implementation is complete, and only the release is waiting.
