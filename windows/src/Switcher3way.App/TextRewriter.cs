@@ -87,6 +87,12 @@ internal static class TextRewriter
         // that: a bulk delete followed too closely by the stream.
         Thread.Sleep(p.SettleMs + Math.Max(eraseCount, replacement.Length));
 
+        // Long text goes in as one paste rather than hundreds of keystrokes. Per-character injection is
+        // what the target mis-renders and what makes a 200-character rewrite take six seconds; a paste is
+        // a single chord that cannot be outrun and cannot be half-delivered. Short text keeps the
+        // keystroke path: it is already reliable, and it leaves the user's clipboard alone.
+        if (replacement.Length > PasteAbove) return PasteAndVerify(replacement, original, erased);
+
         foreach (char c in replacement)
         {
             if (shouldAbort?.Invoke() == true) return Restore(original, erased, typed);
@@ -101,6 +107,46 @@ internal static class TextRewriter
         if (injected < requested) return Result.Partial; // short injection — don't claim success
 
         return Verify(replacement, original, erased, typed);
+    }
+
+    /// <summary>
+    /// Above this many characters a replacement is pasted rather than typed. Below it, typing is already
+    /// reliable (measured clean at 5, 10 and 20 characters) and costs the user nothing; above it, typing
+    /// is both slow and the thing that arrives mangled.
+    /// </summary>
+    private const int PasteAbove = 24;
+
+    /// <summary>
+    /// Replace by clipboard: borrow the clipboard, send one Ctrl+V, verify, hand the clipboard back.
+    ///
+    /// The clipboard is restored only after the paste has been seen on screen — restoring it earlier can
+    /// hand the target the old contents before it has processed the chord, which would paste the wrong
+    /// text. Verification is what establishes the paste landed, so it doubles as that wait.
+    /// </summary>
+    private static Result PasteAndVerify(string replacement, string? original, int erased)
+    {
+        var saved = Selection.SwapClipboard(replacement);
+        try
+        {
+            uint injected = SendChord((ushort)Native.VK_CONTROL, (ushort)VK_V);
+            if (injected == 0) return Result.Protected;   // UIPI refused it — an elevated target
+            return Verify(replacement, original, erased, replacement.Length);
+        }
+        finally { Selection.RestoreClipboard(saved); }
+    }
+
+    private const ushort VK_V = 0x56;
+
+    /// <summary>Modifier held across one key, as four events in one call.</summary>
+    private static uint SendChord(ushort modifier, ushort key)
+    {
+        var arr = new[]
+        {
+            Key(modifier, '\0', 0), Key(key, '\0', 0),
+            Key(key, '\0', Native.KEYEVENTF_KEYUP), Key(modifier, '\0', Native.KEYEVENTF_KEYUP),
+        };
+        return Native.SendInput((uint)arr.Length, arr,
+                                System.Runtime.InteropServices.Marshal.SizeOf<Native.INPUT>());
     }
 
     /// <summary>
@@ -166,11 +212,23 @@ internal static class TextRewriter
             Thread.Sleep(p.EraseMs);
         }
         Thread.Sleep(p.SettleMs + Math.Max(typed, original.Length));
-        foreach (char c in original)
+
+        // Put it back the same way it would have gone in. Retyping a long original character by character
+        // is both slow and exposed to the very failure being repaired, so a long repair pastes too.
+        if (original.Length > PasteAbove)
         {
-            SendPair(Key(0, c, Native.KEYEVENTF_UNICODE),
-                     Key(0, c, Native.KEYEVENTF_UNICODE | Native.KEYEVENTF_KEYUP));
-            Thread.Sleep(p.CharMs);
+            var saved = Selection.SwapClipboard(original);
+            try { SendChord((ushort)Native.VK_CONTROL, VK_V); }
+            finally { Thread.Sleep(40 + original.Length); Selection.RestoreClipboard(saved); }
+        }
+        else
+        {
+            foreach (char c in original)
+            {
+                SendPair(Key(0, c, Native.KEYEVENTF_UNICODE),
+                         Key(0, c, Native.KEYEVENTF_UNICODE | Native.KEYEVENTF_KEYUP));
+                Thread.Sleep(p.CharMs);
+            }
         }
         Diagnostics.LogAlways($"  rewrite: repaired back to \"{original}\"");
     }

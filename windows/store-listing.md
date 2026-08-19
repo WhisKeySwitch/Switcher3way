@@ -105,15 +105,12 @@ is which.
 
 The app is published, so this field is now required on every submission. Current copy:
 
-Version 0.2.9
+Version 0.3.0
 
-• Fixed: converting a selection with the trigger could delete more than you selected — including text
-  on the line above it. Whatever the app has recorded is now discarded the moment the cursor moves, so
-  a conversion can only rewrite the words it actually saw you type.
-• Fixed: selecting everything with Ctrl+A and then tapping the trigger could replace the whole
-  document. Keyboard shortcuts are no longer mistaken for typing.
-• When text is selected, the trigger now always converts the selection rather than the last word you
-  typed — what it changes is what you highlighted.
+• Fixed: cycling a selected phrase through the layouts could corrupt it, and the app believed it had succeeded — so every further tap converted the damage instead of the original text.
+• The app now checks its own work. After replacing text it reads back what actually landed; anything that does not match is undone and reported instead of being built upon.
+• Long replacements are pasted rather than typed one key at a time. Converting a sentence is about twice as fast and no longer risks mangling it. Your clipboard is borrowed for that instant and handed straight back; short conversions never touch it.
+• Fixed: the trigger could convert text you had not selected, if another program wrote to the clipboard at the wrong moment.
 
 ### Search terms
 
@@ -209,15 +206,12 @@ Switcher3way прибирає цей момент.
 
 Застосунок опубліковано, тож це поле тепер обов'язкове в кожній подачі. Поточний текст:
 
-Версія 0.2.9
+Версія 0.3.0
 
-• Виправлено: конвертація виділеного тригером могла видалити більше, ніж ви виділили, — зокрема текст
-  у рядку вище. Тепер усе, що застосунок запам'ятав, скидається щойно курсор змінює позицію, тож
-  конвертація може перезаписати лише ті слова, які він справді бачив.
-• Виправлено: виділення всього тексту через Ctrl+A і натискання тригера могло замінити весь документ.
-  Комбінації клавіш більше не вважаються набором тексту.
-• Коли текст виділено, тригер тепер завжди конвертує виділення, а не останнє набране слово — змінюється
-  саме те, що ви підсвітили.
+• Виправлено: перебирання розкладок для виділеної фрази могло її зіпсувати, а застосунок вважав, що все вдалося, — тож кожне наступне натискання конвертувало вже зіпсований текст, а не початковий.
+• Тепер застосунок перевіряє свою роботу. Замінивши текст, він зчитує те, що насправді з'явилося на екрані; усе, що не збігається, скасовується й повідомляється, а не використовується далі.
+• Довгі замі́ни тепер вставляються, а не набираються по одному символу. Конвертація речення приблизно вдвічі швидша й більше не ризикує зіпсувати текст. Буфер обміну позичається на цю мить і одразу повертається; короткі конвертації його не торкаються.
+• Виправлено: тригер міг конвертувати текст, який ви не виділяли, якщо інша програма записувала щось у буфер обміну в незручний момент.
 
 ### Ключові слова
 
@@ -315,15 +309,12 @@ Switcher3way читает все раскладки, установленные 
 
 Приложение опубликовано, так что это поле теперь обязательно в каждой подаче. Текущий текст:
 
-Версия 0.2.9
+Версия 0.3.0
 
-• Исправлено: конвертация выделенного триггером могла удалить больше, чем вы выделили, — включая текст
-  строкой выше. Теперь всё, что приложение запомнило, сбрасывается как только курсор меняет позицию,
-  так что конвертация может перезаписать только те слова, которые оно действительно видело.
-• Исправлено: выделение всего текста через Ctrl+A и нажатие триггера могло заменить весь документ.
-  Сочетания клавиш больше не принимаются за набор текста.
-• Когда текст выделен, триггер теперь всегда конвертирует выделение, а не последнее набранное слово —
-  меняется именно то, что вы подсветили.
+• Исправлено: перебор раскладок для выделенной фразы мог её испортить, а приложение считало, что всё удалось, — поэтому каждое следующее нажатие конвертировало уже испорченный текст, а не исходный.
+• Теперь приложение проверяет свою работу. Заменив текст, оно считывает то, что действительно появилось на экране; всё, что не совпадает, отменяется и сообщается, а не используется дальше.
+• Длинные замены теперь вставляются, а не набираются по одному символу. Конвертация предложения примерно вдвое быстрее и больше не рискует испортить текст. Буфер обмена занимается на это мгновение и сразу возвращается; короткие конвертации его не трогают.
+• Исправлено: триггер мог конвертировать текст, который вы не выделяли, если другая программа записывала что-то в буфер обмена в неподходящий момент.
 
 ### Ключевые слова
 
