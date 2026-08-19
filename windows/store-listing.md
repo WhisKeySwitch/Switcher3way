@@ -70,8 +70,11 @@ trigger. Let it remember a layout per application, so switching windows puts you
 PRIVATE BY DESIGN
 
 Nothing you type is stored or transmitted. Keystrokes for the current word are held in memory and
-discarded the moment the word ends. This Store version makes no network connections at all. Word
-checking uses dictionaries built into the app. The whole source is public under the MIT licence.
+discarded the moment the word ends. Correcting a long phrase briefly places the corrected text on the
+clipboard so it can be pasted in one go, and puts your previous clipboard contents straight back;
+shorter corrections are typed and never touch it. This Store version makes no network connections at
+all. Word checking uses dictionaries built into the app. The whole source is public under the MIT
+licence.
 
 BEFORE YOU START
 
@@ -172,9 +175,11 @@ Switcher3way прибирає цей момент.
 ПРИВАТНІСТЬ ЗА ЗАМОВЧУВАННЯМ
 
 Ніщо з набраного не зберігається й не передається. Натискання клавіш для поточного слова тримаються
-лише в пам'яті та відкидаються, щойно слово завершилося. Ця версія зі Store не робить жодних мережевих
-з'єднань. Перевірка слів використовує словники, вбудовані в застосунок. Увесь вихідний код відкритий
-за ліцензією MIT.
+лише в пам'яті та відкидаються, щойно слово завершилося. Виправлення довгої фрази на мить кладе
+виправлений текст у буфер обміну, щоб вставити його одним рухом, і одразу повертає ваш попередній вміст
+буфера; коротші виправлення набираються й буфера не торкаються. Ця версія зі Store не робить жодних
+мережевих з'єднань. Перевірка слів використовує словники, вбудовані в застосунок. Увесь вихідний код
+відкритий за ліцензією MIT.
 
 ПЕРЕД ПОЧАТКОМ
 
@@ -275,9 +280,11 @@ Switcher3way читает все раскладки, установленные 
 ПРИВАТНОСТЬ ПО УМОЛЧАНИЮ
 
 Ничего из набранного не сохраняется и не передаётся. Нажатия клавиш для текущего слова хранятся только
-в памяти и отбрасываются, как только слово закончилось. Эта версия из Store не устанавливает никаких
-сетевых соединений. Проверка слов использует словари, встроенные в программу. Весь исходный код
-открыт по лицензии MIT.
+в памяти и отбрасываются, как только слово закончилось. Исправление длинной фразы на мгновение кладёт
+исправленный текст в буфер обмена, чтобы вставить его одним движением, и сразу возвращает ваше
+предыдущее содержимое буфера; более короткие исправления набираются и буфер не трогают. Эта версия из
+Store не устанавливает никаких сетевых соединений. Проверка слов использует словари, встроенные в
+программу. Весь исходный код открыт по лицензии MIT.
 
 ПЕРЕД НАЧАЛОМ
 
