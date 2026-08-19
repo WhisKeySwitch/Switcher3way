@@ -25,7 +25,7 @@
 - [x] 3.5 Regressions: the 0.2.9 data-loss guards hold, a short word still cycles, auto-fix still converts.
 - [x] 3.6 Latency unchanged within noise, recorded in the design.
 - [x] 3.7 `dotnet test` green (166 tests).
-- [ ] 3.8 Verify on the packaged build, not only the unpackaged one.
+- [x] 3.8 Verify on the packaged build, not only the unpackaged one.
 
 ## 4. Ship
 
