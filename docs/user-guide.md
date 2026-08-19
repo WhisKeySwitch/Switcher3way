@@ -241,6 +241,14 @@ the **optional update check** (see above): a request to GitHub for the latest re
 version, which you can switch off in Settings → General. Keystrokes are held only in a short
 in-memory buffer for the current word and are never written to disk.
 
+**On Windows, the clipboard is used for long corrections.** Replacing a long selection or phrase —
+more than about two dozen characters — is done by putting the corrected text on the clipboard,
+pasting it, and restoring your previous clipboard contents immediately. Typing text that long one
+keystroke at a time turned out to be unreliable: applications sometimes received it garbled. Shorter
+corrections, which is nearly all of them, are typed and never touch the clipboard. The text is always
+your own, on its way back into your document, and nothing is stored or sent — but a clipboard-history
+tool may record that momentary entry, as it would for anything you copy.
+
 **Password fields.** Neither Auto-fix, nor the trigger, nor the badge does anything while a
 password field has focus. A field counts as one when *any* of these is true:
 
