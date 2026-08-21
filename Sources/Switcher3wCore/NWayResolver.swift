@@ -51,14 +51,47 @@ public final class NWayResolver {
         public let converted: String
     }
 
+    /// Why a word was left alone. Every one of these is a decision, and every one is invisible on
+    /// screen — so unless it is written down, a guard working perfectly and a guard that never ran
+    /// leave behind identical evidence.
+    public enum KeepReason: String {
+        /// Not a word in any installed language — ordinary for names, code, and typing in progress.
+        case notAWordAnywhere
+        /// A real word of the language it was typed in. Nothing to fix, and it settles the phrase.
+        case validInCurrent
+        /// The current layout, or its language, could not be determined.
+        case noCurrentLanguage
+        /// It reads as another language, but the language being typed holds a word one keystroke
+        /// away, so a fumbled key is the simpler explanation. This is the guard that stops typos.
+        case looksLikeATypo
+        /// Too short to decide alone, and it disagrees with the language the phrase settled into.
+        case phraseDisagrees
+    }
+
     /// Full evaluation result. `.ambiguous` carries every validating language so the caller
     /// can resolve it by the preferred-language setting / phrase lock (phrase-aware-ambiguity);
     /// `resolve` collapses it to nil for callers that only care about the unambiguous case.
     public enum Outcome {
-        case keep
+        case keep(KeepReason)
         case convert(Decision)
         case ambiguous(original: String, winners: [Winner])
+        /// The input reads as another language, but on evidence too weak to act on: a word of two or
+        /// three letters, where a dictionary hit means almost nothing. The caller leaves the text
+        /// alone and records the keystrokes as defaulted to the current language, so the next word
+        /// that does settle the phrase converts this one along with it.
+        case held(original: String, winners: [Winner])
     }
+
+    /// Shorter than this, a dictionary hit carries no information: a quarter of all two-letter Latin
+    /// strings are in the English dictionary — `ft`, `bf`, `kw`, `lb` — mostly abbreviations. Words
+    /// this short are handed to the phrase around them instead of being decided here.
+    public static let undecidableBelow = 4
+
+    /// The length from which `TypoGuard.nearMiss` is worth listening to. It asks whether *any*
+    /// one-edit neighbour is real, and a word has roughly (alphabet x 2 x length) neighbours, so on
+    /// short words it fires on everything. Measured on the Windows port against genuine wrong-layout
+    /// typing: 100% false alarms at two letters, 30-40% at four, and 0% from six up, both directions.
+    public static let nearMissTrustedFrom = 6
 
     /// Legacy single-winner view of `evaluate` — nil unless exactly one language matches.
     public func resolve(keys: [TypedKey], capsLock: Bool) -> Decision? {
@@ -69,14 +102,23 @@ public final class NWayResolver {
     /// Renders the input through all layouts-with-dictionary and picks the target.
     /// `.keep` if: the layout/language can't be determined; the word is valid in the
     /// current language; no other language matches. `.ambiguous` when several do.
-    public func evaluate(keys: [TypedKey], capsLock: Bool) -> Outcome {
-        guard !keys.isEmpty else { return .keep }
+    /// - Parameter phraseLang: the language the surrounding phrase has already settled into, if any
+    ///   (the caller's `PhraseTracker.lockedLang`). It is the tie-breaker for words too short to
+    ///   decide alone: with it a two-letter word converts because the phrase says so; without it the
+    ///   word waits for one that can settle the question.
+    /// - Parameter weighEvidence: whether the precision guards apply. They exist to restrain the app
+    ///   from acting on thin evidence of its own initiative, which is not the situation when the user
+    ///   has pressed the trigger — an explicit request is entitled to an answer even for a two-letter
+    ///   word, so `manualPlan` turns them off.
+    public func evaluate(keys: [TypedKey], capsLock: Bool,
+                         phraseLang: String? = nil, weighEvidence: Bool = true) -> Outcome {
+        guard !keys.isEmpty else { return .keep(.notAWordAnywhere) }
 
         let layouts = catalog.installedLayouts()
         let currentID = catalog.currentLayoutID()
         guard let currentLayout = layouts.first(where: { $0.id == currentID }) else {
             CoreLog.write("nway: nil — current layout not resolvable (id=\(currentID.components(separatedBy: ".").last ?? "?"), installed=\(layouts.count))")
-            return .keep
+            return .keep(.noCurrentLanguage)
         }
         let currentLang = String(currentLayout.lang.prefix(2))
 
@@ -107,7 +149,7 @@ public final class NWayResolver {
 
         guard let current = byLang[currentLang] else {
             CoreLog.write("nway: nil — no candidate for current lang \(currentLang) [\(dump)]")
-            return .keep
+            return .keep(.noCurrentLanguage)
         }
         // always-convert — an EXPLICIT user override: if some other language's letter core is in
         // the "always convert" list, switch there even bypassing the dictionary and vetoes.
@@ -119,9 +161,11 @@ public final class NWayResolver {
         }
 
         // Typed correctly in the current language (its letter core is a real word) → do nothing.
+        // Report it, rather than merely returning: a real word of the language being typed in is the
+        // best evidence the app ever gets about what language this phrase is, and the caller pins it.
         if current.isValid {
             CoreLog.write("nway: nil — '\(current.string)' is a valid \(currentLang) word [\(dump)]")
-            return .keep
+            return .keep(.validInCurrent)
         }
 
         // Other languages where the input's letter core is a real word. Only the LETTER core is
@@ -139,8 +183,44 @@ public final class NWayResolver {
         // apply the preferred-language / phrase-lock policy (phrase-aware-ambiguity).
         if winners.isEmpty {
             CoreLog.write("nway: nil — no valid target language [\(dump)]")
-            return .keep
+            return .keep(.notAWordAnywhere)
         }
+
+        // How far the dictionary hit can be trusted depends almost entirely on how long the word is,
+        // and the two guards below cover different bands of that. Short words cannot be cross-checked
+        // for a typo at all — at that length every string has a near miss — so the phrase arbitrates.
+        let coreLength = SoftGates.letterCore(Array(current.string)).count
+        if weighEvidence && coreLength < Self.nearMissTrustedFrom {
+            if let phraseLang, let byPhrase = winners.first(where: { $0.lang == phraseLang }) {
+                CoreLog.write("nway: short word, phrase agrees on \(phraseLang) [\(dump)]")
+                return .convert(Decision(targetLayoutID: byPhrase.layoutID, lang: byPhrase.lang,
+                                         original: current.string, converted: byPhrase.converted))
+            }
+            if phraseLang != nil {
+                CoreLog.write("nway: nil — too short to decide, phrase reads as another language [\(dump)]")
+                return .keep(.phraseDisagrees)
+            }
+            // Nothing has settled the phrase yet. Under four characters there is no honest way to
+            // tell a short Ukrainian word from a short English one, so hold it — unconverted, but
+            // with its keystrokes remembered, so the word that does settle the phrase converts this
+            // one along with it. That is what stops the caution from being a plain loss of recall.
+            if coreLength < Self.undecidableBelow {
+                CoreLog.write("nway: held — too short to act on alone [\(dump)]")
+                return .held(original: current.string, winners: winners)
+            }
+            // Four or five characters, with nothing to contradict it: worth acting on.
+        }
+
+        // Before accepting "this is a word in another language", check the likelier story: that it is
+        // a word of *this* language with one key missed. A fumbled key is a simpler explanation than
+        // a keyboard that changed for one word and changed back, and this check was never made.
+        if weighEvidence,
+           TypoGuard.nearMiss(SoftGates.letterCore(Array(current.string)).lowercased(),
+                              lang: currentLang, dict: dict) {
+            CoreLog.write("nway: nil — near miss of a \(currentLang) word, reading it as a typo [\(dump)]")
+            return .keep(.looksLikeATypo)
+        }
+
         if winners.count > 1 {
             CoreLog.write("nway: ambiguous (\(winners.map(\.lang).sorted().joined(separator: "/"))) [\(dump)]")
             return .ambiguous(original: current.string, winners: winners)
@@ -215,14 +295,16 @@ public final class NWayResolver {
         // ambiguity the preferred ambiguity language takes that spot instead — one ⌥ tap gives
         // the same answer auto-fix would.
         var promoted: (layoutID: String, converted: String)?
-        switch evaluate(keys: keys, capsLock: capsLock) {
+        // Unguarded: the precision guards restrain the app's own initiative, and the user pressing
+        // the trigger is not that. A two-letter word still gets an answer.
+        switch evaluate(keys: keys, capsLock: capsLock, phraseLang: nil, weighEvidence: false) {
         case .convert(let d):
             promoted = (d.targetLayoutID, d.converted)
         case .ambiguous(_, let winners):
             if ambiguousLang != "off", let w = winners.first(where: { $0.lang == ambiguousLang }) {
                 promoted = (w.layoutID, w.converted)
             }
-        case .keep:
+        case .keep, .held:
             break
         }
         // Match by rendered text, and carry the winner's LAYOUT — not just move its text to the

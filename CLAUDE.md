@@ -148,15 +148,29 @@ legible side by side.
 - **`CoreInterfaces.swift`** — `TypedKey`, `Layout`, and the injection points:
   `DictionaryValidating` (Windows `IDictionaryValidator`), `LayoutCatalog` (`ILayoutCatalog`),
   `WordExceptionList`, plus `CoreLog` (the executable wires it to `rslog` at startup).
+  `DictionaryValidating.alphabet(_:)` defaults to `""`, which switches the typo guard off rather
+  than letting an adapter that cannot answer veto everything.
 - **`SoftGates.swift`** — `passes` (length / all-caps / camelCase / mixed-script vetoes) and
   `letterCore` trimming, shared verbatim by the 2-way and N-way paths.
+- **`TypoGuard.swift`** — `nearMiss`: does the language being typed hold a word one edit away?
+  Port of the Windows `TypoGuard`, and the answer to the same defect — see below.
 - **`NWayResolver.swift`** — `evaluate` / `manualPlan` / `render`. Instance-based; the executable
   owns one (`NWay.resolver`).
+  **Precision is the hard constraint, and it is measured rather than asserted.** A false conversion
+  moves the layout as well as the text, so it costs the user the rest of the sentence; a missed one
+  costs a trigger tap. `evaluate` therefore does not convert on a dictionary hit alone: it asks
+  `TypoGuard.nearMiss` first, and refuses to decide words under 6 characters on their own, handing
+  them to the phrase (`Outcome.held`, then `PhraseTracker`'s retro-correction, and `AppDelegate`'s
+  held-run settlement when no word is long enough to settle anything). Both thresholds come from
+  measurement, not taste — the numbers are in `openspec/changes/stop-converting-typos`, produced by
+  the Windows port, which shares this algorithm.
 - **`PhraseTracker.swift`** — phrase memory and retro-corrections; takes a renderer closure.
 
-`Tests/Switcher3wCoreTests/` covers it (55 cases, `swift test`): soft gates, evaluate outcomes,
-manual plan, phrase tracking, and a **dictionary-quality** test measuring the real NSSpellChecker
-against `WordFixture.swift`.
+`Tests/Switcher3wCoreTests/` covers it (69 cases, `swift test`): soft gates, evaluate outcomes,
+manual plan, phrase tracking, the typo guard, and a **dictionary-quality** test measuring the real
+NSSpellChecker against `WordFixture.swift`. Everything except that last file is Foundation-only and
+guarded with `#if canImport(AppKit)`, so the decision core can be built — and its logic exercised —
+on a machine that is not a Mac.
 
 ### `Sources/Switcher3w/` — the app
 

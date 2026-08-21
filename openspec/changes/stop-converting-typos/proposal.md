@@ -54,6 +54,20 @@ the resolver already had access to and never consulted.
 - The manual trigger is unaffected: it asks for the unguarded reading, because an explicit request is
   entitled to an answer even for a two-letter word.
 
+## Both ports
+
+The defect was reported against Windows and is structural, so it was in the macOS resolver too —
+`Sources/Switcher3wCore/NWayResolver.swift` had the identical shape (`if current.isValid { return
+.keep }`, then any other language wins). Both are fixed, with the same two thresholds and the same
+outcomes, named to stay legible side by side: `Outcome.Defer`/`Outcome.held`,
+`KeepReason`/`NWayResolver.KeepReason`, `TypoGuard.NearMiss`/`TypoGuard.nearMiss`.
+
+They differ in one place, because the platforms differ. The near-miss check needs the language's
+letters; Windows reads them from the Hunspell dictionary's own `TRY` line, and `NSSpellChecker`
+publishes nothing equivalent, so the macOS adapter derives them from the keyboard layout of that
+language — a language's letters are the letters its layout types, which is if anything the more
+direct answer.
+
 ## Impact
 
 Measured on the same natural-prose corpora, before and after:

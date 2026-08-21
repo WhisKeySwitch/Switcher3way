@@ -11,10 +11,15 @@ final class FakeDictionary: DictionaryValidating {
     var words: [String: Set<String>]
     /// Languages that report "no dictionary installed" regardless of their word set.
     var unavailable: Set<String> = []
+    /// Letters per language, for `TypoGuard.nearMiss`. Empty by default, which switches the
+    /// near-miss check off — so a test only pays for it, and only reasons about it, when it sets one.
+    var alphabets: [String: String] = [:]
 
     init(_ words: [String: Set<String>]) {
         self.words = words
     }
+
+    func alphabet(_ lang: String) -> String { alphabets[lang] ?? "" }
 
     func isAvailable(_ lang: String) -> Bool {
         !unavailable.contains(lang) && words[lang] != nil
@@ -116,6 +121,16 @@ enum Fixture {
             made.append(.init(layout: Layout(id: id, lang: lang == "ru2" ? "ru" : lang), keys: keys))
         }
         return FakeLayoutCatalog(layouts: made, current: current)
+    }
+
+    /// Turn a Cyrillic string into the keystrokes that produce it on that language's layout — how a
+    /// user types their own language, which is the side the precision guards are about.
+    static func keysForCyrillic(_ word: String, lang: String) -> [TypedKey] {
+        word.map { ch in
+            let code = rows.first { lang == "uk" ? $0.2 == ch : $0.3 == ch }?.0
+            precondition(code != nil, "character \(ch) is not in the fixture's key table")
+            return TypedKey(keyCode: code!, shift: false, caps: false)
+        }
     }
 
     /// Turn a Latin string into the keystrokes that would have produced it on the US layout —

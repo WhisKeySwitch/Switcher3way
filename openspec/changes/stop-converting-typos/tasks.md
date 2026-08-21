@@ -71,3 +71,43 @@ the log could tell which of three very different things had happened.
       was ever on the table and the near-miss guard is never consulted.
 - [x] 6.6 Build a signed sideload MSIX stamped **0.3.1**, so which build is running is never in doubt
       again, and confirm by extracting the package that the new code is actually inside it.
+
+## 7. Port to macOS
+
+The defect was structural, so it was in the Swift resolver too, in the same shape.
+
+- [x] 7.1 `Sources/Switcher3wCore/TypoGuard.swift` — port of the Windows guard.
+- [x] 7.2 `DictionaryValidating.alphabet(_:)`, defaulted to `""` via a protocol extension, so existing
+      conformances compile and an adapter that cannot answer degrades instead of vetoing everything.
+- [x] 7.3 `SystemDictionary.alphabet(_:)` derives the letters from the keyboard layout of that
+      language and caches them. `NSSpellChecker` has no equivalent of Hunspell's `TRY` line, and the
+      layout is arguably the more direct source anyway.
+- [x] 7.4 `Outcome.keep(KeepReason)` and `Outcome.held` — the Swift counterparts of `Keep(KeepReason)`
+      and `Defer`. Existing `guard case .keep` sites keep compiling; every construction site updated.
+- [x] 7.5 Resolver: phrase arbitrates below 6, near-miss vetoes from 6 up, `held` below 4 with nothing
+      settled; `manualPlan` evaluates unguarded.
+- [x] 7.6 `AppDelegate`: pass the phrase language in, log the keep reason, pin the phrase on a word
+      already valid, handle `held`, and settle a run of two agreeing held words through the existing
+      phrase-correction machinery. `resetPhrase()` pairs the phrase and the held run so neither can be
+      reset without the other.
+- [x] 7.7 `Tests/Switcher3wCoreTests/TypoGuardTests.swift` — 11 cases mirroring the Windows ones.
+- [x] 7.8 Guard `DictionaryQualityTests` with `#if canImport(AppKit)`: it is the only test tied to
+      Apple's frameworks, and without that the platform-independent core cannot be built or exercised
+      anywhere else.
+
+### What is and is not verified
+
+- [x] 7.9 `Switcher3wCore` **compiles** on the Windows toolchain, and every assertion in the new test
+      file was **executed** there against the compiled core through a standalone harness — XCTest
+      itself cannot run here (swift-corelibs-xctest fails to cast `@MainActor` test methods). 12/12
+      checks pass: reasons reported correctly, typos kept, short words held and then repaired by the
+      word that settles the phrase, long wrong-layout words still converted, the manual trigger not
+      second-guessed, and the guard degrading safely with no alphabet.
+- [x] 7.10 The test target compiles.
+- [ ] 7.11 **On a Mac:** `swift test` (the XCTest run proper, including the NSSpellChecker
+      dictionary-quality test), then `bash build_app.sh` — `Sources/Switcher3w/` is AppKit-bound and
+      has only been syntax-checked here, never type-checked.
+- [ ] 7.12 **On a Mac:** the same by-hand pass the Windows build got — type a Ukrainian paragraph with
+      deliberate typos and confirm from `~/Library/Logs/Switcher3w/switcher3w.log` that every word
+      reports `auto: keep — …` and the layout never moves, then type a word in the wrong layout and
+      confirm it still converts.

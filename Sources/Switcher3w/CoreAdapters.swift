@@ -11,6 +11,48 @@ import Switcher3wCore
 struct SystemDictionary: DictionaryValidating {
     func isAvailable(_ lang: String) -> Bool { Dict.isAvailable(lang) }
     func isValidWord(_ word: String, lang: String) -> Bool { Dict.isValidWord(word, lang: lang) }
+
+    /// The language's letters, for the near-miss typo check. The Windows port reads this from the
+    /// Hunspell dictionary's own `TRY` line; `NSSpellChecker` publishes nothing equivalent, so it is
+    /// taken from the keyboard layout of that language instead — a language's letters are the letters
+    /// its layout types, which is if anything the more direct answer to the question being asked.
+    ///
+    /// Cached: this is consulted on the typing path, and translating every keycode through a layout
+    /// on each word would be wasted work for an answer that only changes when layouts do.
+    func alphabet(_ lang: String) -> String { Self.alphabetCache.letters(for: String(lang.prefix(2))) }
+
+    @MainActor
+    private final class AlphabetCache {
+        private var cache: [String: String] = [:]
+
+        func letters(for lang: String) -> String {
+            if let hit = cache[lang] { return hit }
+            let letters = Self.derive(lang)
+            cache[lang] = letters
+            return letters
+        }
+
+        /// Every letter the layouts of this language can type, unshifted, lower-cased and de-duplicated.
+        private static func derive(_ lang: String) -> String {
+            var seen = Set<Character>()
+            var out = ""
+            for source in LayoutSwitcher.installedLayouts()
+            where LayoutSwitcher.languageCode(source).map({ String($0.prefix(2)) }) == lang {
+                guard let data = DynamicKeyMapping.layoutDataForSource(source) else { continue }
+                for code in UInt16(0)...UInt16(127) where DynamicKeyMapping.isLetterKeycode(code) {
+                    guard let c = DynamicKeyMapping.translateKeycode(code, layoutData: data,
+                                                                     shift: false, caps: false),
+                          c.isLetter else { continue }
+                    for lower in String(c).lowercased() where seen.insert(lower).inserted {
+                        out.append(lower)
+                    }
+                }
+            }
+            return out
+        }
+    }
+
+    private static let alphabetCache = AlphabetCache()
 }
 
 /// The TIS input sources behind the core's layout interface. `Layout` carries only the id and the

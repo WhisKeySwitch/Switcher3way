@@ -32,7 +32,7 @@ This is deliberately **precision-first**: a word that looks like code, is ALL-CA
 short is left alone rather than guessed at. A missed fix costs you one trigger tap; a wrong fix
 costs you trust.
 
-**On Windows, a typo is not treated as a wrong layout.** Before converting a word, the app checks
+**A typo is not treated as a wrong layout.** Before converting a word, the app checks
 whether the language you are already typing in has a real word one keystroke away — a dropped letter,
 a doubled one, two letters swapped. If it does, the simpler explanation is that you missed a key, and
 the word is left alone. This is why fumbling a word while writing Ukrainian no longer throws it into
