@@ -37,13 +37,18 @@
 - [x] 4.7 Benchmark `NearMiss`: 0.04–0.6 ms on a hit, 4–7 ms on a miss.
 - [x] 4.8 Full suite green (178).
 - [x] 4.9 First hand-verification attempt was inconclusive, and usefully so — see section 6.
-- [ ] 4.10 Re-run it on the 0.3.1 sideload build, reading the decisions out of the log rather than inferring them from the screen.
+- [x] 4.10 Re-run on the 0.3.1 sideload build, reading the decisions out of the log rather than inferring
+      them from the screen. Ukrainian paragraph with the exact typos that used to convert — `рукую`
+      (reads `here.`), `ае` (`ft`), `даже` (a real Russian word), `ща` (`of`) — all kept, **zero
+      conversions and zero layout switches**; then `ghbdsn` with the English layout active still
+      converted to `привіт` and moved the layout, so the app is demonstrably not just inert.
+      Scripted in `windows/tools/verify-typo-guard.py` so it can be re-run.
 
 ## 5. Document
 
 - [x] 5.1 Spec delta for `layout-switching-and-language-detection`.
-- [ ] 5.2 User guide (en/uk/ru): say that typos are left alone and that very short words wait for context.
-- [ ] 5.3 `CLAUDE.md` and `windows/RELEASING.md` status.
+- [x] 5.2 User guide (en/uk/ru): say that typos are left alone and that very short words wait for context.
+- [x] 5.3 `CLAUDE.md` and `windows/RELEASING.md` status.
 
 ## 6. Make the decision visible, because the first attempt could not see it
 

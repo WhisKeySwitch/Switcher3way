@@ -130,9 +130,16 @@ Import-Certificate -FilePath "$env:TEMP\s3w-dev.cer" -CertStoreLocation Cert:\Lo
 Remove both afterwards — a machine-wide trusted root means anything signed with that key is trusted by
 this PC, and the Store channel never needs it (the Store re-signs the package).
 
-**Only one of the two can run.** The single-instance mutex is shared, and both flavours read the same
-`%APPDATA%\Switcher3way` — the packaged app's data is *not* redirected to `LocalCache`. Whichever
-starts first wins; stop one before launching the other.
+**Installing the sideload package removes the Store one.** They share the package Name
+(`IronMade.Switcher3Way`) and differ only in publisher, and `Add-AppxPackage` replaces rather than
+installs alongside — the Store entry simply disappears, along with its Start-menu tile and its
+auto-start registration. Reinstall it from the Store when finished testing
+([9MXFXL7GG3C5](https://apps.microsoft.com/detail/9MXFXL7GG3C5)). **No user data is lost**: settings
+and logs live in `%APPDATA%\Switcher3way`, which is not redirected to `LocalCache`, so both flavours
+read the same files and the swap is invisible to them.
+
+**Only one of the two can run** for the same reason — the single-instance mutex and the data directory
+are shared. Whichever starts first wins; stop one before launching the other.
 
 **Notifications must be tested on the packaged build, not the MSI one.** `AppNotificationManager` is the
 one API whose behaviour differs between the flavours: unpackaged it creates its own activator, packaged it
