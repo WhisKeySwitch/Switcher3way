@@ -35,11 +35,34 @@
 - [x] 4.5 `як ти пишеш` in the wrong layout: two words held, then converted by the word that settles it.
 - [x] 4.6 `як ти?` — all words too short — converted by the two of them agreeing.
 - [x] 4.7 Benchmark `NearMiss`: 0.04–0.6 ms on a hit, 4–7 ms on a miss.
-- [x] 4.8 Full suite green (177).
-- [ ] 4.9 Exercise a packaged build by hand: type a Ukrainian paragraph with deliberate typos and confirm the layout never moves.
+- [x] 4.8 Full suite green (178).
+- [x] 4.9 First hand-verification attempt was inconclusive, and usefully so — see section 6.
+- [ ] 4.10 Re-run it on the 0.3.1 sideload build, reading the decisions out of the log rather than inferring them from the screen.
 
 ## 5. Document
 
 - [x] 5.1 Spec delta for `layout-switching-and-language-detection`.
 - [ ] 5.2 User guide (en/uk/ru): say that typos are left alone and that very short words wait for context.
 - [ ] 5.3 `CLAUDE.md` and `windows/RELEASING.md` status.
+
+## 6. Make the decision visible, because the first attempt could not see it
+
+The first attempt to verify this by hand reported "nothing was converted", and neither the tester nor
+the log could tell which of three very different things had happened.
+
+- [x] 6.1 Establish from the log what actually ran. `secure: …` appeared 27 times — that line is written
+      at the top of `AutoConvert` — so every word *was* evaluated and reached the resolver.
+- [x] 6.2 Establish which binary produced it: the **Store build 0.3.0, started 19 August**, which does
+      not contain this change. The test could not have exercised the fix either way. Asking for
+      verification without supplying a build was the mistake.
+- [x] 6.3 Note the deeper problem, which would have bitten the next attempt too: `Outcome.Keep` logged
+      **nothing**. Leaving a word alone is this app's most common decision and it changes nothing on
+      screen, so a guard working perfectly and a guard never running produced identical evidence. This
+      change made `Keep` the outcome that carries the new behaviour and left it silent — the fix was
+      unverifiable by construction.
+- [x] 6.4 Give `Outcome.Keep` a `KeepReason`, and log every decision with a plain-language reason.
+- [x] 6.5 Test that each reason is reported correctly, so the log is worth trusting. Writing it caught
+      one of my own examples being wrong: `програмаа` is not a word in English either, so no conversion
+      was ever on the table and the near-miss guard is never consulted.
+- [x] 6.6 Build a signed sideload MSIX stamped **0.3.1**, so which build is running is never in doubt
+      again, and confirm by extracting the package that the new code is actually inside it.

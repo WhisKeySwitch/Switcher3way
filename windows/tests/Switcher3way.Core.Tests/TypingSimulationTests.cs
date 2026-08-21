@@ -240,6 +240,40 @@ public class TypingSimulationTests
     private static bool IsCyrillic(string s) => s.Any(c => (c >= 'а' && c <= 'я') || c is 'і' or 'ї' or 'є');
 
     /// <summary>
+    /// Every way of deciding "leave it alone" reports itself distinctly. This matters more than it
+    /// looks: doing nothing is the app's most common decision and changes nothing on screen, so the
+    /// log is the only evidence that the guard ran at all — and the reasons are only worth logging if
+    /// they are actually right.
+    /// </summary>
+    [Fact]
+    public void Every_reason_for_leaving_a_word_alone_is_reported()
+    {
+        var cat = new MovingCatalog("uk", "en", "uk");
+        var r = new NWayResolver(cat, Real, new NoAlways());
+        Outcome Eval(string typed, string? phrase = null) =>
+            r.Evaluate(KeysFor(typed)!, capsLock: false, phraseLang: phrase);
+
+        // A real Ukrainian word, typed in the Ukrainian layout.
+        Assert.Equal(KeepReason.ValidInCurrent, Assert.IsType<Outcome.Keep>(Eval("програма")).Reason);
+
+        // "друкую" with the д dropped. This is the real failure from the corpus: it renders as "here."
+        // in English, so a conversion genuinely is on the table — and the near-miss test finds "друкую"
+        // one key away in Ukrainian and stops it. This is the guard doing the job it was added for.
+        Assert.Equal(KeepReason.LooksLikeATypo, Assert.IsType<Outcome.Keep>(Eval("рукую")).Reason);
+
+        // A fumble that is not a word anywhere. No conversion was ever on the table, so the near-miss
+        // test is never paid — the reason is the cheaper one, and it says so.
+        Assert.Equal(KeepReason.NotAWordAnywhere, Assert.IsType<Outcome.Keep>(Eval("програмаа")).Reason);
+
+        // "цу" reads as "we" in English, but the phrase is established Ukrainian and two letters is
+        // not enough to overturn that.
+        Assert.Equal(KeepReason.PhraseDisagrees, Assert.IsType<Outcome.Keep>(Eval("цу", phrase: "uk")).Reason);
+
+        // The same word with nothing to go on is held, not kept — a different outcome entirely.
+        Assert.IsType<Outcome.Defer>(Eval("цу"));
+    }
+
+    /// <summary>
     /// The bet the policy makes, on its own: a phrase that opens with short words. Those are left
     /// alone at the time — nothing yet distinguishes a two-letter Ukrainian word from a two-letter
     /// English one — and the first word long enough to settle the language comes back and converts

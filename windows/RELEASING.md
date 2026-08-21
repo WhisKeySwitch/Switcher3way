@@ -20,6 +20,17 @@
 > should lead with it, in all three languages — this is the reason to cut that release, not an
 > incidental passenger. Details and the numbers in `openspec/changes/stop-converting-typos/`.
 >
+> **`-Version` does not stamp the package.** `build-msix.ps1 -Version 0.3.1` names the output file
+> `Switcher3way-0.3.1-x64-sideload.msix` and sets the *assembly* version, but the package Identity comes
+> from the hardcoded `Version="…"` in `Package.appxmanifest`, which the flag does not touch. Build a
+> package without editing that line and you get one whose filename and identity disagree — which is how
+> a test session ended up run against a completely different build than the one under test. **Edit
+> `Package.appxmanifest` as well**, and check the result before trusting it:
+>
+> ```powershell
+> python -c "import zipfile,re;print(re.search(r'<Identity[^>]*>', zipfile.ZipFile('windows/dist/<pkg>.msix').read('AppxManifest.xml').decode()).group(0))"
+> ```
+>
 > **Reading a rewrite failure in the log.** Since 0.3.0 a replacement is verified by reading the text
 > back, so `Result` says what happened rather than only whether SendInput accepted the events:
 > `Ok` — read back and matches. `Mismatch` — landed wrong; the log carries `rewrite: MISMATCH — wanted

@@ -27,12 +27,19 @@ public abstract record Outcome
     private Outcome() { }
 
     /// <summary>
-    /// Leave the text and layout as they are. <paramref name="ValidInCurrent"/> distinguishes the two
-    /// reasons for that — the word is a real word of the language being typed in, or it is simply not
-    /// a word anywhere. The first is the strongest evidence available about what language this phrase
-    /// is in, and the caller uses it to pin the phrase.
+    /// Leave the text and layout as they are, and say why.
+    ///
+    /// The reason is not decoration. Most of what this app decides is "do nothing", and a decision to
+    /// do nothing is invisible on screen — so without the reason recorded, a guard that is working
+    /// perfectly and a guard that is broken produce exactly the same evidence: none. The reason also
+    /// carries information the caller acts on, since <see cref="KeepReason.ValidInCurrent"/> is the
+    /// strongest signal the app ever gets about what language a phrase is in.
     /// </summary>
-    public sealed record Keep(bool ValidInCurrent = false) : Outcome;
+    public sealed record Keep(KeepReason Reason = KeepReason.NotAWordAnywhere) : Outcome
+    {
+        /// <summary>The word is a real word of the language it was typed in.</summary>
+        public bool ValidInCurrent => Reason == KeepReason.ValidInCurrent;
+    }
 
     /// <summary>Exactly one target language: switch and rewrite.</summary>
     public sealed record Convert(Decision Decision) : Outcome;
@@ -50,6 +57,27 @@ public abstract record Outcome
     /// language, so the next word that does settle the phrase converts this one along with it.
     /// </summary>
     public sealed record Defer(string Original, IReadOnlyList<Winner> Winners) : Outcome;
+}
+
+/// <summary>
+/// Why a word was left alone. Every one of these is a decision, and every one of them is invisible
+/// unless it is written down.
+/// </summary>
+public enum KeepReason
+{
+    /// <summary>Not a word in any installed language — ordinary for names, code and typing in progress.</summary>
+    NotAWordAnywhere,
+    /// <summary>A real word of the language it was typed in. Nothing to fix, and it settles the phrase.</summary>
+    ValidInCurrent,
+    /// <summary>The current layout or its language could not be determined.</summary>
+    NoCurrentLanguage,
+    /// <summary>
+    /// It reads as another language, but the language being typed holds a word one keystroke away, so
+    /// a fumbled key is the simpler explanation. This is the guard that stops typos being converted.
+    /// </summary>
+    LooksLikeATypo,
+    /// <summary>Too short to decide alone, and it disagrees with the language the phrase settled into.</summary>
+    PhraseDisagrees,
 }
 
 /// <summary>One step of the manual cycle: a target layout and how the input looks in it.</summary>

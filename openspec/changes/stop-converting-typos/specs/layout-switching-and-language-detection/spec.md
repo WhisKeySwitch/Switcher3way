@@ -29,10 +29,11 @@ A word being valid in another language SHALL NOT by itself be sufficient grounds
 - **AND** the caller SHALL retain its keystrokes so that a later word which does settle the phrase converts the held word along with itself
 - **AND** a run of consecutive held words that all read as the same single language SHALL be taken as settling the phrase to that language, so that a message in which no word is long enough to decide anything is still converted
 
-#### Scenario: Report a word already valid where it was typed
-- **WHEN** the typed input is a real word in the language of the layout it was typed in
-- **THEN** the system SHALL leave it unchanged and SHALL report that this was the reason
-- **AND** the caller SHALL take this as establishing the phrase's language, it being the strongest such evidence available
+#### Scenario: Report why a word was left alone
+- **WHEN** the system decides to leave a word unchanged
+- **THEN** it SHALL report which rule reached that decision — that the word is already valid where it was typed, that it is not a word in any installed language, that it reads as another language but the language being typed holds a word one keystroke away, or that it is too short and the phrase disagrees
+- **AND** the reason SHALL be recorded in the debug log, because leaving a word alone changes nothing on screen and is otherwise indistinguishable from the detection never having run at all
+- **AND** where the reason is that the word is already valid in the language it was typed in, the caller SHALL take this as establishing the phrase's language, it being the strongest such evidence available
 
 #### Scenario: An explicit request is not second-guessed
 - **WHEN** the user asks for a conversion through the manual trigger

@@ -86,7 +86,7 @@ public sealed class NWayResolver
         var layouts = _layouts.InstalledLayouts();
         var currentId = _layouts.CurrentLayoutId();
         var currentLayout = layouts.FirstOrDefault(l => l.Id == currentId);
-        if (currentLayout?.Lang is null) return new Outcome.Keep();
+        if (currentLayout?.Lang is null) return new Outcome.Keep(KeepReason.NoCurrentLanguage);
         var currentLang = Two(currentLayout.Lang);
 
         // One candidate per language (layouts of the same language collapse, preferring the valid
@@ -111,7 +111,7 @@ public sealed class NWayResolver
             }
         }
 
-        if (!byLang.TryGetValue(currentLang, out var current)) return new Outcome.Keep();
+        if (!byLang.TryGetValue(currentLang, out var current)) return new Outcome.Keep(KeepReason.NoCurrentLanguage);
 
         // always-convert — an explicit user override: switch even bypassing the dictionary/vetoes.
         foreach (var cand in byLang.Values)
@@ -120,7 +120,7 @@ public sealed class NWayResolver
 
         // Typed correctly in the current language → do nothing. Say so: a real word of the language
         // being typed in is the best evidence there is about what language this phrase is.
-        if (current.IsValid) return new Outcome.Keep(ValidInCurrent: true);
+        if (current.IsValid) return new Outcome.Keep(KeepReason.ValidInCurrent);
 
         // Other languages where the input's letter core is a real word. Only the letter core is
         // validated; the whole token is re-rendered in the target on output (punctuation keys convert
@@ -156,7 +156,7 @@ public sealed class NWayResolver
             var byPhrase = phraseLang is null ? null : winners.FirstOrDefault(w => w.Lang == phraseLang);
             if (byPhrase is not null)
                 return new Outcome.Convert(new Decision(byPhrase.LayoutId, current.Text, byPhrase.Converted));
-            if (phraseLang is not null) return new Outcome.Keep();
+            if (phraseLang is not null) return new Outcome.Keep(KeepReason.PhraseDisagrees);
 
             // Nothing has settled the phrase yet. Under four characters there is no honest way to tell
             // a short Ukrainian word from a short English one, so hold the word — unconverted, but
@@ -172,7 +172,7 @@ public sealed class NWayResolver
         // back, and this is the check the resolver never had.
         if (weighEvidence &&
             TypoGuard.NearMiss(SoftGates.LetterCore(current.Text).ToLowerInvariant(), currentLang, _dict))
-            return new Outcome.Keep();
+            return new Outcome.Keep(KeepReason.LooksLikeATypo);
 
         if (winners.Count > 1) return new Outcome.Ambiguous(current.Text, winners);
         return new Outcome.Convert(new Decision(winners[0].LayoutId, current.Text, winners[0].Converted));

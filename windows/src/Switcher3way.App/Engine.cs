@@ -217,15 +217,24 @@ internal sealed class Engine
         switch (outcome)
         {
             case Outcome.Keep keep:
+            {
                 ForgetHeldRun();
-                // A word that is already a real word of the layout it was typed in settles what
-                // language this phrase is — nothing else the app sees is stronger. Recording it as
-                // Neutral, as this did before, threw that away and left short words undecidable.
-                _phrase.Record(word, _resolver.RenderCurrent(word) ?? "", 1,
+                var kept = _resolver.RenderCurrent(word) ?? "";
+                // Say so. Leaving a word alone is the app's most common decision and its least visible
+                // one: nothing moves on screen either way, so without this line a guard that is working
+                // and a guard that never ran produce identical evidence. That ambiguity has already
+                // cost this project one round of "it does nothing" that turned out to be correct
+                // behaviour, and it is what makes the typo guard unverifiable by hand.
+                Diagnostics.Log($"  auto: \"{kept}\" kept — {Explain(keep.Reason)}");
+                // A word already valid in the layout it was typed in settles what language this phrase
+                // is; nothing else the app sees is stronger. This used to be filed as Neutral, which
+                // threw the evidence away and left short words undecidable.
+                _phrase.Record(word, kept, 1,
                                keep.ValidInCurrent
                                    ? new PhraseTracker.WordKind.Locked(LangOf(_catalog.CurrentLayoutId() ?? ""))
                                    : new PhraseTracker.WordKind.Neutral(), gen);
                 break;
+            }
 
             case Outcome.Defer defer:
             {
@@ -332,6 +341,18 @@ internal sealed class Engine
             NotifyProtected();
         }
     }
+
+    /// <summary>Plain-language reason for a word being left alone, for the debug log.</summary>
+    private static string Explain(KeepReason reason) => reason switch
+    {
+        KeepReason.ValidInCurrent => "already a word in this layout's language",
+        KeepReason.NotAWordAnywhere => "not a word in any installed language",
+        KeepReason.NoCurrentLanguage => "current layout has no usable language",
+        KeepReason.LooksLikeATypo => "reads as another language, but this one has a word one key away "
+                                     + "— treating it as a typo",
+        KeepReason.PhraseDisagrees => "too short to decide, and the phrase reads as another language",
+        _ => reason.ToString(),
+    };
 
     /// <summary>
     /// Enough held words have agreed on the same language to act on them together. Convert the whole
