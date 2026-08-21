@@ -12,12 +12,23 @@
 > Both channels are at **0.3.0**. 0.2.8 was a Store-only submission; the MSI channel skipped it and
 > went 0.2.7 → 0.2.9 → 0.3.0.
 >
+> **`main` carries unreleased work.** After 0.3.0 shipped, the rewrite gained a check that the text it
+> replaced is actually gone — not merely that the replacement arrived — after that hole was found reporting
+> success for a replacement that landed *beside* the old text. It was deliberately not released on its own:
+> nothing a user can see changes unless a rewrite fails. **The next version bump must carry it**, and its
+> release notes should say that a conversion which does not land is now undone rather than reported as done.
+> Details in `openspec/changes/archive/…-verify-the-old-text-is-gone/`.
+>
 > **Reading a rewrite failure in the log.** Since 0.3.0 a replacement is verified by reading the text
 > back, so `Result` says what happened rather than only whether SendInput accepted the events:
 > `Ok` — read back and matches. `Mismatch` — landed wrong; the log carries `rewrite: MISMATCH — wanted
 > "…", landed "…"`, the text was put back, and the manual cycle was abandoned. `Unverified` — the
 > target exposes no readable text (Chromium before its accessibility tree exists, for instance); this
 > is *not* a failure and is treated as applied. A `Mismatch` in a user's log is the line to ask for.
+> It carries two figures added after 0.3.0: `[caret A -> B, expected C]` shows whether the right number of
+> characters was removed, and `[trailing X -> Y]` shows whether the old text was left behind after the
+> caret — a growing trailing count with a perfect caret figure means the replacement landed beside the
+> original rather than over it.
 
 Switcher3way for Windows ships through **two channels**, built from the same project:
 
