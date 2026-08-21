@@ -38,4 +38,28 @@ public sealed class HunspellDictionaryValidator : IDictionaryValidator
         var list = Load(lang);
         return list is not null && list.Check(word);
     }
+
+    private readonly ConcurrentDictionary<string, string> _alphabets = new();
+
+    /// <summary>
+    /// The language's letters, taken from the dictionary's own <c>TRY</c> line — the list Hunspell
+    /// keeps, in frequency order, for building a misspelling's neighbours. Upper-case forms and the
+    /// punctuation some dictionaries append are dropped: the near-miss check works on lower-cased
+    /// letter cores, so trying <c>Ф</c> after <c>ф</c> only doubles the work.
+    /// </summary>
+    public string Alphabet(string lang) => _alphabets.GetOrAdd(Two(lang), l =>
+    {
+        var list = Load(l);
+        var t = list?.Affix?.TryString;
+        if (string.IsNullOrEmpty(t)) return "";
+        var seen = new HashSet<char>();
+        var sb = new System.Text.StringBuilder(t.Length);
+        foreach (var c in t)
+        {
+            if (!char.IsLetter(c)) continue;
+            var lower = char.ToLowerInvariant(c);
+            if (seen.Add(lower)) sb.Append(lower);
+        }
+        return sb.ToString();
+    });
 }

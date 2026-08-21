@@ -32,6 +32,20 @@ This is deliberately **precision-first**: a word that looks like code, is ALL-CA
 short is left alone rather than guessed at. A missed fix costs you one trigger tap; a wrong fix
 costs you trust.
 
+**On Windows, a typo is not treated as a wrong layout.** Before converting a word, the app checks
+whether the language you are already typing in has a real word one keystroke away — a dropped letter,
+a doubled one, two letters swapped. If it does, the simpler explanation is that you missed a key, and
+the word is left alone. This is why fumbling a word while writing Ukrainian no longer throws it into
+English and drags the layout with it.
+
+**Very short words wait for their sentence.** Under about four letters, a dictionary hit means almost
+nothing — a quarter of all two-letter Latin strings are in the English dictionary, mostly as
+abbreviations like `ft` or `lb`. So the app does not decide such a word on its own: it uses the
+language the rest of the phrase has settled into. If nothing has settled it yet, the word is left on
+screen untouched and converted a moment later, together with the first word long enough to settle the
+question — or, in a message where every word is short, as soon as two of them agree. A word left alone
+because it was truly the only thing you typed is always fixable with one tap of the trigger.
+
 Words valid in **both Ukrainian and Russian** (`там`, `добре`) get special treatment: they are
 converted to the **language for ambiguous words** (Settings → Auto-fix; Ukrainian by default).
 If the phrase you're typing later turns out to be the other language — a word appears that's

@@ -19,6 +19,31 @@ public sealed class NWayResolver
         _always = always;
     }
 
+    /// <summary>
+    /// The length at which a dictionary hit becomes evidence on its own.
+    ///
+    /// Below it, two independent things go wrong at once. The hit itself means little: 160 of the 676
+    /// two-letter Latin strings are in the English dictionary — <c>ft</c>, <c>bf</c>, <c>kw</c>,
+    /// <c>lb</c> — so a short Ukrainian typo has roughly a one-in-four chance of "being an English
+    /// word". And the obvious cross-check, asking whether the typed text is a near miss of a word in
+    /// the language being typed, stops working too: a word has about (alphabet × 2 × length) one-edit
+    /// neighbours, so short words have a near miss almost by definition. Measured against genuine
+    /// wrong-layout typing, <see cref="TypoGuard.NearMiss"/> cries wolf on 100% of two-letter words,
+    /// 30–40% of four-letter ones, and 0% from six characters up, in both directions.
+    ///
+    /// So very short words are not decided here at all — they are handed to the phrase around them —
+    /// and the near-miss cross-check is only consulted where it still discriminates.
+    /// </summary>
+    public const int UndecidableBelow = 4;
+
+    /// <summary>
+    /// The length from which <see cref="TypoGuard.NearMiss"/> is worth listening to. See
+    /// <see cref="UndecidableBelow"/> for why it is useless below this, and note the band between the
+    /// two: four and five characters, where the dictionary hit is worth something but the cross-check
+    /// is not, so the hit is acted on unless the phrase says otherwise.
+    /// </summary>
+    public const int NearMissTrustedFrom = 6;
+
     private sealed record Candidate(string LayoutId, string Lang, string Text, bool IsValid);
 
     private static string Two(string lang) => lang.Length <= 2 ? lang : lang.Substring(0, 2);
@@ -36,9 +61,25 @@ public sealed class NWayResolver
     /// <see cref="Outcome.Keep"/> when the current layout/language can't be resolved, the word is
     /// already valid in the current language, or no other language matches; <see cref="Outcome.Convert"/>
     /// for exactly one target; <see cref="Outcome.Ambiguous"/> when several match (the caller applies
-    /// the preferred-language / phrase-lock policy).
+    /// the preferred-language / phrase-lock policy); <see cref="Outcome.Defer"/> when a target matched
+    /// but the word is too short for that to mean anything on its own.
     /// </summary>
-    public Outcome Evaluate(IReadOnlyList<TypedKey> keys, bool capsLock)
+    /// <param name="phraseLang">
+    /// The language the surrounding phrase has already settled into, if any (the caller's
+    /// <c>PhraseTracker.LockedLang</c>). It is the tie-breaker for words too short to decide alone:
+    /// with it, a two-letter word converts because the phrase says so; without it, the word waits.
+    /// </param>
+    public Outcome Evaluate(IReadOnlyList<TypedKey> keys, bool capsLock, string? phraseLang = null) =>
+        Evaluate(keys, capsLock, phraseLang, weighEvidence: true);
+
+    /// <param name="weighEvidence">
+    /// Whether the precision guards apply. They exist to stop the app acting on its own initiative
+    /// when the evidence is thin, which is not the situation when the user has pressed the trigger:
+    /// an explicit request is entitled to an answer even for a two-letter word, so
+    /// <see cref="ManualPlan"/> turns them off.
+    /// </param>
+    private Outcome Evaluate(IReadOnlyList<TypedKey> keys, bool capsLock, string? phraseLang,
+                             bool weighEvidence)
     {
         if (keys.Count == 0) return new Outcome.Keep();
 
@@ -77,8 +118,9 @@ public sealed class NWayResolver
             if (cand.Lang != currentLang && _always.IsAlwaysConvert(SoftGates.LetterCore(cand.Text)))
                 return new Outcome.Convert(new Decision(cand.LayoutId, current.Text, cand.Text));
 
-        // Typed correctly in the current language → do nothing.
-        if (current.IsValid) return new Outcome.Keep();
+        // Typed correctly in the current language → do nothing. Say so: a real word of the language
+        // being typed in is the best evidence there is about what language this phrase is.
+        if (current.IsValid) return new Outcome.Keep(ValidInCurrent: true);
 
         // Other languages where the input's letter core is a real word. Only the letter core is
         // validated; the whole token is re-rendered in the target on output (punctuation keys convert
@@ -95,6 +137,43 @@ public sealed class NWayResolver
 
         // 0 — not wrong-layout; 1 — convert; >1 — ambiguous (uk↔ru): caller applies the policy.
         if (winners.Count == 0) return new Outcome.Keep();
+
+        // Both guards below weigh how much the dictionary hit is actually worth, and the order between
+        // them matters: the near-miss test is itself meaningless on a very short word, because almost
+        // any two-letter string is one edit from one of the 160 the English dictionary accepts. Short
+        // words are settled by the phrase; only longer ones are worth second-guessing as typos.
+        // How far the dictionary hit can be trusted depends almost entirely on how long the word is,
+        // and the two guards below cover different bands of that. Long words are checked against the
+        // likelier story — that a key was missed in the language already being typed. Short words
+        // cannot be checked that way at all, because at that length every string has a near miss, so
+        // they are settled by the phrase around them instead.
+        var coreLength = SoftGates.LetterCore(current.Text).Length;
+        if (weighEvidence && coreLength < NearMissTrustedFrom)
+        {
+            // Short enough that the near-miss cross-check below would fire on anything, so the phrase
+            // arbitrates instead. Agreeing with the language already being written is corroboration;
+            // contradicting it is not enough to overturn it.
+            var byPhrase = phraseLang is null ? null : winners.FirstOrDefault(w => w.Lang == phraseLang);
+            if (byPhrase is not null)
+                return new Outcome.Convert(new Decision(byPhrase.LayoutId, current.Text, byPhrase.Converted));
+            if (phraseLang is not null) return new Outcome.Keep();
+
+            // Nothing has settled the phrase yet. Under four characters there is no honest way to tell
+            // a short Ukrainian word from a short English one, so hold the word — unconverted, but
+            // with its keystrokes remembered, so the word that does settle the phrase converts this
+            // one along with it. That is what stops the caution from being a plain loss of recall.
+            if (coreLength < UndecidableBelow) return new Outcome.Defer(current.Text, winners);
+            // Four or five characters, with nothing to contradict it: worth acting on.
+        }
+
+        // Before accepting "this is a word in another language",
+        // check the likelier story: that it is a word of *this* language with one key missed. A
+        // fumbled key is a simpler explanation than a keyboard that changed for one word and changed
+        // back, and this is the check the resolver never had.
+        if (weighEvidence &&
+            TypoGuard.NearMiss(SoftGates.LetterCore(current.Text).ToLowerInvariant(), currentLang, _dict))
+            return new Outcome.Keep();
+
         if (winners.Count > 1) return new Outcome.Ambiguous(current.Text, winners);
         return new Outcome.Convert(new Decision(winners[0].LayoutId, current.Text, winners[0].Converted));
     }
@@ -150,7 +229,7 @@ public sealed class NWayResolver
         // Put the "correct" layout first, so one tap gives it. Unambiguous → the dictionary winner;
         // ambiguous (uk↔ru) → the preferred ambiguity language, so one tap matches auto-fix.
         string? promoteLayoutId = null, promoteConverted = null;
-        switch (Evaluate(keys, capsLock))
+        switch (Evaluate(keys, capsLock, phraseLang: null, weighEvidence: false))
         {
             case Outcome.Convert c:
                 promoteLayoutId = c.Decision.TargetLayoutId;

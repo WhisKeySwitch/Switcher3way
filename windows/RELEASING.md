@@ -12,6 +12,14 @@
 > Both channels are at **0.3.0**. 0.2.8 was a Store-only submission; the MSI channel skipped it and
 > went 0.2.7 → 0.2.9 → 0.3.0.
 >
+> **`main` carries unreleased work: the typo fix.** A user left the app because every fumbled key threw
+> a word into English and took the layout with it. Auto-fix now checks whether the typed text is a near
+> miss of a word in the language being typed, and refuses to decide words under six characters without
+> help from the surrounding phrase. Measured typo-conversion rate went from 2.9% to 0%, with
+> paragraph-level recall unchanged. **The next version bump must carry it**, and its release notes
+> should lead with it, in all three languages — this is the reason to cut that release, not an
+> incidental passenger. Details and the numbers in `openspec/changes/stop-converting-typos/`.
+>
 > **Reading a rewrite failure in the log.** Since 0.3.0 a replacement is verified by reading the text
 > back, so `Result` says what happened rather than only whether SendInput accepted the events:
 > `Ok` — read back and matches. `Mismatch` — landed wrong; the log carries `rewrite: MISMATCH — wanted

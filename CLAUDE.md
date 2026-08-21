@@ -30,15 +30,24 @@ Windows terms (Win32/WinUI constraints, what the user sees), not by what macOS d
 pwsh windows/build-msi.ps1                          # direct-download installer (WiX)
 pwsh windows/build-msix.ps1 -Version 0.2.9          # Store package → windows/dist/
 pwsh windows/build-msix.ps1 -Sideload -Sign         # a package you can actually install locally
-dotnet test windows/tests/Switcher3way.Core.Tests   # 166 tests, no app or permissions needed
+dotnet test windows/tests/Switcher3way.Core.Tests   # 177 tests, no app or permissions needed
 ```
 
 - **Two flavours, one project.** `-p:Packaged=true` builds the MSIX (Store); the default is
   unpackaged (MSI). `PackageInfo.IsPackaged` branches the updater and "start with Windows".
-- **`Switcher3way.Core`** is the shared decision core (resolver, soft gates, phrase tracking) with
-  the real test suite. `Switcher3way.App` is the platform shell: `KeyboardMonitor` (hook + word
-  buffer), `Engine` (auto-fix + manual cycle), `TextRewriter` (erase and retype), `Selection`,
-  `SecureField`, `CaretChip`, `Tray`, `Toast`.
+- **`Switcher3way.Core`** is the shared decision core (resolver, soft gates, phrase tracking,
+  `TypoGuard`) with the real test suite. `Switcher3way.App` is the platform shell: `KeyboardMonitor`
+  (hook + word buffer), `Engine` (auto-fix + manual cycle), `TextRewriter` (erase and retype),
+  `Selection`, `SecureField`, `CaretChip`, `Tray`, `Toast`.
+- **Precision is the hard constraint, and it is measured, not asserted.** A false conversion moves the
+  layout as well as the text, so it costs the user the rest of the sentence; a missed one costs a
+  trigger tap. `NWayResolver` therefore does not convert on a dictionary hit alone — it first asks
+  whether the language being typed holds a word one edit away (`TypoGuard.NearMiss`), and it refuses
+  to decide words under 6 characters on their own, handing them to the phrase (`Outcome.Defer`, then
+  `PhraseTracker`'s retro-correction). Both thresholds come from measurement, not taste: see
+  `openspec/changes/stop-converting-typos`. `TypingSimulationTests` scores this over whole paragraphs,
+  which is the only way to see it — per-word, deferring short words looks like a 45-point recall loss
+  and is actually free.
 - **Debug log:** Settings → Advanced → Debug logging, then
   `%APPDATA%\Switcher3way\Logs\switcher3way.log`. Diagnostics switches: `diaghint`, `diagtoast`,
   `diagcaret`, `diagpw`, `diagui`, `selftest`.
