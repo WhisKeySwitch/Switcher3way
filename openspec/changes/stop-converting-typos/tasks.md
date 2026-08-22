@@ -104,9 +104,11 @@ The defect was structural, so it was in the Swift resolver too, in the same shap
       word that settles the phrase, long wrong-layout words still converted, the manual trigger not
       second-guessed, and the guard degrading safely with no alphabet.
 - [x] 7.10 The test target compiles.
-- [ ] 7.11 **On a Mac:** `swift test` (the XCTest run proper, including the NSSpellChecker
+- [x] 7.11 **On a Mac:** `swift test` (the XCTest run proper, including the NSSpellChecker
       dictionary-quality test), then `bash build_app.sh` — `Sources/Switcher3w/` is AppKit-bound and
-      has only been syntax-checked here, never type-checked.
+      has only been syntax-checked here, never type-checked. Done 2026-08-22: 69 tests, 0 failures
+      (dictionary-quality at 100% for en/uk/ru); `build_app.sh` produced a bundle signed with the
+      stable `Switcher3way Self-Signed` identity, `codesign --verify` clean.
 - [ ] 7.12 **On a Mac:** the same by-hand pass the Windows build got — type a Ukrainian paragraph with
       deliberate typos and confirm from `~/Library/Logs/Switcher3w/switcher3w.log` that every word
       reports `auto: keep — …` and the layout never moves, then type a word in the wrong layout and
