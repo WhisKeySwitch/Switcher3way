@@ -18,7 +18,7 @@ internal sealed record UpdateInfo(string Version, string Notes, string MsiUrl, s
 /// </summary>
 internal sealed class UpdateChecker
 {
-    private const string ReleasesApi = "https://api.github.com/repos/WhisKeySwitch/switcher3way-releases/releases";
+    private const string ReleasesApi = "https://api.github.com/repos/WhisKeySwitch/Switcher3way/releases";
     private const string TagPrefix = "windows-v";
     private static readonly TimeSpan Interval = TimeSpan.FromHours(24);
 

@@ -112,7 +112,10 @@ Rationale + detail: `NOTES-3WAY.md`. Summary:
 3. **Updater rebuilt for the fork** — the upstream updater was deleted at fork time (so
    stock 2-way upstream releases couldn't clobber the fork); July 2026 added a new one
    (`UpdateChecker.swift` + `UpdateInstaller.swift`) whose ONLY source is the fork's own
-   public releases repo (`WhisKeySwitch/switcher3way-releases`): daily background check
+   releases — on the main repo (`WhisKeySwitch/Switcher3way`) since the August 2026
+   consolidation (previously the separate `switcher3way-releases` downloads repo, which stays
+   up read-only until the one-time bridge release ships to both — see `NOTES-3WAY.md`):
+   daily background check
    (General-tab toggle, default on) + "Check for Updates…" menu item; notify → one-click
    verified install (manifest sha256 + same-certificate codesign gate — that's what keeps
    TCC permissions across updates) → relaunch via `AppRelauncher`.
@@ -278,7 +281,7 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 ## Current state
 
 - **macOS** — feature-complete: 3-way auto + manual switching, renamed, custom icon, in-app updates
-  from the fork's own releases repo,
+  from the fork's own releases (on the main repo since August 2026),
   modernized UI (toolbar-tab Settings, onboarding checklist, status-first menu with Pause),
   stable signing, abort-safe retype + phrase-aware ambiguity resolution (July 2026). Builds
   clean; latest release 1.3.0.
@@ -313,4 +316,4 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 - `openspec/` — OpenSpec capability specs back-filled from the code (`CAPABILITIES.md` is the
   overview; validate with `openspec validate --specs`). Software updates are a first-class
   capability (`specs/software-updates/`) since July 2026 — the updater targets only the fork's
-  own releases repo.
+  own releases, hosted on the main repo since August 2026.
