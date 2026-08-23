@@ -33,6 +33,27 @@ internal sealed class Engine
     private readonly IDictionaryValidator _dict = new HunspellDictionaryValidator();
     private readonly NWayResolver _resolver;
     private readonly PhraseTracker _phrase;
+
+    /// <summary>
+    /// A run of consecutive short words that were all held (see <see cref="Outcome.Defer"/>) and all
+    /// read as the same other language. No single one of them is evidence of anything. Several in a
+    /// row are: words only pile up here while nothing in the phrase validates in the layout being
+    /// typed in, which is precisely what typing in the wrong layout looks like. Two is enough, and
+    /// without this a short message — "як ти?" — would never be fixed at all, because no word in it is
+    /// long enough to settle the phrase by itself.
+    /// </summary>
+    private string? _heldLang;
+    private int _heldRun;
+    /// <summary>The language a run of held words settled on, standing in for a phrase lock.</summary>
+    private string? _settledLang;
+
+    private const int HeldRunSettles = 2;
+
+    private void ForgetHeldRun() { _heldLang = null; _heldRun = 0; _settledLang = null; }
+
+    /// <summary>Drop the phrase and everything derived from it. The held run is part of the phrase's
+    /// state, so the two must never be reset apart.</summary>
+    private void ResetPhrase() { _phrase.Reset(); ForgetHeldRun(); }
     private readonly KeyboardMonitor _monitor;
     private readonly BlockingCollection<Action> _work = new();
 
@@ -131,7 +152,7 @@ internal sealed class Engine
         _monitor.Typed += () => { lock (_cycleLock) _cycle = null; };
         _monitor.ForegroundChanged += hwnd => _work.Add(() => OnForegroundChanged(hwnd));
         // Phrase resets/extra-spaces are marshaled onto the worker so all tracker mutation is single-threaded.
-        _monitor.PhraseReset += () => _work.Add(() => _phrase.Reset());
+        _monitor.PhraseReset += () => _work.Add(ResetPhrase);
         _monitor.ExtraSpace += () => _work.Add(() => _phrase.NoteExtraSpace());
     }
 
@@ -180,26 +201,69 @@ internal sealed class Engine
     // ---- Auto path (phrase-aware) ----------------------------------------------------------
     private void AutoConvert(IReadOnlyList<TypedKey> word, char boundary)
     {
-        if (_settings.IsDeniedApp(LayoutSwitcher.Foreground().Exe)) { _phrase.Reset(); return; } // terminals / RDP / pw
+        if (_settings.IsDeniedApp(LayoutSwitcher.Foreground().Exe)) { ResetPhrase(); return; } // terminals / RDP / pw
         // Log what the guard saw, not just when it fires: "no suppression" is indistinguishable from
         // "guard broken" otherwise, which is exactly how the browser case hid for four releases.
         if (_settings.DebugLog) Diagnostics.Log("  secure: " + SecureField.Describe());
         if (SecureField.IsFocusedPassword())                                 // never touch a password field
-        { Diagnostics.Log("  auto: suppressed — password field"); _phrase.Reset(); return; }
+        { Diagnostics.Log("  auto: suppressed — password field"); ResetPhrase(); return; }
 
         bool caps = word.Any(k => k.Caps);
-        var outcome = _resolver.Evaluate(word, caps);
+        // The phrase's language goes in, because words too short to decide alone are decided by it.
+        var outcome = _resolver.Evaluate(word, caps, _phrase.LockedLang ?? _settledLang);
         int gen = _phrase.Generation;
         bool hardBoundary = boundary != ' '; // Enter/Tab ends the phrase after this word
 
         switch (outcome)
         {
-            case Outcome.Keep:
-                _phrase.Record(word, _resolver.RenderCurrent(word) ?? "", 1, new PhraseTracker.WordKind.Neutral(), gen);
+            case Outcome.Keep keep:
+            {
+                ForgetHeldRun();
+                var kept = _resolver.RenderCurrent(word) ?? "";
+                // Say so. Leaving a word alone is the app's most common decision and its least visible
+                // one: nothing moves on screen either way, so without this line a guard that is working
+                // and a guard that never ran produce identical evidence. That ambiguity has already
+                // cost this project one round of "it does nothing" that turned out to be correct
+                // behaviour, and it is what makes the typo guard unverifiable by hand.
+                Diagnostics.Log($"  auto: \"{kept}\" kept — {Explain(keep.Reason)}");
+                // A word already valid in the layout it was typed in settles what language this phrase
+                // is; nothing else the app sees is stronger. This used to be filed as Neutral, which
+                // threw the evidence away and left short words undecidable.
+                _phrase.Record(word, kept, 1,
+                               keep.ValidInCurrent
+                                   ? new PhraseTracker.WordKind.Locked(LangOf(_catalog.CurrentLayoutId() ?? ""))
+                                   : new PhraseTracker.WordKind.Neutral(), gen);
                 break;
+            }
+
+            case Outcome.Defer defer:
+            {
+                // Reads as another language, but it is two or three letters long, so that reading is
+                // worth very little — a quarter of two-letter Latin strings are in the English
+                // dictionary. Leave the screen alone and remember the keystrokes as defaulted to the
+                // current language: if a later word settles the phrase the other way, the correction
+                // machinery converts this word along with it, and if none does, nothing was disturbed.
+                var shown = _resolver.RenderCurrent(word) ?? defer.Original;
+                var cur = LangOf(_catalog.CurrentLayoutId() ?? "");
+                Diagnostics.Log($"  auto: \"{shown}\" reads as " +
+                                string.Join("/", defer.Winners.Select(w => $"{w.Converted} [{w.Lang}]")) +
+                                " — too short to act on, waiting for the phrase");
+                _phrase.Record(word, shown, 1, new PhraseTracker.WordKind.Defaulted(cur), gen);
+
+                // Count the run. Only an unambiguous reading counts: a word that could be two
+                // languages says nothing about which one this phrase is in.
+                var only = defer.Winners.Count == 1 ? defer.Winners[0] : null;
+                if (only is null || only.Lang != _heldLang) { _heldLang = only?.Lang; _heldRun = only is null ? 0 : 1; }
+                else _heldRun++;
+
+                if (_heldRun >= HeldRunSettles && only is not null && !hardBoundary)
+                    SettleHeldRun(only.Lang, only.LayoutId, gen);
+                break;
+            }
 
             case Outcome.Convert conv:
             {
+                ForgetHeldRun();
                 var d = conv.Decision;
                 if (_settings.IsNeverConvert(d.Original, d.Converted))
                 {
@@ -219,6 +283,7 @@ internal sealed class Engine
 
             case Outcome.Ambiguous amb:
             {
+                ForgetHeldRun();
                 // Prefer the phrase lock, else the setting. "off" or no matching winner → keep.
                 var target = _phrase.LockedLang ?? (_settings.AmbiguousLang == "off" ? null : _settings.AmbiguousLang);
                 var w = target is null ? null : amb.Winners.FirstOrDefault(x => x.Lang == target);
@@ -233,7 +298,7 @@ internal sealed class Engine
             }
         }
 
-        if (hardBoundary) _phrase.Reset();
+        if (hardBoundary) ResetPhrase();
     }
 
     /// <summary>Convert one word: rewrite while still in the source layout, switch only on success
@@ -265,15 +330,59 @@ internal sealed class Engine
         else if (res == TextRewriter.Result.Aborted)
         {
             Diagnostics.Log($"  auto: \"{d.Original}\" -> aborted (user typed)");
-            _phrase.Reset(); // screen state uncertain — drop phrase memory
+            ResetPhrase(); // screen state uncertain — drop phrase memory
         }
         else
         {
             Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" : {res}");
             // A rewrite that landed wrong, or that could not be checked, leaves the screen in a state the
             // phrase tracker's model no longer describes — the same reasoning as an abort.
-            if (res is TextRewriter.Result.Mismatch) _phrase.Reset();
+            if (res is TextRewriter.Result.Mismatch) ResetPhrase();
             NotifyProtected();
+        }
+    }
+
+    /// <summary>Plain-language reason for a word being left alone, for the debug log.</summary>
+    private static string Explain(KeepReason reason) => reason switch
+    {
+        KeepReason.ValidInCurrent => "already a word in this layout's language",
+        KeepReason.NotAWordAnywhere => "not a word in any installed language",
+        KeepReason.NoCurrentLanguage => "current layout has no usable language",
+        KeepReason.LooksLikeATypo => "reads as another language, but this one has a word one key away "
+                                     + "— treating it as a typo",
+        KeepReason.PhraseDisagrees => "too short to decide, and the phrase reads as another language",
+        _ => reason.ToString(),
+    };
+
+    /// <summary>
+    /// Enough held words have agreed on the same language to act on them together. Convert the whole
+    /// held run in one rewrite and treat the phrase as settled, so the words after it convert directly
+    /// instead of piling up too.
+    /// </summary>
+    private void SettleHeldRun(string lang, string layoutId, int gen)
+    {
+        var corr = _phrase.BuildCorrection(lang, layoutId);
+        if (corr is null) return;
+
+        var res = ArmedRewrite(corr.OldSegment.Length, corr.NewSegment, corr.OldSegment);
+        if (res is TextRewriter.Result.Ok or TextRewriter.Result.Unverified)
+        {
+            var prevLayout = _catalog.CurrentLayoutId();
+            var path = LayoutSwitcher.SwitchForeground(layoutId);
+            Diagnostics.Log($"  auto: {_heldRun} short words agree -> [{LangLabel(layoutId)}] " +
+                            $"\"{corr.NewSegment.TrimEnd()}\" via {path} : {res}");
+            _phrase.Confirm(corr, gen);
+            _settledLang = lang;
+            _heldLang = null;
+            _heldRun = 0;
+            RaiseConverted(corr.OldSegment.TrimEnd(), corr.NewSegment.TrimEnd(), layoutId);
+            SeedCancelCycle(corr.OldSegment.TrimEnd(), corr.NewSegment.TrimEnd(), ' ', layoutId, prevLayout);
+        }
+        else
+        {
+            Diagnostics.Log($"  auto: held-run correction : {res}");
+            if (res is TextRewriter.Result.Mismatch or TextRewriter.Result.Aborted) _phrase.Reset();
+            ForgetHeldRun();
         }
     }
 
@@ -299,12 +408,12 @@ internal sealed class Engine
         else if (res == TextRewriter.Result.Aborted)
         {
             Diagnostics.Log("  auto: phrase correction aborted (user typed)");
-            _phrase.Reset();
+            ResetPhrase();
         }
         else
         {
             Diagnostics.Log($"  auto: phrase correction : {res}");
-            if (res is TextRewriter.Result.Mismatch) _phrase.Reset();
+            if (res is TextRewriter.Result.Mismatch) ResetPhrase();
             NotifyProtected();
         }
     }
@@ -513,7 +622,7 @@ internal sealed class Engine
 
         // Manual control invalidates the phrase memory: its rewrites aren't tracked, so a later
         // phrase correction would be computed over text that is no longer on screen (macOS parity).
-        _phrase.Reset();
+        ResetPhrase();
 
         bool restore = cyc.Step >= cyc.Plan.Candidates.Count;
         string targetId = restore ? cyc.Plan.OriginalLayoutId : cyc.Plan.Candidates[cyc.Step].TargetLayoutId;

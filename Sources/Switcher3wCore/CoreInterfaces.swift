@@ -38,6 +38,21 @@ public struct Layout: Sendable, Equatable {
 public protocol DictionaryValidating {
     func isAvailable(_ lang: String) -> Bool
     func isValidWord(_ word: String, lang: String) -> Bool
+
+    /// The language's letters, for generating the neighbours of a word in `TypoGuard.nearMiss`.
+    /// Empty means "unknown", and the near-miss check simply does not run — which is why there is a
+    /// default: a validator that cannot answer should not have to, and degrading to the previous
+    /// behaviour is safer than vetoing everything.
+    ///
+    /// The Windows port takes this from the Hunspell dictionary's own `TRY` line. `NSSpellChecker`
+    /// exposes nothing equivalent, so the macOS adapter derives it from the keyboard layout of that
+    /// language — which is arguably the more honest source anyway: a language's letters are the
+    /// letters its layout types.
+    func alphabet(_ lang: String) -> String
+}
+
+public extension DictionaryValidating {
+    func alphabet(_ lang: String) -> String { "" }
 }
 
 /// Installed layouts and how keystrokes render in them. Production wraps the TIS input-source

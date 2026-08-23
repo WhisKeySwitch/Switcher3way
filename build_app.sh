@@ -5,8 +5,10 @@ PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PRODUCT_NAME="Switcher3w"   # SwiftPM build product / module name (can't start with a digit)
 APP_NAME="Switcher3way"     # user-facing app + bundle name
 APP_BUNDLE="$PROJECT_DIR/$APP_NAME.app"
-# Universal-сборка кладёт продукт сюда (а не в .build/release)
-BUILD_DIR="$PROJECT_DIR/.build/apple/Products/Release"
+# The products directory moves between toolchains (.build/apple/… on older SwiftPM,
+# .build/out/… on the swiftbuild system), so ask the toolchain instead of hardcoding:
+# a wrong guess here silently packages whatever stale binary the old path still holds.
+BUILD_DIR=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)
 VERSION_JSON="$PROJECT_DIR/version.json"
 
 # version.json — единый источник правды. Значения в Info.plist в репо

@@ -11,9 +11,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     private var statusItem: NSStatusItem!
     private let keyboardMonitor = KeyboardMonitor()
     private let textConverter = TextConverter()
+    /// A run of consecutive short words that were all held (see `NWayResolver.Outcome.held`) and all
+    /// read as the same other language. No single one of them is evidence of anything. Several in a
+    /// row are: words only pile up here while nothing in the phrase validates in the layout being
+    /// typed in, which is precisely what typing in the wrong layout looks like. Two is enough, and
+    /// without this a short message — "як ти?" — would never be fixed at all, because no word in it
+    /// is long enough to settle the phrase by itself.
+    private var heldLang: String?
+    private var heldRun = 0
+    /// The language a run of held words settled on, standing in for a phrase lock.
+    private var settledLang: String?
+    private static let heldRunSettles = 2
+
     private let phraseTracker = PhraseTracker { keys, layoutID in
         NWay.resolver.render(keys: keys, layoutID: layoutID)
     }
+
+    private func forgetHeldRun() { heldLang = nil; heldRun = 0; settledLang = nil }
+
+    /// Drop the phrase and everything derived from it. The held run is part of the phrase's state,
+    /// so the two must never be reset apart.
+    private func resetPhrase() { phraseTracker.reset(); forgetHeldRun() }
     private let settingsController = SettingsWindowController()
     private let onboardingController = OnboardingWindowController()
     private let helpController = HelpWindowController()
@@ -243,7 +261,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
                 guard SettingsManager.shared.effectivelyEnabled else { return }
                 // Manual control invalidates the phrase memory (its conversions/undos
                 // aren't tracked, so later corrections would erase the wrong segment).
-                self.phraseTracker.reset()
+                self.resetPhrase()
                 // The trigger is an explicit user action, which is why it converts words auto
                 // declines — but that does not make it safe to read a password field through the
                 // clipboard fallback, or to retype its contents. Checked before anything reads text.
@@ -309,7 +327,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             onAltReconvert: { [weak self] in
                 guard let self else { return }
                 guard SettingsManager.shared.effectivelyEnabled else { return }
-                self.phraseTracker.reset()   // manual control — see onAltTap
+                self.resetPhrase()   // manual control — see onAltTap
                 guard !SecureFieldDetector.isFocusedPassword else {
                     rslog("trigger: suppressed — password field")
                     return
@@ -365,7 +383,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         // order; races against retype completions are caught by the tracker's generation guard.
         keyboardMonitor.onPhraseReset = { [weak self] in
             DispatchQueue.main.async {
-                self?.phraseTracker.reset()
+                self?.resetPhrase()
                 // Same events that reset the word buffer (Enter/Tab/arrows/click/Esc) are the ones
                 // that move focus between fields — a tab from a username box to the password beside
                 // it must never be answered from the cache.
@@ -431,7 +449,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         let secure = SecureFieldDetector.verdict()
         rslog("  secure: \(secure.describe)")
         guard !secure.isPassword else {
-            phraseTracker.reset()
+            resetPhrase()
             rslog("auto: bail — password field")
             return
         }
@@ -439,22 +457,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         // Remote desktop: do NOT bail immediately — run the detector over our own (clean) buffer, and on
         // "wrong layout" switch OUR layout (the instance on the other side does the conversion).
         let deferToRemote = SettingsManager.shared.remoteDesktopMode && AutoSwitchPolicy.isRemoteDesktopClient(frontID)
-        if AutoSwitchPolicy.isDeniedApp(frontID) { phraseTracker.reset(); rslog("auto: bail denied-app \(frontID ?? "?")"); return }
+        if AutoSwitchPolicy.isDeniedApp(frontID) { resetPhrase(); rslog("auto: bail denied-app \(frontID ?? "?")"); return }
         if let captured = keyboardMonitor.prevWordBundleID, captured != frontID {
-            phraseTracker.reset()
+            resetPhrase()
             rslog("auto: bail focus-changed"); return  // focus moved away between the space and now
         }
 
         let keys = keyboardMonitor.prevWordKeys
         let bc = keyboardMonitor.boundaryCount
-        guard !keys.isEmpty else { phraseTracker.reset(); rslog("auto: bail empty-keys"); return }  // cursor moved away — unsafe
+        guard !keys.isEmpty else { resetPhrase(); rslog("auto: bail empty-keys"); return }  // cursor moved away — unsafe
         let capsLock = keys.contains { $0.caps }
 
         // --- Text forwarded over remote desktop (all symbols are char): N-way is inapplicable,
         // since every layout would yield the same character. We keep the former 2-way path by SCRIPT
         // (RU↔EN), where the direction is decided by KeyMapping.convert, not the office layout. ---
         if keys.allSatisfy({ $0.char != nil }) {
-            phraseTracker.reset()   // phrase tracking is local-input only
+            resetPhrase()   // phrase tracking is local-input only
             guard let pair = DynamicKeyMapping.convertKeys(keys) else { rslog("auto: bail convertKeys-nil"); return }
             if AutoSwitchPolicy.isDeniedWord(pair.original, pair.converted) { rslog("auto: bail denied-word"); return }
             let typedIsCyrillic = pair.original.unicodeScalars.contains { $0.value >= 0x0400 && $0.value <= 0x04FF }
@@ -476,34 +494,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         let gen = phraseTracker.generation
         var decision: NWayResolver.Decision?
         var wordKind = PhraseTracker.WordKind.neutral
-        switch NWay.resolver.evaluate(keys: keys, capsLock: capsLock) {
-        case .keep:
-            break
+        // How an unconverted word is remembered. A word already valid in the layout it was typed in
+        // settles what language this phrase is — nothing else the app sees is stronger — and filing
+        // it as neutral, as this used to, threw that away and left short words undecidable.
+        var keepKind = PhraseTracker.WordKind.neutral
+        // The phrase's language goes in, because words too short to decide alone are decided by it.
+        switch NWay.resolver.evaluate(keys: keys, capsLock: capsLock,
+                                      phraseLang: phraseTracker.lockedLang ?? settledLang) {
+        case .keep(let reason):
+            forgetHeldRun()
+            // Say why. Leaving a word alone is this app's most common decision and its least visible
+            // one: nothing moves on screen either way, so without the reason a guard that is working
+            // and a guard that never ran leave identical evidence.
+            rslog("auto: keep — \(Self.explain(reason))")
+            if reason == .validInCurrent, let lang = currentLanguageCode() {
+                keepKind = .locked(lang: lang)
+            }
+        case .held(let original, let winners):
+            // Reads as another language, but it is two or three letters long, so that reading is
+            // worth very little. Leave the screen alone and remember the keystrokes as defaulted to
+            // the current language: if a later word settles the phrase the other way, the correction
+            // machinery converts this word along with it, and if none does, nothing was disturbed.
+            handleHeldWord(keys: keys, original: original, winners: winners, spacesAfter: bc, gen: gen)
+            return
         case .convert(let d):
+            forgetHeldRun()
             decision = d
             wordKind = .locked(lang: d.lang)
         case .ambiguous(let original, let winners):
+            forgetHeldRun()
             let pref = phraseTracker.lockedLang ?? SettingsManager.shared.ambiguousLang
             if pref != "off", let w = winners.first(where: { $0.lang == pref }) {
                 decision = NWayResolver.Decision(targetLayoutID: w.layoutID, lang: w.lang,
                                                  original: original, converted: w.converted)
                 wordKind = .defaulted(lang: w.lang)
                 rslog("auto: ambiguous → \(w.lang) (\(phraseTracker.lockedLang != nil ? "phrase lock" : "preference"))")
+            } else {
+                // Valid in several languages with nothing to choose between them. Left alone, and
+                // said out loud: this is a decision like any other, and an unlogged decision is
+                // indistinguishable from the detection never having run.
+                rslog("auto: keep — valid in \(winners.map(\.lang).sorted().joined(separator: "/")),"
+                      + " nothing to choose between them")
             }
         }
 
         // Remembers an unconverted word so phrase corrections can reproduce the segment verbatim.
         func recordAsNeutral() {
             if let shown = NWay.resolver.renderCurrent(keys: keys) {
-                phraseTracker.record(keys: keys, shownText: shown, spacesAfter: bc, kind: .neutral)
+                phraseTracker.record(keys: keys, shownText: shown, spacesAfter: bc, kind: keepKind)
             } else {
-                phraseTracker.reset()   // can't account for the on-screen text exactly
+                resetPhrase()   // can't account for the on-screen text exactly
             }
         }
 
         guard let decision else {
             recordAsNeutral()
-            rslog("auto: keep")
             return
         }
         if AutoSwitchPolicy.isDeniedWord(decision.original, decision.converted) {
@@ -514,7 +559,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
 
         if deferToRemote {
             // Remote desktop (controller): the instance on the other side converts the text, here — our own layout.
-            phraseTracker.reset()   // phrase tracking is local-input only
+            resetPhrase()   // phrase tracking is local-input only
             LayoutSwitcher.switchTo(layoutID: decision.targetLayoutID)
             updateStatusIcon()
             rslog("auto: local layout switched, conversion handled by controlled instance")
@@ -571,7 +616,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             guard success else {
                 // Aborted mid-injection: the erased tail was put back, but a keystroke may have
                 // interleaved — the exact on-screen segment is no longer certain. Precision-first.
-                self.phraseTracker.reset()
+                self.resetPhrase()
                 return
             }
             self.keyboardMonitor.markConverted()
@@ -585,6 +630,76 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             if let correction { self.phraseTracker.confirm(correction, ifGeneration: gen) }
             self.phraseTracker.record(keys: keys, shownText: decision.converted,
                                       spacesAfter: bc, kind: kind, ifGeneration: gen)
+        }
+    }
+
+    /// Plain-language reason for a word being left alone, for the debug log.
+    private static func explain(_ reason: NWayResolver.KeepReason) -> String {
+        switch reason {
+        case .validInCurrent:    return "already a word in this layout's language"
+        case .notAWordAnywhere:  return "not a word in any installed language"
+        case .noCurrentLanguage: return "current layout has no usable language"
+        case .looksLikeATypo:    return "reads as another language, but this one has a word one key "
+                                      + "away — treating it as a typo"
+        case .phraseDisagrees:   return "too short to decide, and the phrase reads as another language"
+        }
+    }
+
+    /// The 2-letter language of the layout being typed in, or nil if it cannot be determined.
+    private func currentLanguageCode() -> String? {
+        let id = LayoutSwitcher.currentLayoutID()
+        return SystemLayoutCatalog().installedLayouts().first { $0.id == id }
+            .map { String($0.lang.prefix(2)) }
+    }
+
+    /// A word too short to decide on its own. Record it unconverted but retro-correctable, then count
+    /// the run: enough short words agreeing on the same language is evidence in a way that no single
+    /// one of them is, and it is the only thing that can rescue a message where every word is short.
+    private func handleHeldWord(keys: [TypedKey], original: String,
+                                winners: [NWayResolver.Winner], spacesAfter: Int, gen: Int) {
+        guard let currentLang = currentLanguageCode() else { resetPhrase(); return }
+        rslog("auto: held — \(original) reads as "
+              + winners.map { "\($0.converted) [\($0.lang)]" }.joined(separator: "/")
+              + " — too short to act on, waiting for the phrase")
+        phraseTracker.record(keys: keys, shownText: original, spacesAfter: spacesAfter,
+                             kind: .defaulted(lang: currentLang), ifGeneration: gen)
+
+        // Only an unambiguous reading counts: a word that could be two languages says nothing about
+        // which one this phrase is in.
+        let only = winners.count == 1 ? winners[0] : nil
+        if let only, only.lang == heldLang {
+            heldRun += 1
+        } else {
+            heldLang = only?.lang
+            heldRun = only == nil ? 0 : 1
+        }
+        guard heldRun >= Self.heldRunSettles, let only else { return }
+        settleHeldRun(toLang: only.lang, layoutID: only.layoutID, gen: gen)
+    }
+
+    /// Enough held words have agreed on the same language to act on them together: convert the whole
+    /// held run in one replacement and treat the phrase as settled, so the words after it convert
+    /// directly instead of piling up too.
+    private func settleHeldRun(toLang lang: String, layoutID: String, gen: Int) {
+        guard let correction = phraseTracker.correction(toLang: lang, layoutID: layoutID) else { return }
+        let prevLayout = LayoutSwitcher.currentLayoutID()
+        rslog("auto: \(heldRun) short words agree → \(lang), converting the run "
+              + "(\(correction.correctedWords.count) word(s), erase \(correction.oldSegment.count))")
+        heldLang = nil
+        heldRun = 0
+        _ = textConverter.beginCycle(home: correction.oldSegment,
+                                     steps: [(text: correction.newSegment, layoutID: layoutID)],
+                                     eraseCount: correction.oldSegment.count,
+                                     previousLayoutID: prevLayout) { [weak self] success in
+            guard let self else { return }
+            guard success else { self.resetPhrase(); return }
+            self.keyboardMonitor.markConverted()
+            LayoutSwitcher.switchTo(layoutID: layoutID)
+            self.updateStatusIcon()
+            self.caretIndicator?.conversionApplied(original: correction.oldSegment.trimmingCharacters(in: .whitespaces),
+                                                   converted: correction.newSegment.trimmingCharacters(in: .whitespaces))
+            self.phraseTracker.confirm(correction, ifGeneration: gen)
+            self.settledLang = lang
         }
     }
 

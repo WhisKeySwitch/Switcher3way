@@ -12,12 +12,32 @@
 > Both channels are at **0.3.0**. 0.2.8 was a Store-only submission; the MSI channel skipped it and
 > went 0.2.7 → 0.2.9 → 0.3.0.
 >
-> **`main` carries unreleased work.** After 0.3.0 shipped, the rewrite gained a check that the text it
-> replaced is actually gone — not merely that the replacement arrived — after that hole was found reporting
-> success for a replacement that landed *beside* the old text. It was deliberately not released on its own:
-> nothing a user can see changes unless a rewrite fails. **The next version bump must carry it**, and its
-> release notes should say that a conversion which does not land is now undone rather than reported as done.
-> Details in `openspec/changes/archive/…-verify-the-old-text-is-gone/`.
+> **`main` carries unreleased work — two changes, and the next version bump must carry both.**
+>
+> - **The typo fix.** A user left the app because every fumbled key threw a word into English and took
+>   the layout with it. Auto-fix now checks whether the typed text is a near miss of a word in the
+>   language being typed, and refuses to decide words under six characters without help from the
+>   surrounding phrase. Measured typo-conversion rate went from 2.9% to 0%, with paragraph-level recall
+>   unchanged. The release notes should lead with it, in all three languages — this is the reason to
+>   cut that release, not an incidental passenger. Details and the numbers in
+>   `openspec/changes/stop-converting-typos/`.
+> - **Rewrite verification.** After 0.3.0 shipped, the rewrite gained a check that the text it replaced
+>   is actually gone — not merely that the replacement arrived — after that hole was found reporting
+>   success for a replacement that landed *beside* the old text. It was deliberately not released on its
+>   own: nothing a user can see changes unless a rewrite fails. The release notes should say that a
+>   conversion which does not land is now undone rather than reported as done. Details in
+>   `openspec/changes/archive/…-verify-the-old-text-is-gone/`.
+>
+> **`-Version` does not stamp the package.** `build-msix.ps1 -Version 0.3.1` names the output file
+> `Switcher3way-0.3.1-x64-sideload.msix` and sets the *assembly* version, but the package Identity comes
+> from the hardcoded `Version="…"` in `Package.appxmanifest`, which the flag does not touch. Build a
+> package without editing that line and you get one whose filename and identity disagree — which is how
+> a test session ended up run against a completely different build than the one under test. **Edit
+> `Package.appxmanifest` as well**, and check the result before trusting it:
+>
+> ```powershell
+> python -c "import zipfile,re;print(re.search(r'<Identity[^>]*>', zipfile.ZipFile('windows/dist/<pkg>.msix').read('AppxManifest.xml').decode()).group(0))"
+> ```
 >
 > **Reading a rewrite failure in the log.** Since 0.3.0 a replacement is verified by reading the text
 > back, so `Result` says what happened rather than only whether SendInput accepted the events:
@@ -122,9 +142,16 @@ Import-Certificate -FilePath "$env:TEMP\s3w-dev.cer" -CertStoreLocation Cert:\Lo
 Remove both afterwards — a machine-wide trusted root means anything signed with that key is trusted by
 this PC, and the Store channel never needs it (the Store re-signs the package).
 
-**Only one of the two can run.** The single-instance mutex is shared, and both flavours read the same
-`%APPDATA%\Switcher3way` — the packaged app's data is *not* redirected to `LocalCache`. Whichever
-starts first wins; stop one before launching the other.
+**Installing the sideload package removes the Store one.** They share the package Name
+(`IronMade.Switcher3Way`) and differ only in publisher, and `Add-AppxPackage` replaces rather than
+installs alongside — the Store entry simply disappears, along with its Start-menu tile and its
+auto-start registration. Reinstall it from the Store when finished testing
+([9MXFXL7GG3C5](https://apps.microsoft.com/detail/9MXFXL7GG3C5)). **No user data is lost**: settings
+and logs live in `%APPDATA%\Switcher3way`, which is not redirected to `LocalCache`, so both flavours
+read the same files and the swap is invisible to them.
+
+**Only one of the two can run** for the same reason — the single-instance mutex and the data directory
+are shared. Whichever starts first wins; stop one before launching the other.
 
 **Notifications must be tested on the packaged build, not the MSI one.** `AppNotificationManager` is the
 one API whose behaviour differs between the flavours: unpackaged it creates its own activator, packaged it

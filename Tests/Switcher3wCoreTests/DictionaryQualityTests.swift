@@ -1,3 +1,8 @@
+// The only test here that touches a real system dictionary, and therefore the only one tied to
+// Apple's frameworks. The rest of this target is deliberately platform-independent — the core is
+// Foundation-only so it can be reasoned about anywhere — and guarding this file keeps that true of
+// the suite as well, so the decision logic can be exercised on a non-Apple machine.
+#if canImport(AppKit)
 import AppKit
 import XCTest
 @testable import Switcher3wCore
@@ -105,3 +110,5 @@ final class DictionaryQualityTests: XCTestCase {
         XCTAssertFalse(dict.isAvailable(absent))
     }
 }
+
+#endif

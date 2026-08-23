@@ -11,6 +11,14 @@ public interface IDictionaryValidator
 
     /// <summary>Whether <paramref name="word"/> (already lower-cased) is a real word in the language.</summary>
     bool IsValidWord(string word, string lang);
+
+    /// <summary>
+    /// The language's letters, for generating the neighbours of a word. Hunspell dictionaries carry
+    /// exactly this as their <c>TRY</c> line, ordered by frequency, because suggestion engines need
+    /// the same thing. Empty means "unknown", and the near-miss check simply does not run — which is
+    /// why this has a default: a validator that cannot answer should not have to.
+    /// </summary>
+    string Alphabet(string lang) => "";
 }
 
 /// <summary>
