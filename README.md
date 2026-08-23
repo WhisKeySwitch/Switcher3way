@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest"><img src="https://img.shields.io/github/v/release/WhisKeySwitch/switcher3way-releases?label=latest&color=blue" alt="Latest release"></a>
+  <a href="https://github.com/WhisKeySwitch/Switcher3way/releases/latest"><img src="https://img.shields.io/github/v/release/WhisKeySwitch/Switcher3way?label=latest&color=blue" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/macOS-13%2B-black?logo=apple&logoColor=white" alt="macOS 13+">
   <a href="https://apps.microsoft.com/detail/9MXFXL7GG3C5"><img src="https://img.shields.io/badge/Windows-Microsoft%20Store-0078D4?logo=windows&logoColor=white" alt="Windows — Microsoft Store"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest"><b>⬇&nbsp; Download for macOS</b></a>
+  <a href="https://github.com/WhisKeySwitch/Switcher3way/releases/latest"><b>⬇&nbsp; Download for macOS</b></a>
   &nbsp;·&nbsp;
   <a href="https://apps.microsoft.com/detail/9MXFXL7GG3C5"><b>⬇&nbsp; Get it for Windows</b></a>
 </p>
@@ -37,7 +37,7 @@ Typed `ghbdtn` when you meant `привет` — or `ghbdsn` when you meant `п�
 
 ## Install — macOS
 
-**Download the DMG** from the [latest release](https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest), open it, and drag **Switcher3way.app** into **Applications**.
+**Download the DMG** from the [latest release](https://github.com/WhisKeySwitch/Switcher3way/releases/latest), open it, and drag **Switcher3way.app** into **Applications**.
 
 The app is unnotarized (no Apple Developer account), so the **first** launch is blocked by Gatekeeper if you double-click it — instead **right-click the app → Open**, then confirm. macOS remembers the choice, so later launches are normal.
 
@@ -47,7 +47,7 @@ On first launch the onboarding checklist asks for two macOS permissions — **Ac
 
 **[Get it from the Microsoft Store](https://apps.microsoft.com/detail/9MXFXL7GG3C5)** — signed by Microsoft, so no SmartScreen warning, nothing to install first, and it updates itself. This is the recommended way and the version that gets fixes first.
 
-There is also a [direct-download MSI](https://github.com/WhisKeySwitch/switcher3way-releases/releases/tag/windows-v0.3.0) for anyone who can't use the Store. It needs the [Windows App Runtime 1.6](https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe) installed once and isn't code-signed (SmartScreen will warn — **More info → Run anyway**), but it updates itself and tracks the same version as the Store build.
+There is also a [direct-download MSI](https://github.com/WhisKeySwitch/Switcher3way/releases/tag/windows-v0.3.0) for anyone who can't use the Store. It needs the [Windows App Runtime 1.6](https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe) installed once and isn't code-signed (SmartScreen will warn — **More info → Run anyway**), but it updates itself and tracks the same version as the Store build.
 
 Windows needs no permission dialog. Switcher3way runs in the notification area and has no main window; Windows 11 hides new tray icons, so expand the notification area with the **^** chevron if you don't see the flag. Add a second keyboard layout first (**Settings → Time & language → Language & region**) — with only one layout there is nothing to convert between, and the app will tell you so.
 

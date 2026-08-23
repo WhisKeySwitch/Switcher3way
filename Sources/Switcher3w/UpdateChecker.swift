@@ -35,16 +35,17 @@ enum UpdateError: LocalizedError {
     }
 }
 
-/// Checks the fork's OWN public releases repo for new versions and drives the
+/// Checks the fork's OWN releases for new versions and drives the
 /// notify → one-click-install flow. The upstream updater was deleted at fork time;
 /// this one can never offer a stock rashn/RuSwitcher build because its only source
-/// is WhisKeySwitch/switcher3way-releases.
+/// is the main repo's own releases (WhisKeySwitch/Switcher3way — consolidated from
+/// the separate switcher3way-releases repo in August 2026).
 @MainActor
 final class UpdateChecker {
     static let shared = UpdateChecker()
 
-    /// Public downloads repo — the only update source.
-    nonisolated private static let api = URL(string: "https://api.github.com/repos/WhisKeySwitch/switcher3way-releases/releases/latest")!
+    /// The project's own releases — the only update source.
+    nonisolated private static let api = URL(string: "https://api.github.com/repos/WhisKeySwitch/Switcher3way/releases/latest")!
     private static let checkInterval: TimeInterval = 24 * 60 * 60
 
     private var isChecking = false { didSet { onStateChange?() } }

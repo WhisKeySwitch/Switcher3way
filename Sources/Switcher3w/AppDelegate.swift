@@ -832,7 +832,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         helpItem.target = self
         menu.addItem(helpItem)
 
-        // Updates: the fork's own updater (source = WhisKeySwitch/switcher3way-releases).
+        // Updates: the fork's own updater (source = this repo's own releases).
         // Disabled with a busy title while a check or install is in progress.
         let checker = UpdateChecker.shared
         let updatesTitle = checker.isInstalling ? L10n.menuInstallingUpdate

@@ -70,8 +70,14 @@ Regenerate: `swift icon-design/generate_icon_3way.swift icon-design` → then
 
 History: the upstream updater was deleted at fork time so the fork could never auto-update
 itself back to stock rashn/RuSwitcher. In July 2026 a new updater was built whose ONLY source
-is the fork's own public releases repo — `WhisKeySwitch/switcher3way-releases` — so that risk
-no longer exists.
+is the fork's own releases — so that risk no longer exists. Originally those lived in a
+separate public downloads repo (`WhisKeySwitch/switcher3way-releases`); in August 2026 the
+releases were consolidated onto the main repo (`WhisKeySwitch/Switcher3way`), which the updater
+now targets. **One-time bridge:** every app installed at ≤1.3.0 still polls the old repo, so the
+first release after the consolidation must be published to BOTH repos (same DMG, same
+`version.json`, same notes); once it's out, archive the old repo — archived repos keep serving
+downloads and the API read-only, so stragglers still reach the bridge. Every later release goes
+to the main repo only.
 
 How it works (`UpdateChecker.swift` + `UpdateInstaller.swift`):
 
@@ -88,12 +94,12 @@ How it works (`UpdateChecker.swift` + `UpdateInstaller.swift`):
 - **Install**: mount read-only → move the current bundle aside → `ditto` the new one in →
   rollback on failure → strip quarantine → relaunch via `AppRelauncher`.
 
-**Release-flow requirement**: every release in the public downloads repo MUST attach
+**Release-flow requirement**: every release on the main repo MUST attach
 `version.json` as an asset next to the DMG (`gh release create … Switcher3way-X.Y.Z.dmg
 version.json`) — it's the updater's checksum source of truth. Keep the sha256 in the release
 notes too (human verification + fallback).
 
-**Pending for the next release's notes** (release bodies are authored on the downloads repo, so
+**Pending for the next release's notes** (release bodies are authored at publish time, so
 there is nowhere else in this repo to record this): the manual trigger now switches to the layout
 the dictionary — or the *Language for ambiguous words* preference — points at, for words that
 Ukrainian and Russian spell identically. It previously took whichever of the two came first in the

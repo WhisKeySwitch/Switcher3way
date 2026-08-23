@@ -291,7 +291,8 @@ window, and the conversion feedback chip are the useful three.
 - **.NET SDK** on PATH (`dotnet --version`). WiX is restored from NuGet by the installer project —
   no global WiX install needed.
 - **GitHub CLI** authenticated (`gh auth status`) with push/release rights on
-  `WhisKeySwitch/switcher3way-releases` (downloads) and `WhisKeySwitch/Switcher3way` (page).
+  `WhisKeySwitch/Switcher3way` — releases live on the main repo itself since August 2026
+  (consolidated from the old `switcher3way-releases` downloads repo).
 - Work from a clean, merged `main`.
 
 ## 1. Pick the version
@@ -341,11 +342,19 @@ Windows releases live on the **downloads repo** with a **Windows-specific tag** 
 $ver = "0.2.9"
 $msi = "windows/installer/bin/x64/Release/Switcher3way-$ver-win-x64.msi"
 gh release create "windows-v$ver" "$msi" `
-  -R WhisKeySwitch/switcher3way-releases `
+  -R WhisKeySwitch/Switcher3way `
   --title "Switcher3way for Windows $ver (preview)" `
   --notes-file windows/release-notes.md `
   --prerelease
 ```
+
+> **One-time bridge (first Windows release after the August 2026 consolidation):** every MSI
+> installed before that release polls the OLD repo (`WhisKeySwitch/switcher3way-releases`) for
+> updates. Publish that first release to **both** repos (`gh release create … -R
+> WhisKeySwitch/switcher3way-releases` with the same asset and notes) so existing installs can
+> reach the build that carries the new URL — then archive the old repo (archived repos keep
+> serving downloads and the API read-only, so stragglers still find the bridge). Every release
+> after the bridge goes to the main repo only.
 
 Write the notes to include: install steps (MSI → UAC → SmartScreen *More info → Run anyway* because
 unsigned), "no .NET needed", the **SHA-256**, and known limitations (unsigned, x64 only, no rewrite
@@ -354,8 +363,8 @@ inside elevated windows unless run as admin).
 Verify afterwards:
 
 ```powershell
-gh release view "windows-v$ver" -R WhisKeySwitch/switcher3way-releases --json isPrerelease,assets
-gh release view -R WhisKeySwitch/switcher3way-releases --json tagName   # must still be the macOS vX.Y.Z
+gh release view "windows-v$ver" -R WhisKeySwitch/Switcher3way --json isPrerelease,assets
+gh release view -R WhisKeySwitch/Switcher3way --json tagName   # must still be the macOS vX.Y.Z
 ```
 
 ## 4. Update the landing page

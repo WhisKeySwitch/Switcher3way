@@ -238,7 +238,7 @@ restarted. Select **Resume** to end any pause immediately.
 
 ## Updates
 
-Switcher3way checks its own [releases page](https://github.com/WhisKeySwitch/switcher3way-releases/releases)
+Switcher3way checks its own [releases page](https://github.com/WhisKeySwitch/Switcher3way/releases)
 shortly after launch and once a day, and offers new versions in a dialog. **Install and
 Relaunch** downloads the update, verifies it (checksum and code-signing identity), replaces
 the app, and relaunches — your permissions are kept. **Later** asks again on the next check;

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lets the app discover, verify, and install new versions of itself from the project's own public releases repository (`WhisKeySwitch/switcher3way-releases`) — never from the upstream rashn/RuSwitcher project. Covers the automatic-check schedule and its toggle, the notify-and-choose prompt (install / later / skip), download integrity verification (SHA-256 plus a same-certificate code-signing gate that preserves macOS permissions across updates), in-place installation with rollback, and relaunch, plus a manual menu-driven check.
+Lets the app discover, verify, and install new versions of itself from the project's own public releases (on the main `WhisKeySwitch/Switcher3way` repository; consolidated in August 2026 from the separate `switcher3way-releases` downloads repo) — never from the upstream rashn/RuSwitcher project. Covers the automatic-check schedule and its toggle, the notify-and-choose prompt (install / later / skip), download integrity verification (SHA-256 plus a same-certificate code-signing gate that preserves macOS permissions across updates), in-place installation with rollback, and relaunch, plus a manual menu-driven check.
 
 ## Requirements
 
