@@ -109,7 +109,12 @@ The defect was structural, so it was in the Swift resolver too, in the same shap
       has only been syntax-checked here, never type-checked. Done 2026-08-22: 69 tests, 0 failures
       (dictionary-quality at 100% for en/uk/ru); `build_app.sh` produced a bundle signed with the
       stable `Switcher3way Self-Signed` identity, `codesign --verify` clean.
-- [ ] 7.12 **On a Mac:** the same by-hand pass the Windows build got — type a Ukrainian paragraph with
+- [x] 7.12 **On a Mac:** the same by-hand pass the Windows build got — type a Ukrainian paragraph with
       deliberate typos and confirm from `~/Library/Logs/Switcher3w/switcher3w.log` that every word
       reports `auto: keep — …` and the layout never moves, then type a word in the wrong layout and
-      confirm it still converts.
+      confirm it still converts. Done 2026-08-23: a wrong-layout word converted first (7 keys →
+      Ukrainian-PC, the app demonstrably not inert), then the typo paragraph — `даже` kept as a
+      near-miss typo, `рукую` (reads `here.`) and `пит` (`gbn`) held as too short with the phrase
+      reading another language, `уржені`/`ділнки`/`рекомендвано`/`істи` kept as words in no installed
+      language, and the valid words kept as already-correct. Zero spurious conversions, zero spurious
+      layout switches; all four `KeepReason`s exercised, mirroring the Windows 0.3.1 run word-for-word.
