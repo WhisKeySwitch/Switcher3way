@@ -99,14 +99,8 @@ How it works (`UpdateChecker.swift` + `UpdateInstaller.swift`):
 version.json`) — it's the updater's checksum source of truth. Keep the sha256 in the release
 notes too (human verification + fallback).
 
-**Pending for the next release's notes** (release bodies are authored at publish time, so
-there is nowhere else in this repo to record this): the manual trigger now switches to the layout
-the dictionary — or the *Language for ambiguous words* preference — points at, for words that
-Ukrainian and Russian spell identically. It previously took whichever of the two came first in the
-input-source order, so a Russian-only word like `хорошо` left the user in the Ukrainian layout, and
-the ambiguity preference had no effect on the trigger at all. The text produced is unchanged; only
-the resulting layout differs. Muscle memory attaches to the trigger, so this should be called out
-rather than shipped silently. (`openspec/changes/archive/*-fix-collapsed-layout-candidates`.)
+(The trigger's ambiguous-word layout fix — `*-fix-collapsed-layout-candidates` — shipped in
+1.3.0 and its release notes called it out, as intended.)
 
 ## Known limitation
 

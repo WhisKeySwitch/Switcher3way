@@ -73,16 +73,18 @@ SIGN_ID="Switcher3way Self-Signed"
 if security find-identity -p codesigning 2>/dev/null | grep -q "$SIGN_ID"; then
     echo "→ Code signing with '$SIGN_ID'..."
     codesign --force --deep --sign "$SIGN_ID" "$APP_BUNDLE"
+    SIGNED_AS="'$SIGN_ID' (stable — permissions persist across rebuilds)"
 else
     echo "→ Stable identity not found — code signing ad-hoc (permissions won't persist across rebuilds)..."
     codesign --force --deep --sign - "$APP_BUNDLE"
+    SIGNED_AS="ad-hoc (permissions reset on every rebuild — see signing/README.md)"
 fi
 codesign --verify --deep --strict "$APP_BUNDLE" && echo "→ signature OK"
 
 echo ""
 echo "=== Done! ==="
 echo "App bundle: $APP_BUNDLE"
-echo "Signed: ad-hoc (right-click → Open on first launch on another Mac)"
+echo "Signed: $SIGNED_AS"
 echo ""
 echo "To install:"
 echo "  cp -R $APP_BUNDLE /Applications/"
