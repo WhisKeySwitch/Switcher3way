@@ -12,13 +12,21 @@
 > Both channels are at **0.3.0**. 0.2.8 was a Store-only submission; the MSI channel skipped it and
 > went 0.2.7 → 0.2.9 → 0.3.0.
 >
-> **`main` carries unreleased work: the typo fix.** A user left the app because every fumbled key threw
-> a word into English and took the layout with it. Auto-fix now checks whether the typed text is a near
-> miss of a word in the language being typed, and refuses to decide words under six characters without
-> help from the surrounding phrase. Measured typo-conversion rate went from 2.9% to 0%, with
-> paragraph-level recall unchanged. **The next version bump must carry it**, and its release notes
-> should lead with it, in all three languages — this is the reason to cut that release, not an
-> incidental passenger. Details and the numbers in `openspec/changes/stop-converting-typos/`.
+> **`main` carries unreleased work — two changes, and the next version bump must carry both.**
+>
+> - **The typo fix.** A user left the app because every fumbled key threw a word into English and took
+>   the layout with it. Auto-fix now checks whether the typed text is a near miss of a word in the
+>   language being typed, and refuses to decide words under six characters without help from the
+>   surrounding phrase. Measured typo-conversion rate went from 2.9% to 0%, with paragraph-level recall
+>   unchanged. The release notes should lead with it, in all three languages — this is the reason to
+>   cut that release, not an incidental passenger. Details and the numbers in
+>   `openspec/changes/stop-converting-typos/`.
+> - **Rewrite verification.** After 0.3.0 shipped, the rewrite gained a check that the text it replaced
+>   is actually gone — not merely that the replacement arrived — after that hole was found reporting
+>   success for a replacement that landed *beside* the old text. It was deliberately not released on its
+>   own: nothing a user can see changes unless a rewrite fails. The release notes should say that a
+>   conversion which does not land is now undone rather than reported as done. Details in
+>   `openspec/changes/archive/…-verify-the-old-text-is-gone/`.
 >
 > **`-Version` does not stamp the package.** `build-msix.ps1 -Version 0.3.1` names the output file
 > `Switcher3way-0.3.1-x64-sideload.msix` and sets the *assembly* version, but the package Identity comes
@@ -37,6 +45,10 @@
 > "…", landed "…"`, the text was put back, and the manual cycle was abandoned. `Unverified` — the
 > target exposes no readable text (Chromium before its accessibility tree exists, for instance); this
 > is *not* a failure and is treated as applied. A `Mismatch` in a user's log is the line to ask for.
+> It carries two figures added after 0.3.0: `[caret A -> B, expected C]` shows whether the right number of
+> characters was removed, and `[trailing X -> Y]` shows whether the old text was left behind after the
+> caret — a growing trailing count with a perfect caret figure means the replacement landed beside the
+> original rather than over it.
 
 Switcher3way for Windows ships through **two channels**, built from the same project:
 

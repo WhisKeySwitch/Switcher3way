@@ -103,15 +103,28 @@ change took effect rather than assuming a single switch mechanism always succeed
 - **THEN** the system SHALL determine whether the active layout actually changed, and SHALL attempt an alternative switch mechanism when the primary request did not take effect
 
 ### Requirement: Rewrite typed text in place
-The Windows build SHALL replace the mistyped word with its converted form by erasing the original
+The Windows build SHALL replace the mistyped word with its converted form by removing the original
 characters and inserting the corrected Unicode text, with a clipboard-based fallback for selected
-text. When a real (user-originated, non-synthetic) keystroke is detected while a replacement is in
-progress, the Windows build SHALL abort the replacement, restore any characters it has already
-erased, and record no conversion — so that neither a single-word rewrite nor a multi-word phrase
+text. It MAY remove the original either by erasing it or by selecting the range and replacing it, so
+long as the outcome is verified; the choice is an implementation matter except that a method whose lost
+events silently delete the wrong text SHALL NOT be preferred over one whose lost events produce a
+detectable wrong result. When a real (user-originated, non-synthetic) keystroke is detected while a
+replacement is in progress, the Windows build SHALL abort the replacement, restore any characters it has
+already removed, and record no conversion — so that neither a single-word rewrite nor a multi-word phrase
 correction can leave the on-screen text partially deleted.
 
-The Windows build SHALL inject the erase and insert streams at a rate the target application can
-consume. Above a threshold length it SHALL insert the replacement as a single clipboard paste rather
+The Windows build SHALL inject its input at a rate the target application can consume. That rate is a
+measured property of the target, not a number this project may choose: at the time of writing it is about
+fifteen milliseconds per removal event against a Windows text control, so a replacement at the maximum
+selection length takes a few seconds and a single word about a quarter of a second. Attempts to go faster
+— batching the removals, or pausing accurately for a shorter interval — were measured and each of them
+lost events. Where speed and correctness conflict here, correctness wins and the delay is accepted.
+
+A replacement SHALL verify that the text it replaced is gone, not merely that the text it inserted
+arrived. Checking only the insertion passes a replacement that landed *beside* the old text instead of
+over it, which is a corruption that reports itself as a success.
+
+Above a threshold length it SHALL insert the replacement as a single clipboard paste rather
 than as one event per character, because per-character injection of long text is both slow and the form
 the target mis-renders. Where it borrows the clipboard it SHALL restore the previous text afterwards,
 and only once the paste has been observed on screen.
@@ -130,11 +143,11 @@ of conversions that demonstrably worked.
 
 #### Scenario: Rewrite a buffered word
 - **WHEN** a conversion is applied to a buffered word
-- **THEN** the system SHALL erase the original characters and insert the converted text, preserving any trailing spaces
+- **THEN** the system SHALL remove the original characters and insert the converted text, preserving any trailing spaces
 
 #### Scenario: Abort and restore on concurrent typing
 - **WHEN** the user types a real key while a single-word or multi-word segment replacement is being injected
-- **THEN** the system SHALL stop injecting, restore the characters it already erased, leave the layout unchanged, and treat the conversion as not having happened
+- **THEN** the system SHALL stop injecting, restore the characters it already removed, leave the layout unchanged, and treat the conversion as not having happened
 
 #### Scenario: Surface protected targets rather than failing silently
 - **WHEN** the foreground window cannot receive synthesized input because it runs at a higher integrity level
@@ -145,8 +158,20 @@ of conversions that demonstrably worked.
 - **THEN** the system SHALL report the replacement as failed, SHALL NOT show feedback claiming a conversion, and SHALL record both the intended and the landed text
 
 #### Scenario: A large replacement is not corrupted by its own injection rate
-- **WHEN** a replacement erases and reinserts a selection of at least fifty characters
+- **WHEN** a replacement removes and reinserts a selection of at least fifty characters
 - **THEN** the text that lands SHALL match the text intended, character for character
+
+#### Scenario: A single-word replacement stays fast
+- **WHEN** a conversion is applied to a word of about five characters
+- **THEN** it SHALL complete within about a quarter of a second, so the common case is not slowed by accommodating the long one
+
+#### Scenario: The old text being left behind is a failure, not a success
+- **WHEN** the replacement is inserted but the text it was meant to replace is still present next to it
+- **THEN** the system SHALL report the replacement as failed, and SHALL restore the screen by removing only what it inserted — leaving the original text as it was rather than re-inserting a second copy of it
+
+#### Scenario: Removal is judged independently of what the words are
+- **WHEN** a replacement is applied in a document that repeats the same word, so that a correct result and a failed removal read alike
+- **THEN** the system SHALL still distinguish them, by measuring the text's position rather than comparing only its content
 
 #### Scenario: A long replacement borrows the clipboard and gives it back
 - **WHEN** a replacement longer than the paste threshold is applied while the user has text on the clipboard

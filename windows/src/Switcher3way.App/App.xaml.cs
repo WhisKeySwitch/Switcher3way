@@ -99,6 +99,22 @@ public partial class App : Application
                     dr + i < args2.Length && int.TryParse(args2[dr + i], out var v) ? v : dflt;
                 int count = Arg(1, 46), eraseMs = Arg(2, 0), settleMs = Arg(3, 15), charMs = Arg(4, 2);
                 string layout = dr + 5 < args2.Length ? args2[dr + 5].ToLowerInvariant() : "none";
+                // Sixth argument selects how the old text is removed: perkey | batched:<k> | spin | select.
+                // The strategies differ in speed and, more importantly, in what a lost event costs, so they
+                // have to be comparable on the same rig rather than argued about.
+                string eraseArg = dr + 6 < args2.Length ? args2[dr + 6].ToLowerInvariant() : "perkey";
+                int batch = 8;
+                var colon = eraseArg.IndexOf(':');
+                if (colon > 0 && int.TryParse(eraseArg[(colon + 1)..], out var b)) batch = b;
+                var eraseMode = eraseArg switch
+                {
+                    "spin" => TextRewriter.EraseMode.Spin,
+                    "select" => TextRewriter.EraseMode.Select,
+                    var s when s.StartsWith("select") => TextRewriter.EraseMode.Select,
+                    var s when s.StartsWith("spin") => TextRewriter.EraseMode.Spin,
+                    var s when s.StartsWith("batched") => TextRewriter.EraseMode.Batched,
+                    _ => TextRewriter.EraseMode.PerKey,
+                };
 
                 var marker = new string(Enumerable.Range(0, count).Select(i => (char)('a' + i % 26)).ToArray());
                 var timer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
@@ -117,11 +133,24 @@ public partial class App : Application
                         if (target is null) Diagnostics.LogAlways($"diagrewrite: no '{layout}' layout installed — skipping switch");
                         else Diagnostics.LogAlways($"diagrewrite: layout {cur} -> {target.Id} ({target.Lang}) via {LayoutSwitcher.SwitchForeground(target.Id)}");
                     }
+                    // Name the window this is about to type into. A run that quietly aimed at the wrong
+                    // target looks exactly like a strategy that corrupts text, and that mistake already
+                    // cost one round of conclusions here.
+                    var fg = Native.GetForegroundWindow();
+                    var cls = new System.Text.StringBuilder(96);
+                    var title = new System.Text.StringBuilder(96);
+                    Native.GetClassNameW(fg, cls, cls.Capacity);
+                    Native.GetWindowTextW(fg, title, title.Capacity);
+                    Diagnostics.LogAlways($"diagrewrite: target=0x{fg:X} class={cls} title=\"{title}\"");
                     Diagnostics.LogAlways($"diagrewrite: erase={count} eraseMs={eraseMs} settleMs={settleMs} " +
-                                          $"charMs={charMs} layout={layout}");
+                                          $"charMs={charMs} layout={layout} mode={eraseMode} batch={batch}");
                     Diagnostics.LogAlways($"diagrewrite: intended={marker}");
-                    var res = TextRewriter.Rewrite(count, marker,
-                                                   pace: new TextRewriter.Pace(eraseMs, settleMs, charMs));
+                    // Pass what is being replaced. Without it the rewriter cannot photograph the screen
+                    // beforehand, so the strict "is the old text gone" check has nothing to compare and
+                    // silently degrades to the loose one — which is the very hole under test.
+                    var res = TextRewriter.Rewrite(count, marker, original: new string('.', count),
+                                                   pace: new TextRewriter.Pace(eraseMs, settleMs, charMs),
+                                                   eraseMode: eraseMode, batch: batch);
                     Diagnostics.LogAlways($"diagrewrite: result={res}");
                 };
                 timer.Start();
