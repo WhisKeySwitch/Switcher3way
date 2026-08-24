@@ -115,15 +115,61 @@ public sealed class SettingsManager
 
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
+    /// <summary>
+    /// True when a settings file existed but could not be read, so this instance is defaults standing
+    /// in for the user's real preferences. Not persisted — it describes this run, not the settings.
+    /// </summary>
+    [JsonIgnore]
+    public bool LoadFailed { get; private set; }
+
     public static SettingsManager Load()
     {
+        // No file is not a failure: it is a first run, and nothing was lost. Only an existing file
+        // that cannot be read means the user's preferences have gone missing, and those two cases
+        // used to be indistinguishable here — both quietly produced defaults.
+        if (!File.Exists(FilePath)) return new SettingsManager();
+
         try
         {
-            if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<SettingsManager>(File.ReadAllText(FilePath)) ?? new SettingsManager();
+            var loaded = JsonSerializer.Deserialize<SettingsManager>(File.ReadAllText(FilePath));
+            if (loaded is not null) return loaded;
+            throw new InvalidDataException("the settings file parsed to nothing");
         }
-        catch { /* corrupt/unreadable → defaults */ }
-        return new SettingsManager();
+        catch (Exception ex)
+        {
+            return Quarantine(ex);
+        }
+    }
+
+    /// <summary>
+    /// A settings file exists and cannot be read. Everything the user configured — exception lists,
+    /// denied apps, the trigger key, the ambiguity language — is about to be replaced by defaults, so
+    /// this says so and moves the unreadable file out of harm's way first.
+    ///
+    /// Moving it matters as much as reporting it. Left in place it would be overwritten within
+    /// seconds and without a keystroke from the user: the background update check writes
+    /// <see cref="LastUpdateCheck"/> and saves, which is enough to turn a failed read into a
+    /// permanent erasure. Renamed, the original survives and is one rename away from being restored.
+    /// </summary>
+    private static SettingsManager Quarantine(Exception ex)
+    {
+        // LogAlways, never Log: the debug-log flag is read from the file that just failed, so the one
+        // switch that would have recorded this is unavailable in exactly the case that needs it.
+        Diagnostics.LogAlways($"settings: could not be read ({ex.GetType().Name}: {ex.Message}) — "
+                              + "running on defaults for this session");
+        var kept = FilePath + ".bad";
+        try
+        {
+            if (File.Exists(kept)) File.Delete(kept);
+            File.Move(FilePath, kept);
+            Diagnostics.LogAlways($"settings: the unreadable file was kept as {Path.GetFileName(kept)}");
+        }
+        catch (Exception move)
+        {
+            Diagnostics.LogAlways("settings: could not set the unreadable file aside, so it will be "
+                                  + "overwritten by the next save: " + move.Message);
+        }
+        return new SettingsManager { LoadFailed = true };
     }
 
     public void Save()

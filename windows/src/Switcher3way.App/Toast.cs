@@ -59,10 +59,17 @@ internal static class Toast
     }
 
     /// <summary>A failure the user would otherwise experience as the app silently doing nothing.</summary>
-    public static void ShowError(string message)
+    public static void ShowError(string message) => ShowError(Loc.T("toast.error.title"), message);
+
+    /// <summary>
+    /// The same, with its own heading. The default heading says the app could not fix something,
+    /// which is right for a conversion that failed and wrong for anything else — a notification whose
+    /// title contradicts its body is worse than a plain one.
+    /// </summary>
+    public static void ShowError(string title, string message)
     {
         Show(new AppNotificationBuilder()
-            .AddText(Loc.T("toast.error.title"))
+            .AddText(title)
             .AddText(message));
     }
 
