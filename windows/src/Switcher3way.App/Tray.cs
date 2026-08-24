@@ -21,6 +21,9 @@ internal sealed class Tray : IDisposable
     public Tray()
     {
         _settings = SettingsManager.Load();
+        // Losing an exception list is exactly the kind of thing this app must not do quietly. The
+        // log already has the detail; this is so the user finds out at all.
+        if (_settings.LoadFailed) Toast.ShowError(Loc.T("notify.settingsLost"));
         Loc.Configure(_settings.InterfaceLanguage);
 
         _chip = new CaretChip();

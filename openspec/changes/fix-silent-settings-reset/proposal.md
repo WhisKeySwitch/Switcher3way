@@ -7,9 +7,12 @@ apps, the trigger key, the ambiguous-language preference, onboarding state — *
 log line, and no way to find out.** The one switch that would have recorded the failure lives in the
 file that just failed to load, so it switches itself off.
 
-Worse, the loss is not confined to that session. The defaults are held in memory as if they were the
-user's real settings, and the next `Save()` — triggered by toggling anything at all — writes them
-over the file. What was a failed read becomes a permanent erasure.
+Worse, the loss is not confined to that session, and it needs no help from the user. The defaults are
+held in memory as if they were the real settings, and the next `Save()` writes them over the file —
+but that save is not waiting for anyone to toggle anything. The background update check stamps
+`LastUpdateCheck` and saves on its own. Measured against a build of the shipped code: a settings file
+holding eight denied apps and a never-convert entry became bare defaults on disk **nine seconds after
+launch**, with nothing touched. A failed read turns itself into a permanent erasure.
 
 This was found while measuring a trimmed build, where JSON deserialization genuinely fails, and the
 app kept converting text perfectly while quietly running on defaults. But trimming is not the

@@ -9,7 +9,7 @@
 > dropped. The pattern to learn from: **verify in the flavour that ships.** All three passed testing
 > on an unpackaged build.
 >
-> The MSI channel is at **0.4.0**; the Store is at **0.3.0** until 0.4.0 clears certification.
+> Both channels are at **0.4.0** (the Store cleared certification on 24 August 2026).
 > 0.2.8 was a Store-only submission; the MSI channel skipped it and went 0.2.7 → 0.2.9 → 0.3.0 → 0.4.0.
 >
 > **0.4.0 is the typo-guard release.** A user left for a competitor because every fumbled key threw a
