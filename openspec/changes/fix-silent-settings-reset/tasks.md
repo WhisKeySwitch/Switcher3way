@@ -39,7 +39,23 @@ Against a published build, driving the real binary and reading its own log.
       exception list and all eight denied apps still present afterwards.
 - [x] 3.4 A settings file carrying a field this build has never heard of loads normally rather than
       being treated as corrupt, so a downgrade after a future release does not destroy preferences.
-- [ ] 3.5 **Needs a packaged build:** the notification itself. Unpackaged builds log
-      `toast: not registered — this and any further notifications are dropped`, so the user-facing
-      half of 2.4 is unverified. Notifications have to be tested in the flavour that ships; that
-      lesson cost two certification failures.
+- [x] 3.5 The notification itself, on a packaged build — and it was right to insist. The first
+      packaged run logged `toast: not registered — this and any further notifications are dropped`,
+      because `Tray` raised the notification ten lines before `Toast.Initialize` registers with the
+      platform. **The user would never have seen it.** Unpackaged runs log the same line for an
+      innocent reason, so nothing short of a packaged build could have caught it. Notification moved
+      after registration.
+- [x] 3.6 Delivery verified objectively rather than by watching for a banner: Windows records every
+      delivered notification in `wpndatabase.db`, and the entry is there with the right text.
+- [x] 3.7 Corrected the heading while reading that entry. It arrived under the generic
+      `toast.error.title` — "Switcher3way couldn't fix that" — which belongs to a failed conversion
+      and flatly contradicts this message. `ShowError` gained a title overload and the notification
+      its own heading in all three languages: "Your settings were reset".
+
+## 4. Test packages must not disturb the installed app
+
+- [x] 4.1 The test packages were built with a distinct `Identity/Name` and their own activator CLSID,
+      so they installed **beside** the Store build instead of replacing it — a plain sideload shares
+      the package name and silently removes the Store entry, which happened once already.
+- [x] 4.2 Afterwards: test packages removed, the stale 0.3.1 developer package removed, the real
+      settings file restored byte-for-byte, and the Store build confirmed running.

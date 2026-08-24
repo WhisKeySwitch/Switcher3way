@@ -21,9 +21,6 @@ internal sealed class Tray : IDisposable
     public Tray()
     {
         _settings = SettingsManager.Load();
-        // Losing an exception list is exactly the kind of thing this app must not do quietly. The
-        // log already has the detail; this is so the user finds out at all.
-        if (_settings.LoadFailed) Toast.ShowError(Loc.T("notify.settingsLost"));
         Loc.Configure(_settings.InterfaceLanguage);
 
         _chip = new CaretChip();
@@ -33,6 +30,13 @@ internal sealed class Tray : IDisposable
         // off the UI thread — the activation callback especially, which comes from the notification
         // platform — so the settings mutation is marshalled.
         Toast.Initialize(word => _dispatcher.TryEnqueue(() => AddNeverConvert(word)));
+        // Only now, because Toast.Initialize is what registers with the notification platform and
+        // anything raised before it is silently discarded. Raising this ten lines earlier — next to
+        // the load it reports on, where it reads better — meant the user was never told, and only a
+        // packaged build showed it: unpackaged runs log the same "not registered" line for an
+        // innocent reason, which hides this one completely.
+        if (_settings.LoadFailed)
+            Toast.ShowError(Loc.T("notify.settingsLost.title"), Loc.T("notify.settingsLost"));
         _engine.Notify += m => { Diagnostics.Log($"notify: {m}"); Toast.ShowError(m); };
         _engine.Undone += (original, converted) => Toast.OfferNeverConvert(original, converted);
         _engine.Hint += (title, body, chip) => ShowHint(title, body, chip);
