@@ -108,12 +108,12 @@ is which.
 
 The app is published, so this field is now required on every submission. Current copy:
 
-Version 0.3.0
+Version 0.4.0
 
-• Fixed: cycling a selected phrase through the layouts could corrupt it, and the app believed it had succeeded — so every further tap converted the damage instead of the original text.
-• The app now checks its own work. After replacing text it reads back what actually landed; anything that does not match is undone and reported instead of being built upon.
-• Long replacements are pasted rather than typed one key at a time. Converting a sentence is about twice as fast and no longer risks mangling it. Your clipboard is borrowed for that instant and handed straight back; short conversions never touch it.
-• Fixed: the trigger could convert text you had not selected, if another program wrote to the clipboard at the wrong moment.
+• Fixed: your typos are no longer mistaken for the wrong keyboard. Mistyping a word in your own language used to throw it into English and move the layout with it, so the rest of the sentence came out in the wrong alphabet. The app now checks whether the language you are typing has a real word one keystroke away, and leaves the word alone if it does.
+• Very short words are decided by the sentence around them rather than on their own. A two-letter word is far too weak a clue on its own — a quarter of all two-letter Latin strings are in the English dictionary as abbreviations — so it now waits for a longer word to settle which language you are writing, and is corrected along with it.
+• Correcting a whole phrase typed in the wrong layout works exactly as before. This was measured over full paragraphs, not single words.
+• Fixed: a replacement that landed beside your text instead of over it counted as a success. It is now detected and undone rather than built upon.
 
 ### Search terms
 
@@ -211,12 +211,12 @@ Switcher3way прибирає цей момент.
 
 Застосунок опубліковано, тож це поле тепер обов'язкове в кожній подачі. Поточний текст:
 
-Версія 0.3.0
+Версія 0.4.0
 
-• Виправлено: перебирання розкладок для виділеної фрази могло її зіпсувати, а застосунок вважав, що все вдалося, — тож кожне наступне натискання конвертувало вже зіпсований текст, а не початковий.
-• Тепер застосунок перевіряє свою роботу. Замінивши текст, він зчитує те, що насправді з'явилося на екрані; усе, що не збігається, скасовується й повідомляється, а не використовується далі.
-• Довгі замі́ни тепер вставляються, а не набираються по одному символу. Конвертація речення приблизно вдвічі швидша й більше не ризикує зіпсувати текст. Буфер обміну позичається на цю мить і одразу повертається; короткі конвертації його не торкаються.
-• Виправлено: тригер міг конвертувати текст, який ви не виділяли, якщо інша програма записувала щось у буфер обміну в незручний момент.
+• Виправлено: описки більше не сприймаються як неправильна розкладка. Раніше помилка в слові рідною мовою викидала його в англійську й тягнула за собою розкладку, тож решта речення виходила не тим алфавітом. Тепер застосунок перевіряє, чи немає в мові, якою ви пишете, справжнього слова за одне натискання клавіші, — і якщо є, слово лишається недоторканим.
+• Дуже короткі слова визначаються реченням навколо них, а не самі по собі. Дволітерне слово — надто слабка підказка: чверть усіх дволітерних латинських сполучень є в англійському словнику як скорочення. Тепер таке слово чекає на довше слово, яке визначить мову, і виправляється разом із ним.
+• Виправлення цілої фрази, набраної не в тій розкладці, працює точно як раніше. Це вимірювалося на цілих абзацах, а не на окремих словах.
+• Виправлено: заміна, що з'явилася поруч із вашим текстом, а не замість нього, вважалася успішною. Тепер це виявляється й скасовується, а не використовується далі.
 
 ### Ключові слова
 
@@ -316,12 +316,12 @@ Store не устанавливает никаких сетевых соедин
 
 Приложение опубликовано, так что это поле теперь обязательно в каждой подаче. Текущий текст:
 
-Версия 0.3.0
+Версия 0.4.0
 
-• Исправлено: перебор раскладок для выделенной фразы мог её испортить, а приложение считало, что всё удалось, — поэтому каждое следующее нажатие конвертировало уже испорченный текст, а не исходный.
-• Теперь приложение проверяет свою работу. Заменив текст, оно считывает то, что действительно появилось на экране; всё, что не совпадает, отменяется и сообщается, а не используется дальше.
-• Длинные замены теперь вставляются, а не набираются по одному символу. Конвертация предложения примерно вдвое быстрее и больше не рискует испортить текст. Буфер обмена занимается на это мгновение и сразу возвращается; короткие конвертации его не трогают.
-• Исправлено: триггер мог конвертировать текст, который вы не выделяли, если другая программа записывала что-то в буфер обмена в неподходящий момент.
+• Исправлено: опечатки больше не принимаются за неправильную раскладку. Раньше ошибка в слове на родном языке выбрасывала его в английский и утягивала за собой раскладку, так что остаток предложения выходил не тем алфавитом. Теперь приложение проверяет, нет ли в языке, на котором вы пишете, настоящего слова в одном нажатии клавиши, — и если есть, слово остаётся нетронутым.
+• Очень короткие слова определяются предложением вокруг них, а не сами по себе. Двухбуквенное слово — слишком слабая подсказка: четверть всех двухбуквенных латинских сочетаний есть в английском словаре как сокращения. Теперь такое слово ждёт более длинного, которое определит язык, и исправляется вместе с ним.
+• Исправление целой фразы, набранной не в той раскладке, работает точно так же, как раньше. Это измерялось на целых абзацах, а не на отдельных словах.
+• Исправлено: замена, появившаяся рядом с вашим текстом, а не вместо него, считалась успешной. Теперь это обнаруживается и отменяется, а не используется дальше.
 
 ### Ключевые слова
 
