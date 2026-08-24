@@ -9,24 +9,22 @@
 > dropped. The pattern to learn from: **verify in the flavour that ships.** All three passed testing
 > on an unpackaged build.
 >
-> Both channels are at **0.3.0**. 0.2.8 was a Store-only submission; the MSI channel skipped it and
-> went 0.2.7 → 0.2.9 → 0.3.0.
+> The MSI channel is at **0.4.0**; the Store is at **0.3.0** until 0.4.0 clears certification.
+> 0.2.8 was a Store-only submission; the MSI channel skipped it and went 0.2.7 → 0.2.9 → 0.3.0 → 0.4.0.
 >
-> **`main` carries unreleased work — two changes, and the next version bump must carry both.**
+> **0.4.0 is the typo-guard release.** A user left for a competitor because every fumbled key threw a
+> word into English and took the layout with it. Auto-fix now asks whether the typed text is a near
+> miss of a word in the language being typed, and refuses to decide words under six characters without
+> help from the surrounding phrase; measured typo-conversion went from 2.9% to 0% with paragraph-level
+> recall unchanged. It also carries the rewrite-removal check held back from 0.3.0. Both are described
+> in `openspec/changes/archive/2026-08-23-stop-converting-typos/` and
+> `openspec/changes/archive/2026-08-19-verify-the-old-text-is-gone/`.
 >
-> - **The typo fix.** A user left the app because every fumbled key threw a word into English and took
->   the layout with it. Auto-fix now checks whether the typed text is a near miss of a word in the
->   language being typed, and refuses to decide words under six characters without help from the
->   surrounding phrase. Measured typo-conversion rate went from 2.9% to 0%, with paragraph-level recall
->   unchanged. The release notes should lead with it, in all three languages — this is the reason to
->   cut that release, not an incidental passenger. Details and the numbers in
->   `openspec/changes/stop-converting-typos/`.
-> - **Rewrite verification.** After 0.3.0 shipped, the rewrite gained a check that the text it replaced
->   is actually gone — not merely that the replacement arrived — after that hole was found reporting
->   success for a replacement that landed *beside* the old text. It was deliberately not released on its
->   own: nothing a user can see changes unless a rewrite fails. The release notes should say that a
->   conversion which does not land is now undone rather than reported as done. Details in
->   `openspec/changes/archive/…-verify-the-old-text-is-gone/`.
+> **0.4.0 was the consolidation bridge for Windows.** Every MSI up to and including 0.3.0 polls the OLD
+> downloads repo (`WhisKeySwitch/switcher3way-releases`) for updates, so 0.4.0 was published to **both**
+> repos to let those installs reach the build that carries the new URL. Releases after this one go to
+> the main repo only, and the old repo can be archived once the stragglers have crossed over (archived
+> repos keep serving downloads and read-only API, so archiving does not strand anyone).
 >
 > **`-Version` does not stamp the package.** `build-msix.ps1 -Version 0.3.1` names the output file
 > `Switcher3way-0.3.1-x64-sideload.msix` and sets the *assembly* version, but the package Identity comes

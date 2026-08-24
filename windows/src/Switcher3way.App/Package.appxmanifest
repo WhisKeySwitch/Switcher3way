@@ -24,7 +24,7 @@
   <Identity
     Name="IronMade.Switcher3Way"
     Publisher="CN=AF9BB38F-30B9-45AC-B73D-521C0053C310"
-    Version="0.3.0.0" />
+    Version="0.4.0.0" />
 
   <Properties>
     <DisplayName>Switcher3way</DisplayName>
