@@ -12,6 +12,16 @@
 > Both channels are at **0.4.0** (the Store cleared certification on 24 August 2026).
 > 0.2.8 was a Store-only submission; the MSI channel skipped it and went 0.2.7 → 0.2.9 → 0.3.0 → 0.4.0.
 >
+> **`main` carries unreleased work again: settings that cannot be read.** `SettingsManager.Load()`
+> used to swallow every failure and return defaults, and `DebugLog` defaults to false — so an
+> unreadable settings file discarded the exception lists, denied apps, trigger key and language
+> preference with no message and no log, and the background update check then saved the defaults over
+> it within seconds. Measured: a real settings file became bare defaults on disk **nine seconds after
+> launch**, untouched. It is now reported through the always-on log, the unreadable file is kept as
+> `settings.json.bad`, and the user is told. Release notes should say that settings which cannot be
+> read are now reported and preserved instead of quietly replaced. Details in
+> `openspec/changes/archive/2026-08-24-fix-silent-settings-reset/`.
+>
 > **0.4.0 is the typo-guard release.** A user left for a competitor because every fumbled key threw a
 > word into English and took the layout with it. Auto-fix now asks whether the typed text is a near
 > miss of a word in the language being typed, and refuses to decide words under six characters without
