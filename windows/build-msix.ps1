@@ -25,7 +25,13 @@ param(
     [string]$Version,
     [switch]$Sideload,
     [switch]$Sign,
-    [switch]$Certify
+    [switch]$Certify,
+    # Trimming is opt-in per build, and stays that way until the verification in
+    # openspec/changes/trim-the-bundled-runtime is complete. It removes roughly half the download and
+    # removes it from the parts of the runtime nothing references — but it also removes what only
+    # reflection and COM can see, which is how the password guard and every window are reached. The
+    # roots that keep those working live in src/Switcher3way.App/ILLink.Descriptors.xml.
+    [switch]$Trimmed
 )
 
 $ErrorActionPreference = "Stop"
@@ -50,6 +56,7 @@ $args = @(
     "-p:AppxPackageDir=$outDir\"
 )
 if ($Version) { $args += "-p:Version=$Version" }
+if ($Trimmed) { $args += "-p:PublishTrimmed=true" }
 if ($Sign) {
     # The stable self-signed dev identity — for local sideload testing only.
     $args += "-p:PackageCertificateThumbprint=AF3E5CA81DA3A215225702AD60AD34BA1FB5E060"
