@@ -9,32 +9,23 @@
 > dropped. The pattern to learn from: **verify in the flavour that ships.** All three passed testing
 > on an unpackaged build.
 >
-> Both channels are at **0.4.0** (the Store cleared certification on 24 August 2026).
-> 0.2.8 was a Store-only submission; the MSI channel skipped it and went 0.2.7 → 0.2.9 → 0.3.0 → 0.4.0.
+> The MSI channel is at **0.4.1**; the Store is at **0.4.0** until 0.4.1 clears certification.
+> 0.2.8 was a Store-only submission; the MSI channel skipped it and went 0.2.7 → 0.2.9 → 0.3.0 → 0.4.0
+> → 0.4.1.
 >
-> **`main` carries unreleased work again: settings that cannot be read.** `SettingsManager.Load()`
-> used to swallow every failure and return defaults, and `DebugLog` defaults to false — so an
-> unreadable settings file discarded the exception lists, denied apps, trigger key and language
-> preference with no message and no log, and the background update check then saved the defaults over
-> it within seconds. Measured: a real settings file became bare defaults on disk **nine seconds after
-> launch**, untouched. It is now reported through the always-on log, the unreadable file is kept as
-> `settings.json.bad`, and the user is told. Release notes should say that settings which cannot be
-> read are now reported and preserved instead of quietly replaced. Details in
-> `openspec/changes/archive/2026-08-24-fix-silent-settings-reset/`.
+> **0.4.1 is the "stop interrupting people" release.** A word finished with Enter could never be
+> converted — the rewrite replaces the word *and its boundary* and types every character as a Unicode
+> code point, which a Windows text box ignores for U+000A — so it erased, retyped, failed
+> verification, undid itself and raised a notification at the end of every line. It only became
+> visible in 0.4.0, when the app started reading back what it had written. It now declines. Also:
+> failure messages describe what actually failed instead of blaming elevation for everything, and
+> settings that cannot be read are preserved and reported rather than silently replaced.
 >
-> **0.4.0 is the typo-guard release.** A user left for a competitor because every fumbled key threw a
-> word into English and took the layout with it. Auto-fix now asks whether the typed text is a near
-> miss of a word in the language being typed, and refuses to decide words under six characters without
-> help from the surrounding phrase; measured typo-conversion went from 2.9% to 0% with paragraph-level
-> recall unchanged. It also carries the rewrite-removal check held back from 0.3.0. Both are described
-> in `openspec/changes/archive/2026-08-23-stop-converting-typos/` and
-> `openspec/changes/archive/2026-08-19-verify-the-old-text-is-gone/`.
->
-> **0.4.0 was the consolidation bridge for Windows.** Every MSI up to and including 0.3.0 polls the OLD
-> downloads repo (`WhisKeySwitch/switcher3way-releases`) for updates, so 0.4.0 was published to **both**
-> repos to let those installs reach the build that carries the new URL. Releases after this one go to
-> the main repo only, and the old repo can be archived once the stragglers have crossed over (archived
-> repos keep serving downloads and read-only API, so archiving does not strand anyone).
+> **0.4.0 was the typo-guard release, and the consolidation bridge for Windows.** Every MSI up to and
+> including 0.3.0 polls the OLD downloads repo (`WhisKeySwitch/switcher3way-releases`), so 0.4.0 was
+> published to both. **Releases from 0.4.1 onward go to the main repo only.** The old repo can be
+> archived once stragglers have crossed over — archived repos keep serving downloads and read-only
+> API, so archiving strands nobody.
 >
 > **Trimming the runtime was measured and declined.** 94% of the package is the bundled .NET + WinUI
 > runtime; the dictionaries are 5%. `PublishTrimmed` takes the Store package from **46.7 MB to

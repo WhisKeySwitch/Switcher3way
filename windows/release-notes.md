@@ -2,67 +2,54 @@ Switcher3way for Windows — direct-download preview. If you can use the
 [Microsoft Store version](https://apps.microsoft.com/detail/9MXFXL7GG3C5), prefer it: it is signed by
 Microsoft, needs no prerequisite, and updates itself.
 
-**This release stops the app converting your typos.** If you write Ukrainian or Russian and have ever
-watched a mistyped word jump into English — taking the keyboard layout with it, so the rest of the
-sentence came out in the wrong alphabet — this is the fix. Update.
+**This release stops the app interrupting you at the end of every line**, and stops it blaming a
+problem it had not diagnosed. If you finish sentences with Enter — which is to say, if you type —
+update.
 
-## Fixed — a fumbled key is no longer read as the wrong keyboard
+## Fixed — the app no longer attempts a conversion it cannot complete
 
-A user went back to a competitor over this, and they were right to:
+Finishing a word with **Enter** could never be converted. Not since the app was written. What
+happened instead was that it tried: erased your word, typed the replacement, discovered the result
+was wrong, put your text back, and told you the window "may be running as administrator". Every line.
 
-> every typo or mistake makes switch to EN from UK … quite big text with some crap in english layout
-> here and there
+The cause is small and complete. When the app converts a word it replaces the word *and the character
+that ended it*, and it types every character as a Unicode code point. That is exactly right for a
+space and useless for Enter — a Windows text box ignores it — so the replacement always arrived one
+character short and the check added in 0.4.0 correctly refused it.
 
-The app used to reason: this is not a word in the language you are typing, but it *is* a word in
-another one, so your keyboard must be wrong. That reasoning has no way to express the far more common
-explanation — you are writing your own language and you missed a key. So it converted typos, moved the
-layout, and left English debris scattered through a long document.
+This was never a working feature that broke. It only became *visible* in 0.4.0, when the app started
+reading back what it had written: before that the same rewrite reported success and left your text
+however it fell.
 
-Two things were going wrong, and both are now measured rather than assumed:
+So the app now declines. A word finished with Enter or Tab is left alone, quietly. Nothing you see
+changes — it was never converted either way — but the rewrite that ran, failed, undid itself and
+interrupted you is gone. Words finished with a space convert exactly as before, and the trigger is
+unaffected.
 
-- **Short words carried no information.** 160 of the 676 possible two-letter Latin strings are in the
-  English dictionary — `ft`, `bf`, `kw`, `lb` — almost all abbreviations nobody types as a word. A
-  mistyped two-letter Ukrainian word therefore had roughly a one-in-four chance of "being English".
-- **Ukrainian typos land in Russian constantly.** `програма` → `программа`, `адже` → `даже`,
-  `колегами` → `коллегами` are all real Russian words, and they are long, so no rule about word length
-  could have caught them.
+Re-pressing Enter to put the line break back was considered and rejected: it would work in a text
+editor and misfire in a chat box, where Enter has already sent the message and pressing it again
+would send another. Nothing tells those apart in advance, so the app does not guess.
 
-What the app does now:
+## Fixed — failure messages that describe what actually failed
 
-- **It asks whether it is a typo first.** Before accepting that a word belongs to another language, it
-  checks whether the language you are already typing holds a real word one keystroke away — a dropped
-  letter, a doubled one, a wrong one, two letters swapped. If it does, the simpler story is that you
-  missed a key, and the word is left alone.
-- **It refuses to judge very short words on their own**, and uses the sentence around them instead. A
-  two- or three-letter word is held, untouched, until a longer word settles which language you are
-  writing; then it is converted along with it. In a message where every word is short — `як ти?` —
-  two words agreeing with each other settle it between them.
-- **Correcting a whole sentence typed in the wrong layout still works exactly as before.** This was the
-  hard part: measured one word at a time the new caution looks ruinous, and measured across a paragraph
-  it costs nothing, because the held words are picked up by the word that resolves the sentence.
+Every rewrite failure was reported as *"Can't change text in this window — it may be running as
+administrator."* That is true for exactly one of them. A conversion refused in an ordinary text editor
+sent you looking for elevation you do not have, while the real behaviour — the app checked its own
+work, disliked the result, and put your original back — went unmentioned.
 
-Measured over natural prose with realistic typos: the share of typos converted went from **2.9% to 0%**,
-spurious layout switches from 8 per page to **none**, and correcting text typed in the wrong layout is
-unchanged.
+A conversion that does not land now says so, and says your text was put back. Administrator rights
+are named only when that is genuinely the cause.
 
-One deliberate trade: a **single short word** typed in the wrong layout, with nothing around it and no
-second word to agree with, is no longer corrected automatically — on the evidence available it cannot be
-told apart from a typo, so the app declines instead of guessing. The trigger still converts it.
+## Fixed — settings that cannot be read are no longer discarded in silence
 
-## Fixed — a conversion that does not land is now undone, not reported as done
+If the settings file could not be read — a truncated write after a crash, a disk error, a file from a
+newer version — the app quietly started with defaults and then saved them over the top, usually within
+seconds of launching and without you touching anything. Your exception lists, denied apps, trigger key
+and language preference were gone, with nothing said and nothing logged, because the debug-log switch
+that would have recorded it lives in the file that failed to load.
 
-The rewrite already checked that the replacement it typed had arrived. It did not check that the text it
-was replacing had actually *gone* — so a replacement that landed correctly *beside* the old text passed
-as a success. Removal is now verified by position as well as content, and the two failures are told
-apart, because they need opposite repairs: text that landed wrong is erased and the original restored,
-while text that landed beside the original has only the insertion removed. Nothing you can see changes
-unless a rewrite fails; when one does, you get your text back instead of a mess built on top of it.
-
-## Also
-
-- The debug log now records **every** decision, including the decision to leave a word alone, with the
-  reason. Leaving text untouched is this app's most common action and it looks identical to the app not
-  running — which made the typo guard impossible to verify by watching the screen.
+The unreadable file is now kept as `settings.json.bad`, the failure is recorded whatever the log
+setting says, and you are told.
 
 ## Install
 
@@ -80,14 +67,14 @@ unless a rewrite fails; when one does, you get your text back instead of a mess 
 
 ## Verify the download
 
-SHA-256 of `Switcher3way-0.4.0-win-x64.msi`:
+SHA-256 of `Switcher3way-0.4.1-win-x64.msi`:
 
 ```
-8a33baacd6c0d13658abee3923cab8020c3bc25e022c26578350343799be7bfa
+1b17870d50f2b3d5ae9ba02142a9c0d53395251385c66c4eb16250687363f9b0
 ```
 
 ```powershell
-(Get-FileHash .\Switcher3way-0.4.0-win-x64.msi -Algorithm SHA256).Hash
+(Get-FileHash .\Switcher3way-0.4.1-win-x64.msi -Algorithm SHA256).Hash
 ```
 
 The in-app updater checks this same checksum before installing anything.
@@ -96,6 +83,8 @@ The in-app updater checks this same checksum before installing anything.
 
 - **Not code-signed** — SmartScreen warns on first run. The Store build is signed by Microsoft.
 - **x64 only.** No arm64 build yet.
+- A word finished with **Enter or Tab** is not auto-converted, for the reason above. The trigger still
+  converts it if the text is still on screen.
 - **Cannot rewrite text inside windows running as administrator** unless Switcher3way is also running
   as administrator — Windows blocks synthesized input from a lower integrity level. The app reports
   this rather than silently doing nothing.
