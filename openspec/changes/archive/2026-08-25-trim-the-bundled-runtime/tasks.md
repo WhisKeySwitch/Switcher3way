@@ -86,10 +86,36 @@ text, both of which the broken trimmed build already does.
 
 ## 4. Adopt or record
 
-- [ ] 4.1 If 3.1–3.7 all hold: adopt in `build-msix.ps1` and `build-msi.ps1`, and state the new
-      download size in the release notes — it is the most user-visible thing in the release.
-- [ ] 4.2 If any of them cannot be made to hold: **abandon**, and write the finding into
-      `windows/RELEASING.md` with the measurements, so the 68% stays a known and re-testable
-      opportunity rather than something rediscovered and re-attempted from scratch.
-- [ ] 4.3 Either way, record that the dictionary split was measured at 2.2 MB and rejected, and note
-      the condition that would change that answer: a fourth and fifth bundled language.
+**Abandoned — deliberately, and with the measurements kept.**
+
+- [x] 4.1 Not adopted. The decision was the owner's and the constraint was absolute: a size reduction
+      that can break functionality is not acceptable, whatever it saves. That is the right reading of
+      the evidence rather than a cautious one. Trimming's failure mode is not "it breaks loudly", it
+      is "something nobody thought to test is silently gone" — this work found three such failures,
+      two of them invisible from the outside, in an app that compiled cleanly and converted text
+      perfectly. Nineteen checks passing says the paths we knew to worry about survive. It says
+      nothing about the ones we did not think of, and by construction it cannot.
+- [x] 4.2 Recorded in `windows/RELEASING.md` with the numbers, so a 50% saving stays a known and
+      re-testable opportunity rather than folklore rediscovered in a year.
+- [x] 4.3 The dictionary split is recorded as measured at 2.2 MB and rejected, with the condition that
+      would change the answer: a fourth and fifth bundled language.
+
+### What is kept, and why
+
+The mechanism stays in the tree and stays **off**: `ILLink.Descriptors.xml`, the `PublishTrimmed`
+conditions in the csproj, and `build-msix.ps1 -Trimmed`. None of it affects a shipped build — the
+properties are conditioned on `PublishTrimmed`, which nothing sets.
+
+This follows what was done with the erase strategies in `verify-the-old-text-is-gone`: the rejected
+approaches stayed reachable behind `diagrewrite` precisely so the negative result stays a finding
+that can be re-tested rather than an opinion handed down. Someone will propose trimming again. When
+they do, the roots that make it nearly work, the measurement, and the reason it was declined are all
+here.
+
+### What would change the answer
+
+Not a bigger saving — the saving was never the problem. It would take a way to establish that a
+trimmed build is *whole*, rather than testing the paths we happen to remember. A crash-free run of
+every UI surface and every interop path, driven automatically, would be a start. Until something like
+that exists, "we tested the parts we thought of" is the strongest claim available, and it is not
+strong enough for code that types into other people's password fields.

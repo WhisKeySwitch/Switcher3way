@@ -36,6 +36,29 @@
 > the main repo only, and the old repo can be archived once the stragglers have crossed over (archived
 > repos keep serving downloads and read-only API, so archiving does not strand anyone).
 >
+> **Trimming the runtime was measured and declined.** 94% of the package is the bundled .NET + WinUI
+> runtime; the dictionaries are 5%. `PublishTrimmed` takes the Store package from **46.7 MB to
+> 23.1 MB** — and silently breaks things a clean build and a working conversion do not reveal:
+> browser password-field detection (COM stripped from under the guard, which fails open and so looks
+> identical to a working one), the Settings window, and settings loading. Trimmer roots in
+> `src/Switcher3way.App/ILLink.Descriptors.xml` fix all three, and 19 of 23 verification checks then
+> pass, including the password guard against a real Chrome field and `toast: registered` on a
+> packaged build.
+>
+> It is still not adopted, and the reason is not the residual check. It is that trimming fails
+> *silently*, so passing the tests you thought of does not bound the risk — and this app types into
+> other people's password fields. **A size reduction that can break functionality is not acceptable,
+> whatever it saves.**
+>
+> The mechanism stays in the tree and stays off (`build-msix.ps1 -Trimmed`, conditioned on
+> `PublishTrimmed`, which nothing sets), so the finding can be re-tested rather than rediscovered.
+> Full measurements: `openspec/changes/archive/…-trim-the-bundled-runtime/`. What would change the
+> answer is a way to establish a trimmed build is *whole*, not a bigger saving.
+>
+> **Shipping English-only dictionaries and downloading the rest** was measured at 2.2 MB compressed —
+> under 5% — and rejected for the complexity and the offline failure mode. It becomes the right design
+> at a fourth or fifth bundled language, not at three.
+>
 > **`-Version` does not stamp the package.** `build-msix.ps1 -Version 0.3.1` names the output file
 > `Switcher3way-0.3.1-x64-sideload.msix` and sets the *assembly* version, but the package Identity comes
 > from the hardcoded `Version="…"` in `Package.appxmanifest`, which the flag does not touch. Build a
