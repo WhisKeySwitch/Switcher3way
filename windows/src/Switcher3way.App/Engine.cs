@@ -105,12 +105,33 @@ internal sealed class Engine
     private int UsableLayoutCount() =>
         _catalog.InstalledLayouts().Count(l => l.Lang is not null && _dict.IsAvailable(l.Lang));
 
-    private void NotifyProtected()
+    /// <summary>
+    /// Tell the user a conversion did not happen, in terms of what actually went wrong.
+    ///
+    /// Every failure used to be reported as "this window may be running as administrator", which is
+    /// true for exactly one of them. A conversion refused because the replacement did not land in a
+    /// perfectly ordinary window told the user to go and check elevation they do not have, and left
+    /// the real behaviour — the app checked its own work, disliked the result, and put the original
+    /// back — completely invisible. A message that contradicts what happened is worse than a vague
+    /// one, and this app has already had to fix two of them.
+    /// </summary>
+    private void NotifyFailure(TextRewriter.Result result)
     {
         var now = DateTime.Now;
-        if ((now - _lastNotify).TotalSeconds < 30) return; // throttle so an elevated window can't spam
+        if ((now - _lastNotify).TotalSeconds < 30) return; // throttle so one bad window can't spam
         _lastNotify = now;
-        Notify?.Invoke(Loc.T("notify.protected"));
+        Notify?.Invoke(Loc.T(result switch
+        {
+            // The one case that really is about privilege: Windows refuses synthesized input from a
+            // lower integrity level.
+            TextRewriter.Result.Protected => "notify.protected",
+            // The replacement was checked and did not match, so the original was restored. Nothing was
+            // lost, and saying so is the point — otherwise the app looks broken rather than careful.
+            TextRewriter.Result.Mismatch => "notify.mismatch",
+            // Injection stopped part-way through for a reason other than the user typing.
+            TextRewriter.Result.Partial => "notify.partial",
+            _ => "notify.protected",
+        }));
     }
 
     private sealed class Cycle
@@ -213,6 +234,27 @@ internal sealed class Engine
         var outcome = _resolver.Evaluate(word, caps, _phrase.LockedLang ?? _settledLang);
         int gen = _phrase.Generation;
         bool hardBoundary = boundary != ' '; // Enter/Tab ends the phrase after this word
+
+        // A word finished with Enter or Tab cannot be rewritten, and trying is worse than declining.
+        // The rewrite erases the word *and its boundary*, then re-types both — and it types every
+        // character as a Unicode code point, which is fine for a space and useless for these: a
+        // Windows edit control ignores U+000A and U+000D alike, so the replacement always lands one
+        // character short and the read-back correctly refuses it. Measured in Notepad: erase 7, type
+        // 7, six arrive, `caret 7 -> 6, expected 7`, repaired back.
+        //
+        // Re-emitting the boundary as a key press instead would fix a text editor and break a chat
+        // box, where Enter already sent the message and pressing it again would send another. There
+        // is no way to tell those apart before acting, so the app does not act. The user sees no
+        // conversion either way; what they no longer see is a rewrite that runs, fails, undoes itself
+        // and raises a notification, every single time they finish a line.
+        if (hardBoundary && outcome is Outcome.Convert or Outcome.Ambiguous)
+        {
+            Diagnostics.Log($"  auto: \"{_resolver.RenderCurrent(word) ?? ""}\" not converted — the word ends "
+                            + (boundary == '	' ? "with Tab" : "with Enter")
+                            + ", whose boundary character cannot be re-typed");
+            ResetPhrase();
+            return;
+        }
 
         switch (outcome)
         {
@@ -338,7 +380,7 @@ internal sealed class Engine
             // A rewrite that landed wrong, or that could not be checked, leaves the screen in a state the
             // phrase tracker's model no longer describes — the same reasoning as an abort.
             if (res is TextRewriter.Result.Mismatch) ResetPhrase();
-            NotifyProtected();
+            NotifyFailure(res);
         }
     }
 
@@ -414,7 +456,7 @@ internal sealed class Engine
         {
             Diagnostics.Log($"  auto: phrase correction : {res}");
             if (res is TextRewriter.Result.Mismatch) ResetPhrase();
-            NotifyProtected();
+            NotifyFailure(res);
         }
     }
 
@@ -653,7 +695,7 @@ internal sealed class Engine
             lock (_cycleLock) _cycle = null;
             if (res is TextRewriter.Result.Mismatch)
                 Diagnostics.LogAlways("  cycle: abandoned after Mismatch — the next trigger will start from what is on screen");
-            NotifyProtected();
+            NotifyFailure(res);
             return;
         }
         // Feedback on manual conversions too, but not on the final restore-to-original step.
