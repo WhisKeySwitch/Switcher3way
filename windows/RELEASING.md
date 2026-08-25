@@ -184,6 +184,11 @@ log says either `toast: registered` or `toast: registration failed`.
 
 ### Submission pack (paste into Partner Center)
 
+> The **What's new in this version** field — the one part that changes on every submission — lives in
+> [`whats-new.md`](whats-new.md), with all three languages together so it can be copied without
+> hunting through the listing. Everything else is below.
+
+
 **Privacy policy URL** — required, because a keyboard hook can access personal information:
 `https://whiskeyswitch.github.io/Switcher3way/privacy.html` (source: [`docs/privacy.html`](../docs/privacy.html)).
 
