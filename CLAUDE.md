@@ -27,11 +27,18 @@ Its own product on its own terms, not a macOS port — describe and justify its 
 Windows terms (Win32/WinUI constraints, what the user sees), not by what macOS does.
 
 ```powershell
-pwsh windows/build-msi.ps1                          # direct-download installer (WiX)
-pwsh windows/build-msix.ps1 -Version 0.2.9          # Store package → windows/dist/
+pwsh windows/build-msi.ps1 -Version 0.4.0           # direct-download installer (WiX)
+pwsh windows/build-msix.ps1 -Version 0.4.0          # Store package → windows/dist/
 pwsh windows/build-msix.ps1 -Sideload -Sign         # a package you can actually install locally
-dotnet test windows/tests/Switcher3way.Core.Tests   # 177 tests, no app or permissions needed
+dotnet test windows/tests/Switcher3way.Core.Tests   # 178 tests, no app or permissions needed
+python windows/tools/verify-typo-guard.py           # drives the installed app, reads its own log
 ```
+
+**`-Version` does not stamp the package.** It names the output file and sets the *assembly* version;
+the MSIX Identity comes from a hardcoded `Version="…"` in `Package.appxmanifest` that the flag never
+touches. Edit both, then check the artifact rather than trusting the filename — a package called
+0.3.1 that identifies as 0.3.0.0 is indistinguishable from the shipped build once installed, and that
+is how a whole test session once ran against the wrong binary. `windows/RELEASING.md` has the check.
 
 - **Two flavours, one project.** `-p:Packaged=true` builds the MSIX (Store); the default is
   unpackaged (MSI). `PackageInfo.IsPackaged` branches the updater and "start with Windows".
@@ -45,20 +52,34 @@ dotnet test windows/tests/Switcher3way.Core.Tests   # 177 tests, no app or permi
   whether the language being typed holds a word one edit away (`TypoGuard.NearMiss`), and it refuses
   to decide words under 6 characters on their own, handing them to the phrase (`Outcome.Defer`, then
   `PhraseTracker`'s retro-correction). Both thresholds come from measurement, not taste: see
-  `openspec/changes/stop-converting-typos`. `TypingSimulationTests` scores this over whole paragraphs,
+  `openspec/changes/archive/2026-08-23-stop-converting-typos`. `TypingSimulationTests` scores this over whole paragraphs,
   which is the only way to see it — per-word, deferring short words looks like a 45-point recall loss
   and is actually free.
 - **Debug log:** Settings → Advanced → Debug logging, then
   `%APPDATA%\Switcher3way\Logs\switcher3way.log`. Diagnostics switches: `diaghint`, `diagtoast`,
-  `diagcaret`, `diagpw`, `diagui`, `selftest`.
+  `diagtoastoffer`, `diagcaret`, `diagcaretwinui`, `diagpw`, `diagrewrite`, `diagnochip`, `diagui`,
+  `selftest`. **Every auto decision is logged, including the decision to do nothing** — leaving a word
+  alone is the app's most common action and moves nothing on screen, so without a reason line a guard
+  that works and a guard that never ran leave identical evidence. That ambiguity has already produced
+  one "it does nothing" report that turned out to be correct behaviour.
+- **A sideload package replaces the Store one.** They share the package Name and differ only in
+  publisher, so `Add-AppxPackage` removes the Store entry rather than installing alongside. To test
+  without disturbing an installed Store build, give the test package a distinct `Identity/Name` **and
+  its own activator CLSID** (two packages cannot register the same COM class). User data is untouched
+  either way — `%APPDATA%\Switcher3way` is shared and not redirected to `LocalCache`.
 - **Notifications differ between flavours** and this cost two certification failures — see
   `Toast.cs` and the `windows.comServer` / `windows.toastNotificationActivation` extensions in
   `Package.appxmanifest`. Test notifications on a *packaged* build only.
 - **The rewrite is the dangerous code.** Anything buffered is only safe to rewrite while the caret
   hasn't moved since it was typed; `KeyboardMonitor` clears both buffers on mouse click, app switch,
-  caret keys, Ctrl/Alt chords and backspace-into-an-earlier-word for that reason. `TextRewriter`'s
-  `Result.Ok` means SendInput accepted the events, **not** that the text landed — see the open
-  `openspec/changes/fix-rewrite-text-corruption`.
+  caret keys, Ctrl/Alt chords and backspace-into-an-earlier-word for that reason. `Result.Ok` used to
+  mean only that SendInput accepted the events; since 0.3.0 the rewrite reads back what actually
+  landed, and since 0.4.0 it also checks that the text it replaced is *gone* — by position, not just
+  content, because a replacement that arrives correctly *beside* the original passes any comparison of
+  what was written. `Mismatch` is put back; `Unverified` means the target exposes no readable text
+  (Chromium before its accessibility tree exists) and counts as applied. The erase runs at about 15 ms
+  per character because that is what the receiving application needs: batching and shorter accurate
+  pauses were both measured and both lost events. See the archived `verify-the-old-text-is-gone`.
 - Injected input is deliberately *accepted* (only the app's own `dwExtraInfo`-tagged events are
   ignored), so Remote Desktop and remappers work — and so trigger behaviour can be driven end to end
   by a script.
@@ -102,7 +123,7 @@ earlier "it doesn't work".
 
 Rationale + detail: `NOTES-3WAY.md`. Summary:
 
-1. **N-way detection** — `NWayDetector.swift` (`NWayResolver.evaluate`). Renders the typed
+1. **N-way detection** — `Sources/Switcher3wCore/NWayResolver.swift` (`evaluate`). Renders the typed
    keystrokes through *every* installed layout that has a macOS dictionary, validates each
    candidate in its own language, switches to the single unambiguous winner. Words valid in
    **both** uk & ru (e.g. `там`, `добре`) convert to the preferred ambiguity language
@@ -124,7 +145,7 @@ Rationale + detail: `NOTES-3WAY.md`. Summary:
    "check for updates" checkbox removed (returned in July 2026 with the fork's own updater,
    see 3); note added explaining auto = all layouts.
 6. **Stable signing** — `build_app.sh` signs with the self-signed identity instead of ad-hoc.
-7. **UI modernization** (`openspec/changes/modernize-ui`, from the W1–W4 design-review
+7. **UI modernization** (`openspec/changes/archive/2026-07-04-modernize-ui`, from the W1–W4 design-review
    wireframes): Settings became toolbar-tab preferences (General / Auto-fix / Advanced / About)
    with grouped forms and switches; the three exception tables merged into one
    filtered/searchable list; the chained permission alerts became a live onboarding checklist
@@ -165,7 +186,7 @@ legible side by side.
   `TypoGuard.nearMiss` first, and refuses to decide words under 6 characters on their own, handing
   them to the phrase (`Outcome.held`, then `PhraseTracker`'s retro-correction, and `AppDelegate`'s
   held-run settlement when no word is long enough to settle anything). Both thresholds come from
-  measurement, not taste — the numbers are in `openspec/changes/stop-converting-typos`, produced by
+  measurement, not taste — the numbers are in `openspec/changes/archive/2026-08-23-stop-converting-typos`, produced by
   the Windows port, which shares this algorithm.
 - **`PhraseTracker.swift`** — phrase memory and retro-corrections; takes a renderer closure.
 
@@ -185,7 +206,6 @@ on a machine that is not a Mac.
   ⌥-trigger callbacks (`onAltTap`/`onAltReconvert`) also route through N-way; all three gate on
   `SettingsManager.effectivelyEnabled` (master toggle AND not paused); pause timers live in
   `applyEnabledState()`.
-- **`NWayDetector.swift`** — the N-way decision (fork's core).
 - **`AutoSwitch.swift`** — `Dict` (NSSpellChecker), `LayoutDetector.decide`, `AutoSwitchPolicy`
   (exception lists, denied apps, secure-input, remote). The soft gates now live in the core.
 - **`CoreAdapters.swift`** — the production conformances (`SystemDictionary`,
@@ -280,27 +300,38 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Current state
 
-- **macOS** — feature-complete: 3-way auto + manual switching, renamed, custom icon, in-app updates
-  from the fork's own releases (on the main repo since August 2026),
-  modernized UI (toolbar-tab Settings, onboarding checklist, status-first menu with Pause),
-  stable signing, abort-safe retype + phrase-aware ambiguity resolution (July 2026). Builds
-  clean; latest release 1.3.0.
-- **Windows** — **live on the Microsoft Store** (August 2026) after three certification failures on
-  10.1.2.10 Functionality: silent trigger, then injected input being discarded, then notifications
-  being dropped entirely in the packaged build. **Both channels are at 0.2.9** — Store (rolling out
-  from 12 August 2026) and the direct-download MSI (`windows-v0.2.9`, pre-release tag so the macOS
-  updater keeps resolving to the DMG). 0.2.9 fixed three data-loss defects in the rewrite path.
+- **macOS — 1.4.0** (August 2026), the typo-guard release. Feature-complete: 3-way auto + manual
+  switching, custom icon, in-app updates from the fork's own releases (on the main repo since the
+  August 2026 consolidation), modernized UI (toolbar-tab Settings, onboarding checklist, status-first
+  menu with Pause), stable signing, abort-safe retype + phrase-aware ambiguity resolution.
+- **Windows — 0.4.0 on both channels** (August 2026), also the typo-guard release. Live on the
+  Microsoft Store after three certification failures on 10.1.2.10 Functionality: silent trigger, then
+  injected input being discarded, then notifications dropped entirely in the packaged build. The
+  lesson from all three: **verify in the flavour that ships.** The MSI keeps a `windows-v*`
+  pre-release tag so `/releases/latest` stays the macOS DMG for the macOS updater.
+- **Both ports now refuse to convert a typo** (August 2026). The resolver used to reason "not a word
+  here, a word there, therefore wrong keyboard", which cannot express the likelier explanation — you
+  mistyped your own language — so it converted typos and took the layout with them. A user left over
+  it. Measured typo-conversion went 2.9% → 0% with paragraph recall unchanged.
+- **`main` carries an unreleased fix:** settings that cannot be read are now reported and preserved
+  rather than silently replaced by defaults. Nothing user-visible changes unless a settings file goes
+  bad, so it rides the next release rather than justifying one. `windows/RELEASING.md` says so too.
 - **Pending user action:** visual pass of the macOS UI against the W1–W4 wireframes
-  (`openspec/changes/modernize-ui/`) — behavior is verified via debug log, pixels are not.
+  (`openspec/changes/archive/2026-07-04-modernize-ui/`) — behavior is verified via debug log, pixels are not.
 
 ## Known issues / next steps
 
-- **Windows: cycling a converted selection corrupts text** (open, shipped in 0.2.9). Convert a
-  selection, cycle to the next layout, cycle back to the original — the restore step logs `Ok` but
-  lands mangled text (first ~10 characters wrong, runs collapsed onto the run's last character), and
-  the next trigger then faithfully converts the corruption. `TextRewriter.Rewrite` returns `Ok` when
-  SendInput *accepted* the events, which is not evidence the text landed. Proposed fix, with the
-  isolation experiment it needs first: `openspec/changes/fix-rewrite-text-corruption`.
+- **Package size** — 94% of the 46.7 MB Windows package is the bundled .NET + WinUI runtime;
+  dictionaries are 5%. Trimming measures at **68% off** (45.9 → 14.5 MB compressed) and breaks three
+  things, two of them silently — most seriously browser password-field detection, because
+  `SecureField` fails open and a broken guard looks exactly like a working one. Gated proposal with
+  the measurements and an abandon condition: `openspec/changes/trim-the-bundled-runtime`. Shipping
+  English-only dictionaries and downloading the rest was measured at 2.2 MB and rejected; it becomes
+  the right design at a fourth or fifth language, not at three.
+- **Not code-signed on the MSI channel** — SmartScreen warns. Needs an OV/EV certificate from a CA;
+  self-signed does not satisfy SmartScreen. x64 only, no arm64 build.
+- **The old downloads repo can be archived** once pre-0.4.0 installs have crossed over: 0.4.0 was
+  published to both repos as the one-time bridge, and archived repos keep serving downloads read-only.
 - **Icon optical balance** — S/Э/Є are fine; could optically size-match if desired.
 - **Git:** work happens on feature branches merged into `main` via PRs on
   `WhisKeySwitch/Switcher3way` (origin; the old `yaremenko2205/switcher3w` URL redirects there).
