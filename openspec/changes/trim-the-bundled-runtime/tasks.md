@@ -11,27 +11,44 @@
 
 ## 2. Make the three defects survivable
 
-- [ ] 2.1 Settings: source-generated `JsonSerializerContext` instead of reflection-based
+- [x] 2.1 Settings: source-generated `JsonSerializerContext` instead of reflection-based
       `JsonSerializer`. Good practice regardless of trimming, and it removes every IL2026 on
-      `SettingsManager`. (`fix-silent-settings-reset` makes the failure loud; this makes it not happen.)
-- [ ] 2.2 XAML: trimmer roots / descriptors for WinUI and the app assembly so markup extensions resolve.
-      WinUI 3 does not officially support trimming — if this cannot be made to hold, stop here and
-      record it.
-- [ ] 2.3 COM interop: preserve the paths `SecureField` and `AccessibleCaret` depend on
-      (`AccessibleObjectFromWindow`, `IAccessible`, `Type.InvokeMember` over accessibility objects)
-      with explicit `DynamicDependency` attributes or a trimmer root descriptor.
-- [ ] 2.4 `StartupShortcut` and `SettingsWindow` use `dynamic` over COM ProgIDs; replace with typed
-      interop or preserve explicitly.
-- [ ] 2.5 **Re-measure.** Roots give size back. If the saving after roots is not clearly worth the
-      risk this change is documenting, abandon it — the number that matters is the one at the end.
+      `SettingsManager`.
+- [x] 2.2 XAML: `ILLink.Descriptors.xml` preserving WinUI, the projections and the SDK projection
+      assembly, so markup extensions resolve. Settings now opens in a trimmed build.
+- [x] 2.3 COM interop: `BuiltInComInteropSupport=true` **plus** preserving `System.StubHelpers`,
+      `Marshal` and `__ComObject` in CoreLib — the switch alone is not enough, because the marshalling
+      stubs are trimmed away regardless and the guard then fails with a different exception. Also
+      preserved `Accessibility` and `Interop.UIAutomationClient`, which `SecureField` and
+      `AccessibleCaret` reach only through `Type.InvokeMember`.
+- [x] 2.4 `StartupShortcut` and `SettingsWindow` reach COM through `dynamic`; covered by the same
+      descriptor rather than rewritten, since the interop they use is preserved wholesale.
+- [x] 2.5 Re-measured. Roots give back 8 MB, as expected — the number that matters is the one after
+      them:
+
+      | | compressed | on disk |
+      |---|---|---|
+      | untrimmed | 45.9 MB | 121 MB |
+      | trimmed, no roots (broken) | 14.5 MB | 40 MB |
+      | **trimmed + roots (working)** | **22.6 MB** | **~60 MB** |
+
+      A **51% saving**, against 2.2 MB for the dictionary split this change rejected.
 
 ## 3. Prove the guard, or abandon the change
 
 The gate. None of these may be satisfied by inference from a clean build or from the app converting
 text, both of which the broken trimmed build already does.
 
-- [ ] 3.1 `diagpw` against a focused password field in **Chrome or Edge** — the case that needs the
-      accessibility path — reporting a real verdict rather than "UI Automation unavailable".
+- [x] 3.1 `diagpw` against a focused password field in **Chrome**: `password=True (uia=True
+      named=True)`, focused element `[name='Password' type=50004]`, and no "UI Automation
+      unavailable" anywhere — identical to the untrimmed baseline built from the same source.
+
+      Taking that baseline mattered. The first attempt showed `uia=False` on the trimmed build and
+      looked like a failure; the untrimmed build said `uia=False` too. Chrome builds its renderer
+      accessibility tree lazily, so until something asks for it the guard sees only a window pane
+      (`type=50033`) rather than the field. Worth knowing on its own account: **browser password
+      detection depends on Chrome's accessibility tree being up**, which this app's own repeated
+      queries appear to bring up in normal use but which a freshly opened window may not have.
 - [ ] 3.2 The same in an Electron application, which raises the tree through `AXManualAccessibility`.
 - [ ] 3.3 The same against a classic Win32 password field, which uses the secure-input flag and should
       never have depended on COM.
