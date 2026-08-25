@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What the trimmer must keep, and why.
+
+  Trimming works by following what the code demonstrably calls. Everything this app reaches through
+  COM or reflection is invisible to that analysis, and the parts it silently removes are the parts
+  that matter most: the accessibility interop behind password-field detection, and the XAML machinery
+  behind every window. Both fail at run time, in a build that compiles cleanly and converts text
+  perfectly — which is exactly why they are listed here rather than discovered later.
+
+  Measurements and the verification this is gated on:
+  openspec/changes/trim-the-bundled-runtime.
+-->
+<linker>
+  <!--
+    COM interop marshalling. `BuiltInComInteropSupport=true` re-enables the feature switch, but the
+    marshalling stubs themselves are still trimmed out of CoreLib, and the guard then fails with
+    "Could not load type 'System.StubHelpers.InterfaceMarshaler'" instead of "COM has been disabled".
+    Same broken guard, different exception — measured, not assumed.
+  -->
+  <assembly fullname="System.Private.CoreLib">
+    <namespace fullname="System.StubHelpers" preserve="all" />
+    <type fullname="System.Runtime.InteropServices.Marshal" preserve="all" />
+    <type fullname="System.__ComObject" preserve="all" />
+  </assembly>
+
+  <!--
+    IAccessible and friends: `SecureField` and `AccessibleCaret` obtain these through
+    AccessibleObjectFromWindow and then call them by name via Type.InvokeMember, which no static
+    analysis can follow.
+  -->
+  <assembly fullname="Accessibility" preserve="all" />
+  <assembly fullname="Interop.UIAutomationClient" preserve="all" />
+
+  <!--
+    WinUI resolves XAML at run time: markup extensions, converters and every type named in a .xaml
+    file are reached by name. Losing one of them is a XamlParseException when a window opens, not a
+    build error.
+  -->
+  <assembly fullname="Microsoft.WinUI" preserve="all" />
+  <assembly fullname="Microsoft.InteractiveExperiences.Projection" preserve="all" />
+  <assembly fullname="Microsoft.Windows.SDK.NET" preserve="all" />
+</linker>

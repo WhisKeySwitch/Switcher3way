@@ -58,6 +58,17 @@
     <Compile Remove="UpdateInstaller.Store.cs" />
   </ItemGroup>
 
+  <!-- Trimming is opt-in per build (see build-msix.ps1 / build-msi.ps1); these only take effect when
+       PublishTrimmed is set, and are inert otherwise. -->
+  <PropertyGroup Condition="'$(PublishTrimmed)' == 'true'">
+    <TrimMode>partial</TrimMode>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(PublishTrimmed)' == 'true'">
+    <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Interop.UIAutomationClient" Version="10.19041.0" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.*" />
