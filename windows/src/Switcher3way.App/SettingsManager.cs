@@ -113,7 +113,6 @@ public sealed class SettingsManager
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Switcher3way");
     private static string FilePath => Path.Combine(Dir, "settings.json");
 
-    private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     /// <summary>
     /// True when a settings file existed but could not be read, so this instance is defaults standing
@@ -131,7 +130,7 @@ public sealed class SettingsManager
 
         try
         {
-            var loaded = JsonSerializer.Deserialize<SettingsManager>(File.ReadAllText(FilePath));
+            var loaded = JsonSerializer.Deserialize(File.ReadAllText(FilePath), SettingsJson.Default.SettingsManager);
             if (loaded is not null) return loaded;
             throw new InvalidDataException("the settings file parsed to nothing");
         }
@@ -177,7 +176,7 @@ public sealed class SettingsManager
         try
         {
             Directory.CreateDirectory(Dir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(this, JsonOpts));
+            File.WriteAllText(FilePath, JsonSerializer.Serialize(this, SettingsJson.Default.SettingsManager));
         }
         catch { /* best-effort; a failed save must not crash the app */ }
     }
@@ -197,3 +196,21 @@ public sealed class SettingsManager
         Save();
     }
 }
+
+/// <summary>
+/// Source-generated serialization metadata for <see cref="SettingsManager"/>.
+///
+/// Reflection-based <c>JsonSerializer</c> walks the type at run time, which a trimmer cannot see and
+/// therefore cannot preserve: the properties survive, the machinery that reads them does not, and the
+/// failure surfaces as a silent fall back to defaults — every exception list and preference gone,
+/// with the app otherwise behaving normally. Generating the metadata at compile time removes the
+/// guesswork, and is the documented way to serialize in a trimmed application.
+///
+/// It lives at namespace scope deliberately. The generator requires every containing type to be
+/// <c>partial</c>, and nesting it inside <c>SettingsManager</c> produced no generated code at all —
+/// which fails at build time here, but is the same class of silent omission the trimming work is
+/// about.
+/// </summary>
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(SettingsManager))]
+internal sealed partial class SettingsJson : JsonSerializerContext { }
