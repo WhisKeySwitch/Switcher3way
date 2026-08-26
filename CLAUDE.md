@@ -316,8 +316,10 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 - **`main` carries an unreleased fix:** settings that cannot be read are now reported and preserved
   rather than silently replaced by defaults. Nothing user-visible changes unless a settings file goes
   bad, so it rides the next release rather than justifying one. `windows/RELEASING.md` says so too.
-- **Pending user action:** visual pass of the macOS UI against the W1–W4 wireframes
-  (`openspec/changes/archive/2026-07-04-modernize-ui/`) — behavior is verified via debug log, pixels are not.
+- **macOS visual pass done** (2026-08-25): W1/W2/W4 verified against the wireframes and approved
+  (`openspec/changes/archive/2026-07-04-modernize-ui/tasks.md`, task 7.1). Still open there:
+  the localization smoke test (task 7.2, switch interface language to uk/ru) and W3, which only
+  shows on first launch or after a permission reset — check it when it naturally appears.
 
 ## Known issues / next steps
 
