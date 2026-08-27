@@ -25,4 +25,14 @@
       was put back", observed in a real run before the fix landed.
 - [x] 3.4 Every localization key referenced by the code exists in all three languages.
 - [x] 3.5 178 tests green.
-- [ ] 3.6 Confirm on a packaged build, since notifications only register there.
+- [x] 3.6 Confirmed on the **shipped Store build 0.4.1**, which is the strongest form this could take
+      — not a test package, the thing users have:
+
+      ```
+      auto: "ghbdsn" not converted — the word ends with Enter, whose boundary character cannot be re-typed
+      auto: "cnjkbwz" -> "столиця" [uk] via Primary : Ok
+      ```
+
+      One log line and no rewrite for the Enter case, and **no notification** — which is the point:
+      before this, that same keystroke produced a failed rewrite, an undo, and a message blaming
+      administrator rights. A space-terminated word converts as it always did.
