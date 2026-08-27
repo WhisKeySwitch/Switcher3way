@@ -40,6 +40,10 @@
 
 ## 7. Verification & polish
 
-- [ ] 7.1 Full manual pass against wireframes W1–W4 with the installed signed build (`bash build_app.sh`, copy to /Applications): each tab, exceptions filtering/search/add/remove, onboarding live-grant flow, pause/resume, conditional permissions item
+- [x] 7.1 Full manual pass against wireframes W1–W4 with the installed signed build (`bash build_app.sh`, copy to /Applications): each tab, exceptions filtering/search/add/remove, onboarding live-grant flow, pause/resume, conditional permissions item
+      — done 2026-08-25 against the installed 1.4.0: W1/W2/W4 match (screenshots vs wireframes,
+      user-approved); W3 not capturable while permissions are healthy — judge it when it next
+      naturally appears. One accepted deviation: "Remote Desktop mode (beta)" keeps its beta
+      suffix in the menu, contrary to design.md's "beta suffixes dropped from menu labels".
 - [ ] 7.2 Localization smoke test: switch interface language (en/ru/uk) and confirm new strings localize and menu rebuilds
 - [x] 7.3 Regression check: manual ⌥ conversion, auto-convert, undo-learn prompt, per-app layout memory, debug log lines still correct; update NOTES-3WAY.md / CLAUDE.md UI descriptions
