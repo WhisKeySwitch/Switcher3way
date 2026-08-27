@@ -521,6 +521,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             forgetHeldRun()
             decision = d
             wordKind = .locked(lang: d.lang)
+        case .rescued(let d):
+            forgetHeldRun()
+            // No dictionary vouches for this word — only its shape does. Convert, but file it as
+            // defaulted rather than locked: evidence this weak must not settle what language the
+            // phrase is in, and must stay retro-correctable if the phrase proves otherwise.
+            decision = d
+            wordKind = .defaulted(lang: d.lang)
+            rslog("auto: rescue → \(d.lang) — no dictionary knows it, but only \(d.lang) fits its shape")
         case .ambiguous(let original, let winners):
             forgetHeldRun()
             let pref = phraseTracker.lockedLang ?? SettingsManager.shared.ambiguousLang

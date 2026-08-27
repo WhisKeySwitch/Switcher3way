@@ -20,7 +20,7 @@ public sealed record Winner(string Lang, string LayoutId, string Converted);
 /// Full evaluation result of <see cref="NWayResolver.Evaluate"/>. <see cref="Ambiguous"/> carries
 /// every validating language so the caller can resolve it by the preferred-language setting / phrase
 /// lock (phrase-aware ambiguity); <see cref="NWayResolver.Resolve"/> collapses it for callers that
-/// only want the unambiguous case. A closed union — the four nested records are the only cases.
+/// only want the unambiguous case. A closed union — the five nested records are the only cases.
 /// </summary>
 public abstract record Outcome
 {
@@ -57,6 +57,16 @@ public abstract record Outcome
     /// language, so the next word that does settle the phrase converts this one along with it.
     /// </summary>
     public sealed record Defer(string Original, IReadOnlyList<Winner> Winners) : Outcome;
+
+    /// <summary>
+    /// No dictionary knows this word, but the typed rendering is gibberish in the typed language
+    /// while exactly one candidate is a plausible word shape in its own — jargon or a name typed in
+    /// the wrong layout (<c>Лншм</c> → <c>Kyiv</c>). Weaker evidence than a dictionary hit: the
+    /// caller converts but records the word as <em>defaulted</em>, not locked, so the phrase can
+    /// still overrule it. When the plausible pair is uk/ru the outcome is <see cref="Ambiguous"/>
+    /// instead, and the ambiguity preference decides, exactly as for shared dictionary words.
+    /// </summary>
+    public sealed record Rescued(Decision Decision) : Outcome;
 }
 
 /// <summary>

@@ -19,6 +19,13 @@ public interface IDictionaryValidator
     /// why this has a default: a validator that cannot answer should not have to.
     /// </summary>
     string Alphabet(string lang) => "";
+
+    /// <summary>
+    /// The language's vowels, for <see cref="WordShape.IsPlausible"/> (the gibberish-rescue path).
+    /// Same fail-open convention as <see cref="Alphabet"/>: empty means "unknown", and the rescue
+    /// simply does not run — a validator that cannot answer must not cause conversions.
+    /// </summary>
+    string Vowels(string lang) => "";
 }
 
 /// <summary>

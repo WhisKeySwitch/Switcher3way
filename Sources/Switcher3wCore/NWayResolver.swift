@@ -80,6 +80,13 @@ public final class NWayResolver {
         /// alone and records the keystrokes as defaulted to the current language, so the next word
         /// that does settle the phrase converts this one along with it.
         case held(original: String, winners: [Winner])
+        /// No dictionary knows this word, but the typed rendering is gibberish in the typed
+        /// language while exactly one candidate is a plausible word shape in its own — jargon or a
+        /// name typed in the wrong layout (`Лншм` → `Kyiv`). Weaker evidence than a dictionary hit:
+        /// the caller converts but records the word as *defaulted*, not locked, so the phrase can
+        /// still overrule it. When the plausible pair is uk/ru the outcome is `.ambiguous` instead,
+        /// and the ambiguity preference decides, exactly as for shared dictionary words.
+        case rescued(Decision)
     }
 
     /// Shorter than this, a dictionary hit carries no information: a quarter of all two-letter Latin
@@ -92,6 +99,14 @@ public final class NWayResolver {
     /// short words it fires on everything. Measured on the Windows port against genuine wrong-layout
     /// typing: 100% false alarms at two letters, 30-40% at four, and 0% from six up, both directions.
     public static let nearMissTrustedFrom = 6
+
+    /// The gibberish rescue acts only from this length up. A rescue candidate carries even less
+    /// evidence than a short dictionary hit (no dictionary vouches for it at all), but the words
+    /// that motivated the feature — `апка`, `айді`, `Лншм` — are four letters, and below four the
+    /// shape signals stop meaning anything: almost any 2–3-letter cluster is a legitimate
+    /// abbreviation in one of the languages (`хз`, `пн`, `msg`, `pwd`). Measured in
+    /// `RescueQualityTests` against the checked-in fixture.
+    public static let rescueFloor = 4
 
     /// Legacy single-winner view of `evaluate` — nil unless exactly one language matches.
     public func resolve(keys: [TypedKey], capsLock: Bool) -> Decision? {
@@ -182,6 +197,13 @@ public final class NWayResolver {
         // 0 — not wrong-layout. >1 — ambiguous (uk↔ru): reported as such so the caller can
         // apply the preferred-language / phrase-lock policy (phrase-aware-ambiguity).
         if winners.isEmpty {
+            // Last resort before keeping: jargon, loanwords and names validate NOWHERE, so a
+            // dictionary can never rescue them — but a word typed in the wrong layout is gibberish
+            // in the layout it landed in and word-shaped in the one it was meant for, and that
+            // asymmetry is checkable. Runs with every gate the dictionary path has, plus its own.
+            if let rescue = rescue(current: current, byLang: byLang, capsLock: capsLock, dump: dump) {
+                return rescue
+            }
             CoreLog.write("nway: nil — no valid target language [\(dump)]")
             return .keep(.notAWordAnywhere)
         }
@@ -228,6 +250,77 @@ public final class NWayResolver {
         let winner = winners[0]
         return .convert(Decision(targetLayoutID: winner.layoutID, lang: winner.lang,
                                  original: current.string, converted: winner.converted))
+    }
+
+    /// The gibberish rescue: no dictionary validates the word in any language, so the shape of the
+    /// renderings is the only evidence left. Convert only when the typed side is gibberish AND a
+    /// candidate side is word-shaped — one-sided implausibility is not enough (`npm` is gibberish
+    /// in English, but so is its Cyrillic rendering, so it keeps).
+    ///
+    /// Returns nil when the rescue does not apply; the caller then keeps as before. Every decline
+    /// on the way is logged: this path exists precisely where the log used to show nothing.
+    private func rescue(current: Candidate, byLang: [String: Candidate],
+                        capsLock: Bool, dump: String) -> Outcome? {
+        // The dictionary path's own vetoes first, on the UN-lowercased core: the all-caps and
+        // camelCase vetoes are about letter case, and lowercasing first would blind them.
+        let rawCore = SoftGates.letterCore(Array(current.string))
+        guard SoftGates.passes(rawCore, capsLock: capsLock) else { return nil }
+        let core = rawCore.lowercased()
+        guard core.count >= Self.rescueFloor else {
+            CoreLog.write("nway: rescue declined — below length floor [\(dump)]")
+            return nil
+        }
+
+        // Shape of the typed side. An empty vowel set means this language's shape is unknown —
+        // then nothing can be called gibberish and the rescue stays out of the way (fail-open,
+        // like the near-miss alphabet).
+        let currentVowels = dict.vowels(current.lang)
+        guard !currentVowels.isEmpty else { return nil }
+        if WordShape.isPlausible(core, vowels: currentVowels, lang: current.lang) {
+            CoreLog.write("nway: rescue declined — '\(current.string)' is plausible \(current.lang) [\(dump)]")
+            return nil
+        }
+
+        // Not a typo either: if the typed language holds a word one keystroke away, a fumbled key
+        // stays the simpler story, exactly as on the dictionary path — and it is reported as that
+        // story, not as a generic keep.
+        if TypoGuard.nearMiss(core, lang: current.lang, dict: dict) {
+            CoreLog.write("nway: rescue declined — near miss of a \(current.lang) word [\(dump)]")
+            return .keep(.looksLikeATypo)
+        }
+
+        // The candidates that ARE word-shaped in their own language.
+        var plausible: [Winner] = []
+        for cand in byLang.values where cand.lang != current.lang {
+            let candCore = SoftGates.letterCore(Array(cand.string)).lowercased()
+            let candVowels = dict.vowels(cand.lang)
+            guard !candVowels.isEmpty,
+                  WordShape.isPlausible(candCore, vowels: candVowels, lang: cand.lang) else { continue }
+            plausible.append(Winner(lang: cand.lang, layoutID: cand.layoutID, converted: cand.string))
+        }
+
+        switch plausible.count {
+        case 0:
+            CoreLog.write("nway: rescue declined — gibberish in every language [\(dump)]")
+            return nil
+        case 1:
+            let w = plausible[0]
+            CoreLog.write("nway: rescue → \(w.lang) — '\(current.string)' is word-shaped only there [\(dump)]")
+            return .rescued(Decision(targetLayoutID: w.layoutID, lang: w.lang,
+                                     original: current.string, converted: w.converted))
+        default:
+            // The uk/ru pair is the ambiguity the preference setting exists for; report it the
+            // same way dictionary words shared by both languages are reported. Anything wider —
+            // plausible across scripts — is a coin toss, and a wrong pick costs the user the
+            // sentence while a keep costs one trigger tap.
+            let langs = Set(plausible.map(\.lang))
+            if langs == ["ru", "uk"] {
+                CoreLog.write("nway: rescue ambiguous (ru/uk) — word-shaped in both [\(dump)]")
+                return .ambiguous(original: current.string, winners: plausible)
+            }
+            CoreLog.write("nway: rescue declined — word-shaped in \(langs.sorted().joined(separator: "/")), nothing to choose [\(dump)]")
+            return nil
+        }
     }
 
     /// Render of the typed keys in the CURRENT layout — what the word looks like on screen
@@ -298,7 +391,7 @@ public final class NWayResolver {
         // Unguarded: the precision guards restrain the app's own initiative, and the user pressing
         // the trigger is not that. A two-letter word still gets an answer.
         switch evaluate(keys: keys, capsLock: capsLock, phraseLang: nil, weighEvidence: false) {
-        case .convert(let d):
+        case .convert(let d), .rescued(let d):
             promoted = (d.targetLayoutID, d.converted)
         case .ambiguous(_, let winners):
             if ambiguousLang != "off", let w = winners.first(where: { $0.lang == ambiguousLang }) {

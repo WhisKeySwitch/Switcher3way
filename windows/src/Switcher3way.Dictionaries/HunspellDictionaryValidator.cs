@@ -62,4 +62,18 @@ public sealed class HunspellDictionaryValidator : IDictionaryValidator
         }
         return sb.ToString();
     });
+
+    /// <summary>
+    /// The language's vowels, for the gibberish-rescue shape check. Static knowledge, not derived:
+    /// which letters are vowels is a fact about the language, and the three languages this app
+    /// ships dictionaries for are known. Unlisted languages return "" — the rescue then never runs
+    /// for them, the same fail-open convention as <see cref="Alphabet"/>.
+    /// </summary>
+    public string Vowels(string lang) => Two(lang) switch
+    {
+        "en" => "aeiouy",
+        "uk" => "аеєиіїоуюя",
+        "ru" => "аеёиоуыэюя",
+        _ => "",
+    };
 }

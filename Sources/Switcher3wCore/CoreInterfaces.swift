@@ -49,10 +49,16 @@ public protocol DictionaryValidating {
     /// language — which is arguably the more honest source anyway: a language's letters are the
     /// letters its layout types.
     func alphabet(_ lang: String) -> String
+
+    /// The language's vowels, for `WordShape.isPlausible` (the gibberish-rescue path). Same
+    /// fail-open convention as `alphabet(_:)`: empty means "unknown", and the rescue simply does
+    /// not run — a validator that cannot answer must not cause conversions.
+    func vowels(_ lang: String) -> String
 }
 
 public extension DictionaryValidating {
     func alphabet(_ lang: String) -> String { "" }
+    func vowels(_ lang: String) -> String { "" }
 }
 
 /// Installed layouts and how keystrokes render in them. Production wraps the TIS input-source

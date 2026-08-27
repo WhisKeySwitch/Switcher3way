@@ -8,6 +8,15 @@ internal sealed class FakeDict : IDictionaryValidator
     private readonly HashSet<string> _available;
     private readonly Dictionary<string, HashSet<string>> _words;
 
+    /// <summary>Letters per language, for <see cref="TypoGuard.NearMiss"/>. Empty by default —
+    /// a test only pays for the near-miss check when it seeds one.</summary>
+    public Dictionary<string, string> Alphabets { get; } = new();
+
+    /// <summary>Vowels per language, for the gibberish rescue's <see cref="WordShape"/> check.
+    /// Empty by default, which switches the rescue off — existing tests reason about the
+    /// dictionary path undisturbed.</summary>
+    public Dictionary<string, string> VowelSets { get; } = new();
+
     public FakeDict(IEnumerable<string> available, Dictionary<string, HashSet<string>> words)
     {
         _available = new HashSet<string>(available);
@@ -18,6 +27,10 @@ internal sealed class FakeDict : IDictionaryValidator
 
     public bool IsValidWord(string word, string lang) =>
         _words.TryGetValue(lang, out var set) && set.Contains(word);
+
+    public string Alphabet(string lang) => Alphabets.TryGetValue(lang, out var a) ? a : "";
+
+    public string Vowels(string lang) => VowelSets.TryGetValue(lang, out var v) ? v : "";
 }
 
 /// <summary>
