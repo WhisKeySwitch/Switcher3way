@@ -313,6 +313,11 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   here, a word there, therefore wrong keyboard", which cannot express the likelier explanation — you
   mistyped your own language — so it converted typos and took the layout with them. A user left over
   it. Measured typo-conversion went 2.9% → 0% with paragraph recall unchanged.
+- **Gibberish rescue** (August 2026, `openspec/changes/rescue-wrong-layout-gibberish`): words no
+  dictionary knows (jargon `апка`/`айді`, names `Kyiv`) now convert when the typed rendering is
+  gibberish in the typed language and word-shaped in exactly one other (`WordShape` +
+  `NWayResolver.rescued`; ru/uk pair → ambiguity preference). Measured: 0 keep-side false
+  conversions, recall 0.80 latin→cyrillic / 1.00 reverse (`RescueQualityTests`).
 - **`main` carries an unreleased fix:** settings that cannot be read are now reported and preserved
   rather than silently replaced by defaults. Nothing user-visible changes unless a settings file goes
   bad, so it rides the next release rather than justifying one. `windows/RELEASING.md` says so too.

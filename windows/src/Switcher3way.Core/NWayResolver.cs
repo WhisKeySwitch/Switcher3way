@@ -44,6 +44,16 @@ public sealed class NWayResolver
     /// </summary>
     public const int NearMissTrustedFrom = 6;
 
+    /// <summary>
+    /// The gibberish rescue acts only from this length up. A rescue candidate carries even less
+    /// evidence than a short dictionary hit (no dictionary vouches for it at all), but the words
+    /// that motivated the feature — <c>апка</c>, <c>айді</c>, <c>Лншм</c> — are four letters, and
+    /// below four the shape signals stop meaning anything: almost any 2–3-letter cluster is a
+    /// legitimate abbreviation in one of the languages (<c>хз</c>, <c>пн</c>, <c>msg</c>,
+    /// <c>pwd</c>). Measured in <c>RescueQualityTests</c> against the checked-in fixture.
+    /// </summary>
+    public const int RescueFloor = 4;
+
     private sealed record Candidate(string LayoutId, string Lang, string Text, bool IsValid);
 
     private static string Two(string lang) => lang.Length <= 2 ? lang : lang.Substring(0, 2);
@@ -136,7 +146,10 @@ public sealed class NWayResolver
         }
 
         // 0 — not wrong-layout; 1 — convert; >1 — ambiguous (uk↔ru): caller applies the policy.
-        if (winners.Count == 0) return new Outcome.Keep();
+        // Last resort before keeping: jargon, loanwords and names validate NOWHERE, so a dictionary
+        // can never rescue them — but a word typed in the wrong layout is gibberish in the layout it
+        // landed in and word-shaped in the one it was meant for, and that asymmetry is checkable.
+        if (winners.Count == 0) return Rescue(current, byLang, capsLock) ?? new Outcome.Keep();
 
         // Both guards below weigh how much the dictionary hit is actually worth, and the order between
         // them matters: the near-miss test is itself meaningless on a very short word, because almost
@@ -176,6 +189,64 @@ public sealed class NWayResolver
 
         if (winners.Count > 1) return new Outcome.Ambiguous(current.Text, winners);
         return new Outcome.Convert(new Decision(winners[0].LayoutId, current.Text, winners[0].Converted));
+    }
+
+    /// <summary>
+    /// The gibberish rescue: no dictionary validates the word in any language, so the shape of the
+    /// renderings is the only evidence left. Convert only when the typed side is gibberish AND a
+    /// candidate side is word-shaped — one-sided implausibility is not enough (<c>npm</c> is
+    /// gibberish in English, but so is its Cyrillic rendering, so it keeps). Null when the rescue
+    /// does not apply; the caller then keeps as before. A port of the macOS <c>rescue</c>,
+    /// deliberately branch-for-branch comparable with it.
+    /// </summary>
+    private Outcome? Rescue(Candidate current, Dictionary<string, Candidate> byLang, bool capsLock)
+    {
+        // The dictionary path's own vetoes first, on the UN-lowercased core: the all-caps and
+        // camelCase vetoes are about letter case, and lowercasing first would blind them.
+        var rawCore = SoftGates.LetterCore(current.Text);
+        if (!SoftGates.PassesSoftGates(rawCore, capsLock)) return null;
+        var core = rawCore.ToLowerInvariant();
+        if (core.Length < RescueFloor) return null;
+
+        // Shape of the typed side. An empty vowel set means this language's shape is unknown —
+        // then nothing can be called gibberish and the rescue stays out of the way (fail-open,
+        // like the near-miss alphabet).
+        var currentVowels = _dict.Vowels(current.Lang);
+        if (currentVowels.Length == 0) return null;
+        if (WordShape.IsPlausible(core, currentVowels, current.Lang)) return null;
+
+        // Not a typo either: if the typed language holds a word one keystroke away, a fumbled key
+        // stays the simpler story, exactly as on the dictionary path — and it is reported as that
+        // story, not as a generic keep.
+        if (TypoGuard.NearMiss(core, current.Lang, _dict)) return new Outcome.Keep(KeepReason.LooksLikeATypo);
+
+        // The candidates that ARE word-shaped in their own language.
+        var plausible = new List<Winner>();
+        foreach (var cand in byLang.Values)
+        {
+            if (cand.Lang == current.Lang) continue;
+            var candVowels = _dict.Vowels(cand.Lang);
+            if (candVowels.Length == 0) continue;
+            var candCore = SoftGates.LetterCore(cand.Text).ToLowerInvariant();
+            if (!WordShape.IsPlausible(candCore, candVowels, cand.Lang)) continue;
+            plausible.Add(new Winner(cand.Lang, cand.LayoutId, cand.Text));
+        }
+
+        switch (plausible.Count)
+        {
+            case 0:
+                return null;
+            case 1:
+                return new Outcome.Rescued(new Decision(plausible[0].LayoutId, current.Text, plausible[0].Converted));
+            default:
+                // The uk/ru pair is the ambiguity the preference setting exists for; report it the
+                // same way dictionary words shared by both languages are reported. Anything wider —
+                // plausible across scripts — is a coin toss, and a wrong pick costs the user the
+                // sentence while a keep costs one trigger tap.
+                var langs = plausible.Select(w => w.Lang).ToHashSet();
+                if (langs.SetEquals(new[] { "ru", "uk" })) return new Outcome.Ambiguous(current.Text, plausible);
+                return null;
+        }
     }
 
     /// <summary>How the keys look in the current layout — the text on screen when nothing converts.</summary>
@@ -234,6 +305,10 @@ public sealed class NWayResolver
             case Outcome.Convert c:
                 promoteLayoutId = c.Decision.TargetLayoutId;
                 promoteConverted = c.Decision.Converted;
+                break;
+            case Outcome.Rescued r:
+                promoteLayoutId = r.Decision.TargetLayoutId;
+                promoteConverted = r.Decision.Converted;
                 break;
             case Outcome.Ambiguous a when preferredAmbiguityLang is string p && p != "off":
                 var w = a.Winners.FirstOrDefault(x => x.Lang == p);

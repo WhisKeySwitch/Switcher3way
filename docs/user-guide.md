@@ -180,6 +180,15 @@ one language, the phrase's ambiguous words are re-converted to that language tog
 one replacement, one trigger-tap undo. Phrases that mix clearly-Ukrainian and clearly-Russian
 words are never touched retroactively.
 
+**Jargon and names the dictionaries don't know.** Slang, tech loanwords and names (`апка`,
+`айді`, `Kyiv`) are valid in no dictionary, so for a long time they simply stayed as typed.
+Auto-fix now rescues them when the evidence is one-sided: what you typed is unpronounceable
+gibberish in the layout it landed in, while its reading in another layout looks like a real
+word shape. `fgrf` becomes `апка` (using the same *language for ambiguous words*; set it to
+*Do not convert* and this rescue is off too), and `Лншм` typed in a Cyrillic layout becomes
+`Kyiv`. Words that look plausible in the layout you typed them in — names, acronyms, code —
+are never touched, and a rescued word undoes with one trigger tap like any conversion.
+
 ## Exceptions
 
 **Settings → Auto-fix → Exceptions** manages all three lists in one place. Use the segmented

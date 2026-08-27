@@ -247,7 +247,7 @@ internal sealed class Engine
         // is no way to tell those apart before acting, so the app does not act. The user sees no
         // conversion either way; what they no longer see is a rewrite that runs, fails, undoes itself
         // and raises a notification, every single time they finish a line.
-        if (hardBoundary && outcome is Outcome.Convert or Outcome.Ambiguous)
+        if (hardBoundary && outcome is Outcome.Convert or Outcome.Ambiguous or Outcome.Rescued)
         {
             Diagnostics.Log($"  auto: \"{_resolver.RenderCurrent(word) ?? ""}\" not converted — the word ends "
                             + (boundary == '	' ? "with Tab" : "with Enter")
@@ -320,6 +320,24 @@ internal sealed class Engine
                     ApplyCorrection(word, d, corr, boundary, lang, gen);
                 else
                     ConvertSingle(word, d, boundary, new PhraseTracker.WordKind.Locked(lang), gen);
+                break;
+            }
+
+            case Outcome.Rescued resc:
+            {
+                ForgetHeldRun();
+                var d = resc.Decision;
+                if (_settings.IsNeverConvert(d.Original, d.Converted))
+                {
+                    _phrase.Record(word, d.Original, 1, new PhraseTracker.WordKind.Neutral(), gen);
+                    break;
+                }
+                // No dictionary vouches for this word — only its shape does. Convert, but file it as
+                // defaulted rather than locked: evidence this weak must not settle what language the
+                // phrase is in, and must stay retro-correctable if the phrase proves otherwise.
+                var rescueLang = LangOf(d.TargetLayoutId);
+                Diagnostics.Log($"  auto: rescue -> [{rescueLang}] — no dictionary knows \"{d.Original}\", but only {rescueLang} fits its shape");
+                ConvertSingle(word, d, boundary, new PhraseTracker.WordKind.Defaulted(rescueLang), gen);
                 break;
             }
 

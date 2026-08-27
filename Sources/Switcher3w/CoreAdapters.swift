@@ -21,6 +21,19 @@ struct SystemDictionary: DictionaryValidating {
     /// on each word would be wasted work for an answer that only changes when layouts do.
     func alphabet(_ lang: String) -> String { Self.alphabetCache.letters(for: String(lang.prefix(2))) }
 
+    /// The language's vowels, for the gibberish-rescue shape check. Static knowledge, not derived:
+    /// which letters are vowels is a fact about the language, and the three languages this app
+    /// ships for are known. Unlisted languages return "" — the rescue then never runs for them,
+    /// the same fail-open convention as `alphabet(_:)`.
+    func vowels(_ lang: String) -> String {
+        switch String(lang.prefix(2)) {
+        case "en": return "aeiouy"
+        case "uk": return "аеєиіїоуюя"
+        case "ru": return "аеёиоуыэюя"
+        default:   return ""
+        }
+    }
+
     @MainActor
     private final class AlphabetCache {
         private var cache: [String: String] = [:]

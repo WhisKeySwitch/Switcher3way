@@ -14,12 +14,16 @@ final class FakeDictionary: DictionaryValidating {
     /// Letters per language, for `TypoGuard.nearMiss`. Empty by default, which switches the
     /// near-miss check off — so a test only pays for it, and only reasons about it, when it sets one.
     var alphabets: [String: String] = [:]
+    /// Vowels per language, for the gibberish rescue's `WordShape` check. Empty by default, which
+    /// switches the rescue off — existing tests reason about the dictionary path undisturbed.
+    var vowelSets: [String: String] = [:]
 
     init(_ words: [String: Set<String>]) {
         self.words = words
     }
 
     func alphabet(_ lang: String) -> String { alphabets[lang] ?? "" }
+    func vowels(_ lang: String) -> String { vowelSets[lang] ?? "" }
 
     func isAvailable(_ lang: String) -> Bool {
         !unavailable.contains(lang) && words[lang] != nil
