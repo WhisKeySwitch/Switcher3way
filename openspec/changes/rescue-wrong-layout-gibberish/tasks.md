@@ -56,10 +56,11 @@
 
 ## 5. Verify on the machines that hurt
 
-- [ ] 5.1 macOS: install the build on the Teams-heavy Mac, enable debug log, type the
+- [x] 5.1 macOS: install the build on the Teams-heavy Mac, enable debug log, type the
       motivating phrases (`fgrf`, `nj fqlі ntyfyne`, and `Kyiv` while in a Cyrillic layout)
       and confirm rescue lines + conversions land
-- [ ] 5.2 macOS: type the keep-side sentinels (`Kyiv` in the English layout, `PeopleOps`,
+      — verified by the user on a 1.5.0 pre-release build, 2026-08-29 ("seem to work fine")
+- [x] 5.2 macOS: type the keep-side sentinels (`Kyiv` in the English layout, `PeopleOps`,
       `SSO`, `npm`, `хз`) in normal text and confirm keeps with logged reasons
 - [ ] 5.3 **Windows machine (win agent):** end-to-end on the installed app — the same
       motivating phrases and keep-side sentinels via real typing (or

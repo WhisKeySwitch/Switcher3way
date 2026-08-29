@@ -300,10 +300,11 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Current state
 
-- **macOS — 1.4.0** (August 2026), the typo-guard release. Feature-complete: 3-way auto + manual
-  switching, custom icon, in-app updates from the fork's own releases (on the main repo since the
-  August 2026 consolidation), modernized UI (toolbar-tab Settings, onboarding checklist, status-first
-  menu with Pause), stable signing, abort-safe retype + phrase-aware ambiguity resolution.
+- **macOS — 1.5.0** (August 2026), the gibberish-rescue release (typo guard shipped in 1.4.0).
+  Feature-complete: 3-way auto + manual switching, custom icon, in-app updates from the fork's own
+  releases (on the main repo since the August 2026 consolidation), modernized UI (toolbar-tab
+  Settings, onboarding checklist, status-first menu with Pause), stable signing, abort-safe
+  retype with phrase-aware ambiguity resolution.
 - **Windows — 0.4.0 on both channels** (August 2026), also the typo-guard release. Live on the
   Microsoft Store after three certification failures on 10.1.2.10 Functionality: silent trigger, then
   injected input being discarded, then notifications dropped entirely in the packaged build. The
