@@ -48,6 +48,12 @@ Ukrainian and Russian all work together.
 Words that exist in both Ukrainian and Russian — там, добре — go to whichever language you prefer, and
 if a later word makes the phrase clearly the other one, the app goes back and corrects itself.
 
+Names and jargon are handled too, even though no dictionary contains them. Type Kyiv with a Ukrainian
+layout active and you get Лншм — a shape no Ukrainian word could have, while Kyiv is an entirely
+ordinary English one. Switcher3way reads that difference and fixes it. Words that only look unusual
+are left alone: a name you typed on purpose, camelCase, ALL-CAPS, code identifiers and abbreviations
+without vowels all stay exactly as you typed them.
+
 FIX IT YOURSELF, TOO
 
 Tap the trigger key — a double tap of Ctrl by default, or Pause/Break, F9 and others — to convert the
@@ -94,6 +100,7 @@ is which.
 - Fixes words typed in the wrong keyboard layout automatically, as you finish each word
 - Three languages together — English, Ukrainian and Russian — not just a two-layout toggle
 - Checks every layout Windows has installed against that language's dictionary
+- Names and jargon no dictionary contains are fixed by their shape, while deliberate names, camelCase, ALL-CAPS and vowel-less abbreviations are left alone
 - Words valid in both Ukrainian and Russian follow your preference, and are corrected later if the phrase proves otherwise
 - Manual trigger — double Ctrl by default — converts the last word or the current selection
 - Tap the trigger again to step through the other layouts, once more to undo
@@ -144,6 +151,12 @@ Switcher3way прибирає цей момент.
 Слова, які існують і українською, і російською — там, добре — переходять у мову, яку ви обрали. А якщо
 наступне слово робить фразу однозначно іншою мовою, застосунок повертається й виправляє себе сам.
 
+Назви та професійний сленг теж виправляються, хоча їх немає в жодному словнику. Наберіть Kyiv з
+українською розкладкою — і отримаєте Лншм: форма, якої не може мати жодне українське слово, тоді як
+Kyiv — цілком звичайне англійське. Switcher3way бачить цю різницю й виправляє. А те, що лише виглядає
+незвично, лишається недоторканим: навмисно набрана назва, camelCase, ВЕЛИКІ ЛІТЕРИ, ідентифікатори з
+коду та скорочення без голосних зостаються такими, як ви їх набрали.
+
 ВИПРАВЛЯЙТЕ Й САМОСТІЙНО
 
 Натисніть клавішу-тригер — типово подвійний Ctrl, також доступні Pause/Break, F9 та інші — щоб
@@ -190,6 +203,7 @@ Switcher3way прибирає цей момент.
 
 - Автоматично виправляє слова, набрані не в тій розкладці, щойно слово завершено
 - Три мови разом — англійська, українська та російська, а не просто перемикач двох розкладок
+- Назви та сленг, яких немає в словниках, виправляються за формою слова, а навмисні назви, camelCase, ВЕЛИКІ ЛІТЕРИ й скорочення без голосних лишаються незмінними
 - Перевіряє кожну встановлену у Windows розкладку словником відповідної мови
 - Слова, дійсні і українською, і російською, ідуть за вашим вибором, а згодом виправляються, якщо фраза виявилася іншою
 - Ручний тригер — типово подвійний Ctrl — конвертує останнє слово або виділений текст
@@ -243,6 +257,12 @@ Switcher3way читает все раскладки, установленные 
 предпочли. А если следующее слово делает фразу однозначно другой, программа возвращается и исправляет
 себя сама.
 
+Названия и профессиональный сленг тоже исправляются, хотя их нет ни в одном словаре. Наберите Kyiv с
+украинской раскладкой — и получите Лншм: форма, которой не может быть ни у одного украинского слова,
+тогда как Kyiv — совершенно обычное английское. Switcher3way видит эту разницу и исправляет. А то, что
+лишь выглядит необычно, остаётся нетронутым: намеренно набранное название, camelCase, ЗАГЛАВНЫЕ,
+идентификаторы из кода и сокращения без гласных остаются такими, как вы их набрали.
+
 ИСПРАВЛЯЙТЕ И ВРУЧНУЮ
 
 Нажмите клавишу-триггер — по умолчанию двойной Ctrl, также доступны Pause/Break, F9 и другие — чтобы
@@ -290,6 +310,7 @@ Store не устанавливает никаких сетевых соедин
 - Автоматически исправляет слова, набранные не в той раскладке, как только слово закончено
 - Три языка вместе — английский, украинский и русский, а не просто переключатель двух раскладок
 - Проверяет каждую установленную в Windows раскладку словарём соответствующего языка
+- Названия и сленг, которых нет в словарях, исправляются по форме слова, а намеренные названия, camelCase, ЗАГЛАВНЫЕ и сокращения без гласных остаются нетронутыми
 - Слова, верные и в украинском, и в русском, следуют вашему выбору и исправляются позже, если фраза оказалась другой
 - Ручной триггер — по умолчанию двойной Ctrl — преобразует последнее слово или выделенный текст
 - Повторное нажатие перебирает другие раскладки, ещё одно — отменяет
