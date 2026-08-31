@@ -191,7 +191,12 @@ public final class NWayResolver {
         for cand in byLang.values where cand.lang != currentLang {
             let core = SoftGates.letterCore(Array(cand.string))
             guard SoftGates.passes(core, capsLock: capsLock) else { continue }
-            guard dict.isValidWord(core.lowercased(), lang: cand.lang) else { continue }
+            // One verdict per word per decision: the candidate already carries the dictionary's
+            // answer, and asking again bought nothing except the chance to disagree with it —
+            // NSSpellChecker demonstrably flip-flops within one evaluation during its bad
+            // episodes, which produced logs whose dump said VALID while the outcome said no
+            // winner ('Привіт!', 'відгуки', 2026-07..08).
+            guard cand.isValid else { continue }
             winners.append(Winner(lang: cand.lang, layoutID: cand.layoutID, converted: cand.string))
         }
         // 0 — not wrong-layout. >1 — ambiguous (uk↔ru): reported as such so the caller can

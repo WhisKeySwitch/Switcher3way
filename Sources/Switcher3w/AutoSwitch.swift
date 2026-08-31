@@ -5,7 +5,15 @@ import Switcher3wCore
 /// Word checking against the system dictionary (NSSpellChecker) — locally, without dependencies,
 /// without network and without a data bundle. ~0.1ms per check, 40+ languages.
 enum Dict {
-    @MainActor private static let checker = NSSpellChecker.shared
+    @MainActor private static let checker: NSSpellChecker = {
+        let c = NSSpellChecker.shared
+        // Every query below names its language explicitly; the shared checker's own
+        // language-guessing state must not influence the answers. Not proven to be the trigger
+        // of the flip-flop episodes the sentinel guards against, but it is the one stateful
+        // input that can simply be removed.
+        c.automaticallyIdentifiesLanguages = false
+        return c
+    }()
 
     @MainActor static func isAvailable(_ lang: String) -> Bool {
         let two = String(lang.prefix(2))

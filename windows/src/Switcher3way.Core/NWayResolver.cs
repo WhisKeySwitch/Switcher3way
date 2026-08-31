@@ -141,7 +141,11 @@ public sealed class NWayResolver
             if (cand.Lang == currentLang) continue;
             var core = SoftGates.LetterCore(cand.Text);
             if (!SoftGates.PassesSoftGates(core, capsLock)) continue;
-            if (!_dict.IsValidWord(core.ToLowerInvariant(), cand.Lang)) continue;
+            // One verdict per word per decision: the candidate already carries the dictionary's
+            // answer. Re-querying here is what let the macOS spellchecker's flip-flop episodes
+            // split a single evaluation against itself; Hunspell is deterministic, so on this
+            // side it is parity and one query saved.
+            if (!cand.IsValid) continue;
             winners.Add(new Winner(cand.Lang, cand.LayoutId, cand.Text));
         }
 

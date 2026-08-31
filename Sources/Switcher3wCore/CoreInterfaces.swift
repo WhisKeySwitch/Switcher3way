@@ -86,12 +86,22 @@ public protocol WordExceptionList {
 /// no-op, so the core carries no file-I/O or UserDefaults dependency.
 public enum CoreLog {
     nonisolated(unsafe) private static var sink: (@Sendable (String) -> Void)?
+    nonisolated(unsafe) private static var alertSink: (@Sendable (String) -> Void)?
 
-    public static func install(_ sink: @escaping @Sendable (String) -> Void) {
+    public static func install(_ sink: @escaping @Sendable (String) -> Void,
+                               alert: (@Sendable (String) -> Void)? = nil) {
         Self.sink = sink
+        Self.alertSink = alert
     }
 
     public static func write(_ message: String) {
         sink?(message)
+    }
+
+    /// For failures the user could never report otherwise (a quarantined dictionary is the app
+    /// silently "not working"). The executable wires this to `logAlways`, so it lands in the log
+    /// file even with debug logging off; falls back to the ordinary sink when not wired.
+    public static func alert(_ message: String) {
+        (alertSink ?? sink)?(message)
     }
 }
