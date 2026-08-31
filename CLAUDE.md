@@ -300,7 +300,11 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Current state
 
-- **macOS — 1.5.0** (August 2026), the gibberish-rescue release (typo guard shipped in 1.4.0).
+- **macOS — 1.5.1** (August 2026): the gibberish rescue of 1.5.0, plus the two defects it
+  surfaced — a word may not END in four consonants (`Шкудфтв`/Ireland read as plausible Russian),
+  and the resolver no longer trusts a dictionary that answers wrong (see
+  `openspec/changes/quarantine-a-lying-dictionary`: one verdict per decision, canary probes,
+  verify-before-act). 1.4.0 was the typo-guard release.
   Feature-complete: 3-way auto + manual switching, custom icon, in-app updates from the fork's own
   releases (on the main repo since the August 2026 consolidation), modernized UI (toolbar-tab
   Settings, onboarding checklist, status-first menu with Pause), stable signing, abort-safe
