@@ -17,18 +17,44 @@
 
 ## 2. Bundle the dictionaries
 
-- [ ] 2.1 Add `bg.dic`/`bg.aff` and `sr.dic`/`sr.aff` from LibreOffice `bg_BG` and `sr`, with their
-      licence files, relying on and recording the **MPL-1.1** branch.
-- [ ] 2.2 Update `DICTIONARIES.md` with both, in the same table and with the same "why not the other
-      one" reasoning already there for Ukrainian.
-- [ ] 2.3 Confirm the packaged size against the measurement before and after.
+- [x] 2.1 Added from LibreOffice `bg_BG` and `sr`, with licence files. **The licence check changed the
+      story.** The proposal claimed MPL-1.1 for Bulgarian on the strength of `wooorm/dictionaries`'
+      metadata; the licence file it links to contains no licence statement, and LibreOffice ships only
+      a GPL-2 `COPYING`. The tri-licence is real but is stated by the upstream **bgOffice** project,
+      and that statement is now quoted in `dict/bg.license` so the evidence travels with the file.
+      Serbian is explicit in its own README — LGPL-3 / **MPL-2** / GPL-3, reader's choice — and is
+      MPL **2.0**, not the 1.1 the packager's table claimed.
+- [x] 2.2 `DICTIONARIES.md` carries both, the Bulgarian licence trail, the declined languages with
+      their reasons, and why `sr-Latn` is deliberately **not** bundled: Serbian Latin and Cyrillic are
+      a 1:1 transliteration of one language, so shipping both would make every Serbian word valid in
+      two "languages" and turn ordinary typing into permanent ambiguity.
+- [x] 2.3 Dictionaries go from **2.42 MB to 3.80 MB** compressed (bg 0.30, sr 1.14), as predicted.
 
 ## 3. Teach the heuristics about them
 
-- [ ] 3.1 Vowel sets: `bg` → `аеиоуъюя` (ъ is a vowel in Bulgarian), `sr` → `аеиоу`.
-- [ ] 3.2 Serbian syllabic R: a word with no vowel but an R between consonants is a normal Serbian
-      word, not gibberish. Decide between widening the vowel set and a Serbian-specific rule, and
-      justify it with the false-conversion rate each produces rather than by taste.
+- [x] 3.1 Vowel sets added: `bg` → `аеиоуъюя`, `sr` → `аеиоур` (see 3.2).
+- [x] 3.2 Measured both, and they came out equivalent, so the simpler one wins — widening the vowel
+      set, which is also the linguistically honest description, since syllabic R *is* a syllable
+      nucleus in Serbian.
+
+      | option | real Serbian judged implausible | gibberish judged Serbian |
+      |---|---|---|
+      | today (`аеиоу`) | 50 / 30,000 — **0.17%** | 98.35% |
+      | widen (add `р`) | 6 / 30,000 — **0.02%** | 98.83% |
+      | rule (`р` excuses the vowel, still counts as a consonant) | 6 / 30,000 — **0.02%** | 98.83% |
+
+      **The control was wrong the first time and had to be rebuilt.** It began as "Russian and
+      Ukrainian words", which the shape test accepted at 86% — correctly, since those *are* words, and
+      the test distinguishes words from keyboard gibberish rather than one Slavic language from
+      another. Replaced with what the rescue is actually shown: English typed on a Serbian layout.
+
+      **That rebuilt control then revealed something larger than syllabic R.** 98% of it reads as
+      plausible Serbian — because the Serbian Cyrillic layout is positionally aligned with Latin, so
+      **vowels map to vowels** and word shape survives the wrong layout intact. ЙЦУКЕН scrambles it
+      (`q`→`й`, `e`→`у`), which is why the rescue works well for Ukrainian and Russian. For Serbian
+      the shape signal is weak, so the rescue will rarely fire — and safely, because two plausible
+      candidates means "keep". Serbian gains the dictionary path; it gains little from the rescue.
+      Worth knowing before anyone reads a quiet log and calls it a bug.
 - [ ] 3.3 Extend the shape fixture with real Serbian and Bulgarian must-keep tokens, so the thresholds
       are measured for these languages rather than inherited from the ones they were tuned on.
 

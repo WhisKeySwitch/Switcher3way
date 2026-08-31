@@ -74,6 +74,18 @@ public sealed class HunspellDictionaryValidator : IDictionaryValidator
         "en" => "aeiouy",
         "uk" => "аеєиіїоуюя",
         "ru" => "аеёиоуыэюя",
+        "bg" => "аеиоуъюя",          // ъ is a full vowel in Bulgarian, not a sign as in Russian
+        // Serbian carries р, and this is linguistics rather than a workaround: syllabic R is a
+        // syllable nucleus, which is why крв, прст, врх, трг, црн, брз, крст, врт and смрт — blood,
+        // finger, top, square, black, fast, cross, garden, death — are ordinary words with no other
+        // vowel in them. Without it the shape test calls correctly typed Serbian unpronounceable,
+        // and the gibberish rescue may then convert it into another language.
+        //
+        // Measured against a rule that exempts such words from needing a vowel while still counting
+        // р as a consonant for cluster length: both take real Serbian wrongly judged implausible from
+        // 0.17% to 0.02%, and differ by half a percentage point on a gibberish control. Equivalent on
+        // the evidence, so the simpler one wins. SerbianShapeTests keeps both scored.
+        "sr" => "аеиоур",
         _ => "",
     };
 }
