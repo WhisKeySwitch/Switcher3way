@@ -172,7 +172,9 @@ public sealed class NWayResolver
             // contradicting it is not enough to overturn it.
             var byPhrase = phraseLang is null ? null : winners.FirstOrDefault(w => w.Lang == phraseLang);
             if (byPhrase is not null)
-                return new Outcome.Convert(new Decision(byPhrase.LayoutId, current.Text, byPhrase.Converted));
+                return _dict.VerifyTrust(byPhrase.Lang)
+                    ? new Outcome.Convert(new Decision(byPhrase.LayoutId, current.Text, byPhrase.Converted))
+                    : new Outcome.Keep(KeepReason.DictionaryUntrusted);
             if (phraseLang is not null) return new Outcome.Keep(KeepReason.PhraseDisagrees);
 
             // Nothing has settled the phrase yet. Under four characters there is no honest way to tell
@@ -191,8 +193,14 @@ public sealed class NWayResolver
             TypoGuard.NearMiss(SoftGates.LetterCore(current.Text).ToLowerInvariant(), currentLang, _dict))
             return new Outcome.Keep(KeepReason.LooksLikeATypo);
 
-        if (winners.Count > 1) return new Outcome.Ambiguous(current.Text, winners);
-        return new Outcome.Convert(new Decision(winners[0].LayoutId, current.Text, winners[0].Converted));
+        // About to act on a dictionary verdict. Confirm the dictionary is still answering
+        // correctly: an episode that began after the last periodic check would otherwise convert a
+        // name into keyboard mash and take the layout with it. No-op where the validator cannot
+        // verify itself, which is the Hunspell case.
+        var trusted = winners.Where(w => _dict.VerifyTrust(w.Lang)).ToList();
+        if (trusted.Count == 0) return new Outcome.Keep(KeepReason.DictionaryUntrusted);
+        if (trusted.Count > 1) return new Outcome.Ambiguous(current.Text, trusted);
+        return new Outcome.Convert(new Decision(trusted[0].LayoutId, current.Text, trusted[0].Converted));
     }
 
     /// <summary>

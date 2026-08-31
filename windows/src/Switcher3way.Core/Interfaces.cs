@@ -26,6 +26,16 @@ public interface IDictionaryValidator
     /// simply does not run — a validator that cannot answer must not cause conversions.
     /// </summary>
     string Vowels(string lang) => "";
+
+    /// <summary>
+    /// Asked immediately before acting on this language's dictionary evidence: is the dictionary
+    /// answering correctly <em>right now</em>? Periodic health checks leave a window in which a
+    /// newly-lying dictionary would convert a name into keyboard mash and take the layout with it,
+    /// and conversions are rare enough that the check is affordable here and nowhere else.
+    /// Defaults to true: a validator that cannot verify itself is trusted exactly as before
+    /// (Hunspell reads bundled files in-process and is deterministic, so on Windows it does).
+    /// </summary>
+    bool VerifyTrust(string lang) => true;
 }
 
 /// <summary>

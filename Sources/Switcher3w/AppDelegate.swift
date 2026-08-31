@@ -650,6 +650,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         case .looksLikeATypo:    return "reads as another language, but this one has a word one key "
                                       + "away — treating it as a typo"
         case .phraseDisagrees:   return "too short to decide, and the phrase reads as another language"
+        case .dictionaryUntrusted:
+            return "the dictionary that matched failed its self-check just now — not acting on it"
         }
     }
 

@@ -48,20 +48,31 @@ language; the checker's own language-guessing state is the one stateful input we
 outright. Not proven to be the trigger (the probe passed 200/200 both ways in a fresh process),
 but it is the documented-correct configuration for explicit-language checking and costs nothing.
 
+**D5 — Verify before acting, not only on a timer.** Field evidence settles a question the
+periodic probe cannot: `тфефдшу` and `ішпщгктун` (logged as `uk VALID` on 2026-08-07) are
+correctly REJECTED today, five rounds running — so those were transient false-valids, not a weak
+dictionary. Which means the dangerous direction is live: during such an episode, and with the
+double-query removed by D1, `Natalie` would convert to `Тфефдшу` and take the layout. Any interval
+between probes is a window for that, so `verifyTrust(lang)` is asked immediately before acting on
+dictionary evidence and re-probes when its verdict is older than `actFreshness` (2 s). Conversions
+are rare next to keystrokes, so this costs two dictionary queries a few times a minute; the
+per-word path is untouched. Ported to the Windows core, where the default `true` keeps Hunspell's
+behavior unchanged.
+
 **D4 — Quarantine logs are unconditional.** `logAlways`-grade via a dedicated CoreLog prefix:
 a suspended dictionary is the app silently "not working" from the user's chair, which is
 exactly the class of failure the debug-log gate must not hide.
 
 ## Risks / Trade-offs
 
-- [False-valid episode shorter than `probeInterval` slips through and converts wrongly] → the
-  near-miss guard and soft gates still veto most of it; interval is 60 s against episodes that
-  in the log span minutes. If field data shows shorter episodes, tighten the interval — the
-  constant is one number.
+- [False-valid episode shorter than `probeInterval` slips through and converts wrongly] → closed
+  by D5: the probe is re-taken at the moment of acting, so the exposure is `actFreshness` (2 s)
+  rather than `probeInterval`.
 - [Canary word missing from a user's dictionary variant (`привіт` should be safe)] → a language
   stuck quarantined logs loudly on every probe; the canary is a constant next to the wiring.
 - [Losing the accidental AND-of-two-samples precision] → D2's mash canary catches accept-all
-  episodes explicitly; the fixture keep-side gates (rescue change) stay green.
+  episodes explicitly, and D5 asks it again at the moment of acting, which is strictly stronger
+  than the old accident; the fixture keep-side gates (rescue change) stay green.
 
 ## Migration Plan
 

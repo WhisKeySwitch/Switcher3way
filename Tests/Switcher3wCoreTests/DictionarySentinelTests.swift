@@ -85,6 +85,27 @@ final class DictionarySentinelTests: XCTestCase {
         XCTAssertEqual(dict.queryCount, afterProbe + 2, "one re-probe after the interval, no more")
     }
 
+    /// The window the periodic probe alone leaves open: the dictionary was healthy when last
+    /// probed and starts lying afterwards. Acting must re-probe and refuse.
+    func testTrustIsReVerifiedBeforeActing() {
+        let dict = ScriptedDictionary()
+        let sentinel = makeSentinel(dict)
+        XCTAssertTrue(sentinel.isAvailable("uk"))       // probed healthy
+        dict.mode = .acceptAll                          // episode begins
+        clock.addTimeInterval(3)                        // past actFreshness, well inside probeInterval
+        XCTAssertFalse(sentinel.verifyTrust("uk"), "acting must re-probe, not ride the old verdict")
+    }
+
+    /// …but not on every single call: a burst of conversions must not re-probe each time.
+    func testVerifyTrustIsCachedWithinFreshness() {
+        let dict = ScriptedDictionary()
+        let sentinel = makeSentinel(dict)
+        XCTAssertTrue(sentinel.verifyTrust("uk"))
+        let afterFirst = dict.queryCount
+        XCTAssertTrue(sentinel.verifyTrust("uk"))
+        XCTAssertEqual(dict.queryCount, afterFirst, "within actFreshness the verdict is reused")
+    }
+
     func testLanguageWithoutCanaryIsNotGuarded() {
         let dict = ScriptedDictionary()
         dict.mode = .acceptAll
@@ -110,6 +131,34 @@ final class SingleVerdictTests: XCTestCase {
         func isValidWord(_ word: String, lang: String) -> Bool {
             guard words.contains(word) else { return false }
             return seen.insert(word).inserted   // true the first time, false after
+        }
+    }
+
+    /// The field case, end to end: a dictionary that starts accepting anything must not turn
+    /// `Natalie` into `Тфефдшу`. (That exact conversion was one probe-interval away from shipping
+    /// once the double-query that accidentally suppressed it was removed.)
+    func testAcceptAllEpisodeCannotConvertANameIntoMash() {
+        /// Accepts every word, and fails the canary probe for the same reason.
+        final class AcceptAll: DictionaryValidating {
+            func isAvailable(_ lang: String) -> Bool { true }
+            func isValidWord(_ word: String, lang: String) -> Bool { true }
+        }
+        let sentinel = DictionarySentinel(
+            wrapping: AcceptAll(),
+            canaries: ["uk": .init(word: "привіт", mash: "нзукжз"),
+                       "ru": .init(word: "привет", mash: "нзукжз")])
+        let resolver = NWayResolver(catalog: Fixture.catalog(current: Fixture.en),
+                                    dict: sentinel, exceptions: FakeExceptions())
+        let outcome = resolver.evaluate(keys: Fixture.keys("natalie"), capsLock: false)
+        // The current language (en) has no canary here, so it stays available and the word is
+        // "valid in current" — either way, nothing may convert into a quarantined language.
+        switch outcome {
+        case .convert(let d):
+            XCTFail("converted into a lying dictionary's language: \(d.converted) [\(d.lang)]")
+        case .ambiguous(_, let winners):
+            XCTFail("offered winners from a lying dictionary: \(winners.map(\.lang))")
+        case .keep, .held, .rescued:
+            break
         }
     }
 

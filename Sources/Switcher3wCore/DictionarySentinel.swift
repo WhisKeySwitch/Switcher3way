@@ -38,13 +38,18 @@ public final class DictionarySentinel: DictionaryValidating {
     public let probeInterval: TimeInterval
     /// How long a quarantine lasts before the next query is allowed to re-probe.
     public let cooldown: TimeInterval
+    /// How stale a verdict may be at the moment of ACTING on it. Much shorter than
+    /// `probeInterval`, because the interval between periodic probes is a window in which a
+    /// newly-lying dictionary could convert a name into mash. Conversions are rare, so this
+    /// re-probe costs two dictionary queries a few times a minute.
+    public let actFreshness: TimeInterval
 
     private let wrapped: DictionaryValidating
     private let canaries: [String: Canary]
     private let now: () -> Date
 
     private enum Health {
-        case trusted(until: Date)
+        case trusted(at: Date, until: Date)
         case quarantined(until: Date)
     }
     private var health: [String: Health] = [:]
@@ -53,11 +58,13 @@ public final class DictionarySentinel: DictionaryValidating {
                 canaries: [String: Canary],
                 probeInterval: TimeInterval = 60,
                 cooldown: TimeInterval = 60,
+                actFreshness: TimeInterval = 2,
                 now: @escaping () -> Date = Date.init) {
         self.wrapped = wrapped
         self.canaries = canaries
         self.probeInterval = probeInterval
         self.cooldown = cooldown
+        self.actFreshness = actFreshness
         self.now = now
     }
 
@@ -66,10 +73,22 @@ public final class DictionarySentinel: DictionaryValidating {
         guard let canary = canaries[lang] else { return true }   // no canary — nothing to verify
 
         switch health[lang] {
-        case .trusted(let until) where now() < until:
+        case .trusted(_, let until) where now() < until:
             return true
         case .quarantined(let until) where now() < until:
             return false
+        default:
+            return probe(lang, canary)
+        }
+    }
+
+    /// Called at the moment of acting. A verdict older than `actFreshness` is re-taken, so an
+    /// episode that began after the last periodic probe cannot ride along into a conversion.
+    public func verifyTrust(_ lang: String) -> Bool {
+        guard let canary = canaries[lang] else { return true }
+        switch health[lang] {
+        case .trusted(let at, _) where now().timeIntervalSince(at) < actFreshness:
+            return true
         default:
             return probe(lang, canary)
         }
@@ -93,7 +112,7 @@ public final class DictionarySentinel: DictionaryValidating {
         if case .quarantined = health[lang] { wasQuarantined = true } else { wasQuarantined = false }
 
         if healthy {
-            health[lang] = .trusted(until: now().addingTimeInterval(probeInterval))
+            health[lang] = .trusted(at: now(), until: now().addingTimeInterval(probeInterval))
             if wasQuarantined {
                 CoreLog.alert("dict-sentinel: \(lang) recovered — canaries answer correctly again")
             }
