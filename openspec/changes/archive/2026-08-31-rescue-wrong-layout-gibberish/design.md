@@ -94,6 +94,14 @@ macOS the `fqls`→`айді` case does not fire — **cyrillic→latin 2/2 (1.0
 macOS (`RescueFloor = 4`, `MaxConsonantRun = 4`, onset + known-token lists in `WordShape`);
 the full suite (191 tests, `TypingSimulationTests` paragraph precision included) stays green.
 
+**Field fix (2026-08-31): trailing-cluster cap.** `Шкудфтв` (Ireland typed on RussianWin) read
+as "plausible ru" — one vowel, and its `дфтв` tail sat exactly at the interior consonant-run cap
+— so the rescue declined. Word-final clusters are where the languages differ from keyboard
+noise (`взгляд` needs its 4-run at the START; essentially nothing in en/uk/ru ends in four
+consonants), so `WordShape` now also caps the trailing run at 3. Re-measured on both cores:
+keep sides still zero, macOS cyrillic→latin recall 3/3, Windows suites green; the case is in
+both fixtures.
+
 **D7 — Measurement is a unit test, and it gates by construction.** A fixture file — keep-side:
 proper nouns, acronyms, identifiers, brand names incl. vowel-less ones, `y`-vowel names,
 real English typos, Cyrillic vowel-less abbreviations (`хз`, `кст`, `пн`); rescue-side: the

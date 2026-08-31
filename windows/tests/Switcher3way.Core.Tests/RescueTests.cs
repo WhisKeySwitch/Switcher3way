@@ -201,6 +201,9 @@ public class RescueQualityTests
     {
         ("лншм", "kyiv"),
         ("дштгч", "linux"),
+        // Field miss 2026-08-31: one vowel + a 4-consonant TAIL read as "plausible ru" until the
+        // trailing-cluster cap was added.
+        ("шкудфтв", "ireland"),
     };
 
     private const double MinRescueRecall = 0.6;

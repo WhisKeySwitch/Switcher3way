@@ -56,6 +56,8 @@ enum RescueFixture {
     static let rescueCyrillicToLatin: [(typedUk: String, expectedEn: String)] = [
         ("лншм", "kyiv"),          // the log's Kyiv case, reversed
         ("дштгч", "linux"),
+        ("шкудфтв", "ireland"),    // field miss 2026-08-31: one vowel + a 4-consonant TAIL read as
+                                   // "plausible ru" until the trailing-cluster cap was added
     ]
 
     /// The floor of acceptable recall per direction — a report threshold, not a precision gate.
