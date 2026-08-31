@@ -28,5 +28,5 @@
 
 ## 4. Verify
 
-- [ ] 4.1 Run the app with debug log through a normal day; confirm no self-contradictory
+- [~] 4.1 (in progress — shipped in 1.5.1, watching the log) Run the app with debug log through a normal day; confirm no self-contradictory
       `VALID`-but-kept lines appear, and any quarantine episodes log with recovery
