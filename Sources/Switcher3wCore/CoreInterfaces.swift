@@ -54,11 +54,24 @@ public protocol DictionaryValidating {
     /// fail-open convention as `alphabet(_:)`: empty means "unknown", and the rescue simply does
     /// not run — a validator that cannot answer must not cause conversions.
     func vowels(_ lang: String) -> String
+
+    /// Asked immediately before acting on this language's dictionary evidence: is the dictionary
+    /// answering correctly *right now*?
+    ///
+    /// Periodic health checks are not enough for the direction that does damage. A dictionary that
+    /// starts accepting keyboard mash mid-episode would convert a name into noise (`Natalie` →
+    /// `Тфефдшу`, seen in the field) and take the layout with it, and any interval between checks
+    /// is a window for exactly that. Conversions are rare compared to keystrokes, so the check is
+    /// affordable here and nowhere else.
+    ///
+    /// Defaults to true: an adapter that cannot verify itself is trusted exactly as before.
+    func verifyTrust(_ lang: String) -> Bool
 }
 
 public extension DictionaryValidating {
     func alphabet(_ lang: String) -> String { "" }
     func vowels(_ lang: String) -> String { "" }
+    func verifyTrust(_ lang: String) -> Bool { true }
 }
 
 /// Installed layouts and how keystrokes render in them. Production wraps the TIS input-source
@@ -86,12 +99,22 @@ public protocol WordExceptionList {
 /// no-op, so the core carries no file-I/O or UserDefaults dependency.
 public enum CoreLog {
     nonisolated(unsafe) private static var sink: (@Sendable (String) -> Void)?
+    nonisolated(unsafe) private static var alertSink: (@Sendable (String) -> Void)?
 
-    public static func install(_ sink: @escaping @Sendable (String) -> Void) {
+    public static func install(_ sink: @escaping @Sendable (String) -> Void,
+                               alert: (@Sendable (String) -> Void)? = nil) {
         Self.sink = sink
+        Self.alertSink = alert
     }
 
     public static func write(_ message: String) {
         sink?(message)
+    }
+
+    /// For failures the user could never report otherwise (a quarantined dictionary is the app
+    /// silently "not working"). The executable wires this to `logAlways`, so it lands in the log
+    /// file even with debug logging off; falls back to the ordinary sink when not wired.
+    public static func alert(_ message: String) {
+        (alertSink ?? sink)?(message)
     }
 }

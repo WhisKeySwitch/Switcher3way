@@ -110,12 +110,26 @@ struct SettingsExceptionList: WordExceptionList {
 /// executable owns one wired to the system adapters — mirroring the Windows port's `_resolver`.
 @MainActor
 enum NWay {
+    /// The system dictionary behind the canary sentinel: NSSpellChecker goes through transient
+    /// episodes of answering wrong (rejecting `привіт`, accepting mash), and a language in that
+    /// state must sit out of detection rather than eat or invent conversions. The canary words
+    /// are deliberately the most ordinary ones each language has.
+    static let dictionary = DictionarySentinel(
+        wrapping: SystemDictionary(),
+        canaries: [
+            "en": .init(word: "the", mash: "zzqxjw"),
+            "uk": .init(word: "привіт", mash: "нзукжз"),
+            "ru": .init(word: "привет", mash: "нзукжз"),
+        ])
+
     static let resolver = NWayResolver(catalog: SystemLayoutCatalog(),
-                                       dict: SystemDictionary(),
+                                       dict: dictionary,
                                        exceptions: SettingsExceptionList())
 
-    /// Wires the core's log sink to `rslog`. Call once at startup, before anything evaluates.
+    /// Wires the core's log sinks. Call once at startup, before anything evaluates. Alerts (the
+    /// sentinel's quarantine/recovery lines) go to `logAlways`: a suspended dictionary is the app
+    /// silently "not working", which the debug-log gate must never hide.
     static func installLogSink() {
-        CoreLog.install { rslog($0) }
+        CoreLog.install({ rslog($0) }, alert: { logAlways($0) })
     }
 }

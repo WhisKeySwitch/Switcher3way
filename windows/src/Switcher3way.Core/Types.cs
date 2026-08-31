@@ -88,6 +88,11 @@ public enum KeepReason
     LooksLikeATypo,
     /// <summary>Too short to decide alone, and it disagrees with the language the phrase settled into.</summary>
     PhraseDisagrees,
+    /// <summary>
+    /// The dictionary that produced the winner failed its canaries when asked to confirm, so its
+    /// verdict is not evidence right now. Doing nothing beats converting a name into mash.
+    /// </summary>
+    DictionaryUntrusted,
 }
 
 /// <summary>One step of the manual cycle: a target layout and how the input looks in it.</summary>

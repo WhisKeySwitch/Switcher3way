@@ -66,6 +66,9 @@ public final class NWayResolver {
         case looksLikeATypo
         /// Too short to decide alone, and it disagrees with the language the phrase settled into.
         case phraseDisagrees
+        /// The dictionary that produced the winner failed its canaries when asked to confirm, so
+        /// its verdict is not evidence right now. Doing nothing beats converting a name into mash.
+        case dictionaryUntrusted
     }
 
     /// Full evaluation result. `.ambiguous` carries every validating language so the caller
@@ -191,7 +194,12 @@ public final class NWayResolver {
         for cand in byLang.values where cand.lang != currentLang {
             let core = SoftGates.letterCore(Array(cand.string))
             guard SoftGates.passes(core, capsLock: capsLock) else { continue }
-            guard dict.isValidWord(core.lowercased(), lang: cand.lang) else { continue }
+            // One verdict per word per decision: the candidate already carries the dictionary's
+            // answer, and asking again bought nothing except the chance to disagree with it —
+            // NSSpellChecker demonstrably flip-flops within one evaluation during its bad
+            // episodes, which produced logs whose dump said VALID while the outcome said no
+            // winner ('Привіт!', 'відгуки', 2026-07..08).
+            guard cand.isValid else { continue }
             winners.append(Winner(lang: cand.lang, layoutID: cand.layoutID, converted: cand.string))
         }
         // 0 — not wrong-layout. >1 — ambiguous (uk↔ru): reported as such so the caller can
@@ -214,6 +222,11 @@ public final class NWayResolver {
         let coreLength = SoftGates.letterCore(Array(current.string)).count
         if weighEvidence && coreLength < Self.nearMissTrustedFrom {
             if let phraseLang, let byPhrase = winners.first(where: { $0.lang == phraseLang }) {
+                guard dict.verifyTrust(byPhrase.lang) else {
+                    CoreLog.write("nway: nil — dictionary for \(byPhrase.lang) failed its canaries,"
+                                  + " not acting on it [\(dump)]")
+                    return .keep(.dictionaryUntrusted)
+                }
                 CoreLog.write("nway: short word, phrase agrees on \(phraseLang) [\(dump)]")
                 return .convert(Decision(targetLayoutID: byPhrase.layoutID, lang: byPhrase.lang,
                                          original: current.string, converted: byPhrase.converted))
@@ -243,11 +256,22 @@ public final class NWayResolver {
             return .keep(.looksLikeATypo)
         }
 
-        if winners.count > 1 {
-            CoreLog.write("nway: ambiguous (\(winners.map(\.lang).sorted().joined(separator: "/"))) [\(dump)]")
-            return .ambiguous(original: current.string, winners: winners)
+        // About to act on a dictionary verdict. Confirm the dictionary is still answering
+        // correctly: an episode that began after the last periodic probe would otherwise convert
+        // a name into keyboard mash and take the layout with it (`Natalie` → `Тфефдшу`, field log
+        // 2026-08-07 — that string is nonsense in Ukrainian and the dictionary called it a word).
+        let trusted = winners.filter { dict.verifyTrust($0.lang) }
+        if trusted.isEmpty {
+            CoreLog.write("nway: nil — dictionary for \(winners.map(\.lang).sorted().joined(separator: "/"))"
+                          + " failed its canaries, not acting on it [\(dump)]")
+            return .keep(.dictionaryUntrusted)
         }
-        let winner = winners[0]
+
+        if trusted.count > 1 {
+            CoreLog.write("nway: ambiguous (\(trusted.map(\.lang).sorted().joined(separator: "/"))) [\(dump)]")
+            return .ambiguous(original: current.string, winners: trusted)
+        }
+        let winner = trusted[0]
         return .convert(Decision(targetLayoutID: winner.layoutID, lang: winner.lang,
                                  original: current.string, converted: winner.converted))
     }
