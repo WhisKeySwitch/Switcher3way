@@ -30,6 +30,10 @@ import ctypes, ctypes.wintypes as w, time, sys, subprocess, pathlib, os
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 u32 = ctypes.WinDLL("user32", use_last_error=True)
+u32.GetKeyboardLayoutList.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_void_p)]
+# LPARAM is pointer-sized: an enhanced-layout HKL does not fit ctypes' default int arg.
+u32.PostMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint,
+                             ctypes.wintypes.WPARAM, ctypes.wintypes.LPARAM]
 
 # ---- SendInput plumbing
 ULONG_PTR = ctypes.wintypes.WPARAM   # pointer-sized, which is what dwExtraInfo really is
@@ -91,12 +95,29 @@ def current_layout():
     tid = u32.GetWindowThreadProcessId(hwnd, None)
     return u32.GetKeyboardLayout(tid) & 0xFFFF
 
-def set_layout(klid, tries=8):
+def loaded_layouts():
+    """The keyboard layouts actually loaded, as real HKL handles."""
+    arr = (ctypes.c_void_p * 32)()
+    n = u32.GetKeyboardLayoutList(32, arr)
+    return [arr[i] for i in range(n)]
+
+
+def set_layout(klid, tries=10):
+    """Switch the foreground window to the layout whose language matches `klid`.
+
+    Ask the system which layouts are loaded rather than trusting `LoadKeyboardLayout` to hand back the
+    installed one. Ukrainian is commonly installed as the *enhanced* variant, whose HKL is
+    `FFFFFFFFF0A80422` — a different handle from what loading "00020422" returns, so posting the
+    latter changed nothing and the switch silently failed.
+    """
     want = int(klid[-4:], 16)
-    hkl = u32.LoadKeyboardLayoutW(klid, 1)
+    hkls = [h for h in loaded_layouts() if (h & 0xFFFF) == want]
+    if not hkls:
+        hkls = [u32.LoadKeyboardLayoutW(klid, 1)]
     for _ in range(tries):
         hwnd = u32.GetForegroundWindow()
-        u32.PostMessageW(hwnd, 0x0050, 1, hkl)   # WM_INPUTLANGCHANGEREQUEST, INPUTLANGCHANGE_SYSCHARSET
+        for hkl in hkls:
+            u32.PostMessageW(hwnd, 0x0050, 1, hkl)   # WM_INPUTLANGCHANGEREQUEST, SYSCHARSET
         time.sleep(0.6)
         if current_layout() == want:
             print(f"    layout is now {klid}")
@@ -108,9 +129,73 @@ LOG = pathlib.Path(os.environ["APPDATA"]) / "Switcher3way" / "Logs" / "switcher3
 def log_size():
     return LOG.stat().st_size if LOG.exists() else 0
 
+def foreground():
+    """Class and title of the window that will actually receive the keystrokes."""
+    h = u32.GetForegroundWindow()
+    cls = ctypes.create_unicode_buffer(128); u32.GetClassNameW(h, cls, 128)
+    title = ctypes.create_unicode_buffer(256); u32.GetWindowTextW(h, title, 256)
+    return cls.value, title.value
+
+
+def require_target(*allowed):
+    """Refuse to type unless the intended window has focus.
+
+    Not a nicety. Synthesized keystrokes go wherever focus happens to be, and during development this
+    script's ad-hoc cousins twice typed test words into a real chat window because Notepad had not
+    come to the front. Aborting costs a re-run; not aborting costs someone else's data.
+    """
+    cls, title = foreground()
+    if not any(a.lower() in cls.lower() for a in allowed):
+        raise SystemExit(f"ABORTED — foreground is {cls!r} ({title!r}), not {allowed}")
+    print(f"    target: {cls} [{title[:40]}]")
+
+
+def shifted(vk):
+    """One keystroke with Shift held — for the capitals the soft gates key off."""
+    send_raw(0x10, False); tap(vk); send_raw(0x10, True); time.sleep(0.06)
+
+
+def send_raw(vk, up):
+    i = INPUT(type=1, u=_U(ki=KEYBDINPUT(wVk=vk, wScan=0,
+                                         dwFlags=(KEYEVENTF_KEYUP if up else 0),
+                                         time=0, dwExtraInfo=0)))
+    if u32.SendInput(1, ctypes.byref(i), ctypes.sizeof(INPUT)) != 1:
+        raise OSError("SendInput rejected")
+    time.sleep(0.02)
+
+
+def type_latin(word, gap=0.07):
+    """Literal keys, honouring capitals — `PeopleOps` must arrive as camelCase, not `peopleops`."""
+    for ch in word:
+        (shifted if ch.isupper() else tap)(vk_for(ch.upper() if ch.isalpha() else ch))
+        time.sleep(gap)
+
+
+def activate(hwnd):
+    """Force a window to the foreground.
+
+    SetForegroundWindow alone is refused unless the caller already owns the foreground, so a freshly
+    launched Notepad can sit behind whatever the user was doing. Attaching to the current foreground
+    thread first is the documented way round it.
+    """
+    fg = u32.GetForegroundWindow()
+    t1 = u32.GetWindowThreadProcessId(fg, None)
+    t2 = ctypes.WinDLL("kernel32").GetCurrentThreadId()
+    u32.AttachThreadInput(t2, t1, True)
+    u32.ShowWindow(hwnd, 9); u32.BringWindowToTop(hwnd); u32.SetForegroundWindow(hwnd)
+    u32.AttachThreadInput(t2, t1, False)
+    time.sleep(0.5)
+
+
 # ---- run
 subprocess.Popen(["notepad.exe"])
-time.sleep(2.5)
+time.sleep(3)
+for _ in range(8):
+    h = u32.FindWindowW("Notepad", None)
+    if h: activate(h)
+    if any(k in foreground()[0] for k in ("Notepad", "RichEdit")): break
+    time.sleep(1)
+require_target("Notepad", "RichEdit")
 mark = log_size()
 
 print("phase 1: Ukrainian typed in the Ukrainian layout, with the typos that used to convert")
@@ -128,6 +213,36 @@ set_layout("00000409")
 type_word("ghbdsn", cyrillic=False); space()      # привіт
 type_word("cnjkbwz", cyrillic=False); space()     # столиця
 time.sleep(2.0)
+
+# ---- phase 3: the gibberish rescue, both directions, plus the words it must NOT touch.
+#
+# Rescue acts where no dictionary knows the word, so it cannot be checked with dictionary words at
+# all. The two halves matter equally: jargon and names must convert, and the look-alikes that are
+# meant to stay — an English name typed deliberately in English, camelCase, all-caps, a vowel-less
+# Cyrillic abbreviation — must not. A rescue that also grabs `SSO` is worse than no rescue.
+print("phase 3: jargon and names no dictionary knows")
+set_layout("00000409")
+
+print("  must rescue:")
+# All from one real user log. `fgrf` is `апка` on ЙЦУКЕН; `nj fqls ntyfyne` is `то айді тенанту`.
+# The layout is forced back before each word deliberately. Left alone, the first conversion switches
+# to Ukrainian and every later word is then typed *correctly* and rightly kept — which is the real
+# behaviour, and which tests nothing about the words after the first.
+for word in ("fgrf", "nj", "fqls", "ntyfyne"):
+    set_layout("00000409")
+    type_latin(word); space()
+# Converting switches the layout to Ukrainian, which is exactly the state needed for the other
+# direction: K,y,i,v now render as `Лншм`, and only English fits that shape.
+type_latin("Kyiv"); space()
+
+print("  must keep (Cyrillic side):")
+set_layout("00020422")
+type_latin("[p"); space()          # `хз` — a vowel-less Cyrillic abbreviation, must not be rescued
+
+print("  must keep (Latin side):")
+set_layout("00000409")
+for word in ("Kyiv", "PeopleOps", "SSO", "npm"):   # a name typed on purpose, camelCase, all-caps, a tool
+    type_latin(word); space()
 
 # ---- report what the app decided
 text = LOG.read_text(encoding="utf-8", errors="replace")[mark:]
