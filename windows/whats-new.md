@@ -13,36 +13,36 @@ obvious before Partner Center rejects it.
 ## English (en)
 
 ```
-Version 0.4.1
+Version 0.5.0
 
-• Fixed: finishing a word with Enter no longer makes the app try a conversion it cannot complete. It used to erase the word, type the replacement, find the result wrong, put your text back and interrupt you — at the end of every line. It now leaves such words alone, quietly. Words finished with a space convert exactly as before.
-• Fixed: failure messages describe what actually failed. Every problem used to be reported as "this window may be running as administrator", which is true for one of them and misleading for the rest. A conversion that does not land now says so, and says your text was put back.
-• Fixed: settings that cannot be read are no longer discarded without a word. The unreadable file is kept aside, the failure is recorded, and you are told — instead of your exception lists and preferences quietly reverting to defaults.
+• New: words no dictionary knows are now converted too. A name or piece of jargon typed in the wrong layout used to stay as gibberish — "Kyiv" typed while a Ukrainian layout is active comes out as "Лншм", which no dictionary recognises either way, so nothing happened and you fixed it by hand.
+• The app now looks at a word's shape when no dictionary knows it. A word typed in the wrong layout is unpronounceable in the language it landed in, while exactly one alternative is a perfectly ordinary word shape for its own language. It converts only when exactly one language could plausibly have produced it.
+• Everything that guarded conversion before still guards it: names typed deliberately, camelCase, ALL-CAPS, code identifiers and vowel-less abbreviations stay exactly as you typed them.
 ```
 
-_859 characters._
+_807 characters._
 
 ## Українська (uk)
 
 ```
-Версія 0.4.1
+Версія 0.5.0
 
-• Виправлено: слово, завершене клавішею Enter, більше не змушує застосунок братися за перетворення, яке він не може завершити. Раніше він стирав слово, друкував заміну, виявляв, що результат хибний, повертав ваш текст і відволікав вас — наприкінці кожного рядка. Тепер такі слова просто лишаються незмінними. Слова, завершені пробілом, перетворюються як і раніше.
-• Виправлено: повідомлення про помилку описують те, що справді сталося. Раніше будь-яка проблема подавалася як «можливо, вікно запущене від імені адміністратора» — правда для однієї з них і оманливо для решти. Перетворення, яке не лягло, тепер так і каже й повідомляє, що ваш текст повернуто.
-• Виправлено: налаштування, які не вдалося прочитати, більше не зникають мовчки. Нечитний файл зберігається окремо, збій записується в журнал, і вам про це повідомляють — замість тихого повернення списків винятків і параметрів до типових значень.
+• Нове: тепер конвертуються й слова, яких немає в жодному словнику. Назва чи термін, набрані не в тій розкладці, раніше так і лишалися незрозумілим набором літер: «Kyiv», набране з українською розкладкою, виглядає як «Лншм», і жоден словник не знає ні того, ні того — тож нічого не відбувалося, і ви виправляли вручну.
+• Тепер, коли слова не знає жоден словник, застосунок дивиться на його форму. Слово, набране не в тій розкладці, неможливо вимовити мовою, якою воно з'явилося, і водночас рівно один із варіантів має цілком звичайну для своєї мови форму. Конвертація відбувається лише тоді, коли таку форму дає рівно одна мова.
+• Усі попередні запобіжники лишаються: навмисно набрані назви, camelCase, ВЕЛИКІ ЛІТЕРИ, ідентифікатори з коду та скорочення без голосних не змінюються.
 ```
 
-_917 characters._
+_795 characters._
 
 ## Русский (ru)
 
 ```
-Версия 0.4.1
+Версия 0.5.0
 
-• Исправлено: слово, завершённое клавишей Enter, больше не заставляет приложение браться за преобразование, которое оно не может завершить. Раньше оно стирало слово, печатало замену, обнаруживало, что результат неверен, возвращало ваш текст и отвлекало вас — в конце каждой строки. Теперь такие слова просто остаются нетронутыми. Слова, завершённые пробелом, преобразуются как и прежде.
-• Исправлено: сообщения об ошибке описывают то, что действительно произошло. Раньше любая проблема подавалась как «возможно, окно запущено от имени администратора» — верно для одной из них и вводит в заблуждение для остальных. Преобразование, которое не легло, теперь так и говорит и сообщает, что ваш текст возвращён.
-• Исправлено: настройки, которые не удалось прочитать, больше не исчезают молча. Нечитаемый файл сохраняется отдельно, сбой записывается в журнал, и вам об этом сообщают — вместо тихого возврата списков исключений и параметров к значениям по умолчанию.
+• Новое: теперь конвертируются и слова, которых нет ни в одном словаре. Название или термин, набранные не в той раскладке, раньше так и оставались набором букв: «Kyiv», набранное с украинской раскладкой, выглядит как «Лншм», и ни один словарь не знает ни того, ни другого — поэтому ничего не происходило, и вы исправляли вручную.
+• Теперь, когда слова не знает ни один словарь, приложение смотрит на его форму. Слово, набранное не в той раскладке, невозможно произнести на языке, на котором оно появилось, и при этом ровно один из вариантов имеет совершенно обычную для своего языка форму. Преобразование происходит только тогда, когда такую форму даёт ровно один язык.
+• Все прежние предохранители сохраняются: намеренно набранные названия, camelCase, ЗАГЛАВНЫЕ, идентификаторы из кода и сокращения без гласных остаются как есть.
 ```
 
-_972 characters._
+_844 characters._
 

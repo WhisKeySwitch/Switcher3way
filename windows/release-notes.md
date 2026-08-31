@@ -2,54 +2,39 @@ Switcher3way for Windows — direct-download preview. If you can use the
 [Microsoft Store version](https://apps.microsoft.com/detail/9MXFXL7GG3C5), prefer it: it is signed by
 Microsoft, needs no prerequisite, and updates itself.
 
-**This release stops the app interrupting you at the end of every line**, and stops it blaming a
-problem it had not diagnosed. If you finish sentences with Enter — which is to say, if you type —
-update.
+**Words no dictionary knows now get converted too.** Until this release, a name or a piece of jargon
+typed in the wrong layout stayed as gibberish and had to be fixed by hand.
 
-## Fixed — the app no longer attempts a conversion it cannot complete
+## New — names and jargon typed in the wrong layout
 
-Finishing a word with **Enter** could never be converted. Not since the app was written. What
-happened instead was that it tried: erased your word, typed the replacement, discovered the result
-was wrong, put your text back, and told you the window "may be running as administrator". Every line.
+The app decided what to convert by asking a dictionary: if the keystrokes spell a real word in
+another language, they were meant for that language. That rule is exactly right for ordinary words
+and exactly wrong for everything a dictionary has never heard of — product names, tech jargon, proper
+nouns. `Kyiv` typed while the Ukrainian layout is active comes out as `Лншм`, and no dictionary
+anywhere validates either form, so nothing happened. Every such word cost you a manual fix.
 
-The cause is small and complete. When the app converts a word it replaces the word *and the character
-that ended it*, and it types every character as a Unicode code point. That is exactly right for a
-space and useless for Enter — a Windows text box ignores it — so the replacement always arrived one
-character short and the check added in 0.4.0 correctly refused it.
+The signal the app was missing is **shape, not vocabulary**. A word typed in the wrong layout is not
+merely unknown — it is unpronounceable in the language it landed in, while exactly one of the
+alternatives is a perfectly ordinary word shape for its own language. `Лншм` is not a possible
+Ukrainian word; `Kyiv` is an entirely normal English one. That asymmetry is what a person spots
+instantly, and the app now checks it.
 
-This was never a working feature that broke. It only became *visible* in 0.4.0, when the app started
-reading back what it had written: before that the same rewrite reported success and left your text
-however it fell.
+So when no dictionary recognises a word in any language, the app looks at its shape instead, and
+converts only when exactly one language could plausibly have produced it.
 
-So the app now declines. A word finished with Enter or Tab is left alone, quietly. Nothing you see
-changes — it was never converted either way — but the rewrite that ran, failed, undid itself and
-interrupted you is gone. Words finished with a space convert exactly as before, and the trigger is
-unaffected.
+**What deliberately still keeps.** This is a weaker signal than a dictionary match, so everything
+that guarded conversion before guards it here too — and the thresholds were chosen by measuring
+against real words that must not move, not by taste. `Kyiv` typed *in* the English layout, `PeopleOps`,
+`SSO`, `npm`, code identifiers and vowel-less abbreviations like `хз` all stay exactly as you typed
+them. Verified end to end on this build: five such words, zero touched.
 
-Re-pressing Enter to put the line break back was considered and rejected: it would work in a text
-editor and misfire in a chat box, where Enter has already sent the message and pressing it again
-would send another. Nothing tells those apart in advance, so the app does not guess.
+A rescued word is also held more loosely than a dictionary match — it will not decide what language
+the rest of your sentence is in, and a later word can still correct it.
 
-## Fixed — failure messages that describe what actually failed
-
-Every rewrite failure was reported as *"Can't change text in this window — it may be running as
-administrator."* That is true for exactly one of them. A conversion refused in an ordinary text editor
-sent you looking for elevation you do not have, while the real behaviour — the app checked its own
-work, disliked the result, and put your original back — went unmentioned.
-
-A conversion that does not land now says so, and says your text was put back. Administrator rights
-are named only when that is genuinely the cause.
-
-## Fixed — settings that cannot be read are no longer discarded in silence
-
-If the settings file could not be read — a truncated write after a crash, a disk error, a file from a
-newer version — the app quietly started with defaults and then saved them over the top, usually within
-seconds of launching and without you touching anything. Your exception lists, denied apps, trigger key
-and language preference were gone, with nothing said and nothing logged, because the debug-log switch
-that would have recorded it lives in the file that failed to load.
-
-The unreadable file is now kept as `settings.json.bad`, the failure is recorded whatever the log
-setting says, and you are told.
+**A note for Ukrainian and Russian typists.** On Windows this mostly helps in one direction. The
+dictionaries shipped with the app already know a good deal of Ukrainian and Russian vocabulary, so
+jargon like `апка` or `тенанту` was usually converted already. What was not handled — and now is —
+are Latin names and terms typed while a Cyrillic layout is active.
 
 ## Install
 
@@ -67,14 +52,14 @@ setting says, and you are told.
 
 ## Verify the download
 
-SHA-256 of `Switcher3way-0.4.1-win-x64.msi`:
+SHA-256 of `Switcher3way-0.5.0-win-x64.msi`:
 
 ```
-1b17870d50f2b3d5ae9ba02142a9c0d53395251385c66c4eb16250687363f9b0
+8fab71fcf78f01f49d7ec2740cfa05ff6751d731922de2192b2f2b222b2f1cfd
 ```
 
 ```powershell
-(Get-FileHash .\Switcher3way-0.4.1-win-x64.msi -Algorithm SHA256).Hash
+(Get-FileHash .\Switcher3way-0.5.0-win-x64.msi -Algorithm SHA256).Hash
 ```
 
 The in-app updater checks this same checksum before installing anything.
@@ -83,8 +68,9 @@ The in-app updater checks this same checksum before installing anything.
 
 - **Not code-signed** — SmartScreen warns on first run. The Store build is signed by Microsoft.
 - **x64 only.** No arm64 build yet.
-- A word finished with **Enter or Tab** is not auto-converted, for the reason above. The trigger still
-  converts it if the text is still on screen.
+- A word finished with **Enter or Tab** is not auto-converted: the app cannot re-type those
+  characters, so rather than attempt a replacement that cannot land it leaves the word alone. The
+  trigger still converts it.
 - **Cannot rewrite text inside windows running as administrator** unless Switcher3way is also running
   as administrator — Windows blocks synthesized input from a lower integrity level. The app reports
   this rather than silently doing nothing.
