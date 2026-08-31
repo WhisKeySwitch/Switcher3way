@@ -13,6 +13,19 @@
 > 0.2.8 was a Store-only submission; the MSI channel skipped it and went 0.2.7 → 0.2.9 → 0.3.0 → 0.4.0
 > → 0.4.1.
 >
+> **`main` carries unreleased work: the gibberish rescue.** Words no dictionary knows — jargon,
+> loanwords, proper nouns — could never convert, because the resolver only switched to a language that
+> *validates* the word. It now also weighs shape: a word typed in the wrong layout is unpronounceable
+> in the layout it landed in while exactly one candidate rendering is word-shaped. Shipped on macOS in
+> 1.5.0; **Windows has not released it yet**, so the next bump carries it and should lead with it.
+> Verified end to end on a packaged Windows build (`openspec/changes/rescue-wrong-layout-gibberish`,
+> task 5.3) with zero false conversions on the keep side.
+>
+> Worth knowing when writing those notes: on Windows only the *English-name-in-a-Cyrillic-layout*
+> direction actually needs the rescue. The bundled Hunspell dictionaries already know the Ukrainian
+> jargon (`апка`, `айді`, `тенанту`) that macOS's `NSSpellChecker` does not, so those convert by the
+> ordinary route here.
+>
 > **0.4.1 is the "stop interrupting people" release.** A word finished with Enter could never be
 > converted — the rewrite replaces the word *and its boundary* and types every character as a Unicode
 > code point, which a Windows text box ignores for U+000A — so it erased, retyped, failed

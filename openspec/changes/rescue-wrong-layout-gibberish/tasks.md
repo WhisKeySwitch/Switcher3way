@@ -62,7 +62,35 @@
       — verified by the user on a 1.5.0 pre-release build, 2026-08-29 ("seem to work fine")
 - [x] 5.2 macOS: type the keep-side sentinels (`Kyiv` in the English layout, `PeopleOps`,
       `SSO`, `npm`, `хз`) in normal text and confirm keeps with logged reasons
-- [ ] 5.3 **Windows machine (win agent):** end-to-end on the installed app — the same
-      motivating phrases and keep-side sentinels via real typing (or
-      `windows/tools/verify-typo-guard.py` extended with rescue cases), on the flavour that
-      ships; confirm rescue log lines and that the caret chip/undo path works on a rescued word
+- [x] 5.3 **Windows:** end-to-end on a packaged build, through
+      `windows/tools/verify-typo-guard.py` extended with a rescue phase. Every motivating word
+      converted and every keep-side sentinel kept — **zero false conversions**:
+
+      ```
+      auto: "fgrf"    -> "апка"  [uk]      auto: "хз"        kept
+      auto: "nj"      -> "то"    [uk]      auto: "Kyiv"      kept
+      auto: "fqls"    -> "айді"  [uk]      auto: "PeopleOps" kept
+      auto: "ntyfyne" -> "тенанту" [uk]    auto: "SSO"       kept
+      auto: rescue -> [en] — no dictionary knows "Лншм", but only en fits its shape
+      auto: "Лншм"    -> "Kyiv" [en]       auto: "npm"       kept
+      ```
+
+      **The Windows result differs from the macOS one, and that is the point of having run it.** Only
+      `Лншм`→`Kyiv` took the rescue path here. The four Ukrainian jargon words converted through the
+      ordinary dictionary route, because the bundled Hunspell dictionaries know `апка`, `айді` and
+      `тенанту` where macOS's `NSSpellChecker` does not. So on Windows the rescue earns its place for
+      the *other* direction — English names typed in a Cyrillic layout, which no dictionary on either
+      platform covers. Ticking this from the macOS run would have recorded a rescue that never fired.
+
+      The caret chip appears on the rescued word (`chip: caret screen=…`), which is the visible undo
+      affordance, and the cancel cycle is seeded by the same `ConvertSingle` path the dictionary
+      conversions use. **The trigger itself remains unscriptable** — the app swallows it as a control
+      key — so the undo keystroke is confirmed by construction rather than by test, as it is for every
+      other conversion.
+
+      Three fixes to the harness were needed to get a trustworthy run, and all three had been silently
+      producing wrong answers: it now activates the window it launched (Notepad opened behind a
+      browser and the run typed nowhere), refuses to type unless that window has focus, and switches
+      layouts by the HKLs the system reports rather than what `LoadKeyboardLayout` returns — Ukrainian
+      is installed here as the enhanced variant (`FFFFFFFFF0A80422`), so every earlier layout switch
+      had failed silently.
