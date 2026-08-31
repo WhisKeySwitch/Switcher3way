@@ -31,6 +31,14 @@ public enum WordShape {
     /// (дозволене, no vowel in nine letters) fails by a mile.
     public static let maxConsonantRun = 4
 
+    /// The longest run a word may END on — stricter than the interior cap, because word-final
+    /// clusters are where the languages differ from keyboard noise: `взгляд` needs its 4-run at the
+    /// START, but essentially nothing in en/uk/ru ends in four consonants, while wrong-layout
+    /// renderings do constantly. Added after a field miss: `Шкудфтв` (Ireland on RussianWin) has a
+    /// vowel and its `дфтв` tail sat exactly at the interior cap, so it read as "plausible ru" and
+    /// the rescue declined.
+    public static let maxTrailingConsonantRun = 3
+
     /// Letter pairs that begin no English word. Consulted only for English — the language this
     /// list was measured against; other languages judge by vowels alone. Deliberately conservative:
     /// pairs that begin real words or likely names stay out (`kn`, `gn`, `ps`, `pt`, `sq`, `wr`,
@@ -86,6 +94,8 @@ public enum WordShape {
             }
         }
         guard sawVowel else { return false }
+        // After the loop, `run` is the word's trailing consonant run.
+        guard run <= maxTrailingConsonantRun else { return false }
 
         if lang == "en", word.count >= 2,
            impossibleEnglishOnsets.contains(String(word.prefix(2))) {

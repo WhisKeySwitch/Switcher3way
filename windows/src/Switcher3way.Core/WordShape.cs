@@ -36,6 +36,16 @@ public static class WordShape
     public const int MaxConsonantRun = 4;
 
     /// <summary>
+    /// The longest run a word may END on — stricter than the interior cap, because word-final
+    /// clusters are where the languages differ from keyboard noise: <c>взгляд</c> needs its 4-run
+    /// at the START, but essentially nothing in en/uk/ru ends in four consonants, while
+    /// wrong-layout renderings do constantly. Added after a field miss: <c>Шкудфтв</c> (Ireland on
+    /// the Russian layout) has a vowel and its <c>дфтв</c> tail sat exactly at the interior cap,
+    /// so it read as "plausible ru" and the rescue declined.
+    /// </summary>
+    public const int MaxTrailingConsonantRun = 3;
+
+    /// <summary>
     /// Letter pairs that begin no English word. Consulted only for English — the language this
     /// list was measured against; other languages judge by vowels alone. Deliberately
     /// conservative: pairs that begin real words or likely names stay out (<c>kn</c>, <c>gn</c>,
@@ -98,6 +108,8 @@ public static class WordShape
             else if (++run > MaxConsonantRun) return false;
         }
         if (!sawVowel) return false;
+        // After the loop, `run` is the word's trailing consonant run.
+        if (run > MaxTrailingConsonantRun) return false;
 
         if (lang == "en" && word.Length >= 2 && ImpossibleEnglishOnsets.Contains(word[..2]))
             return false;
