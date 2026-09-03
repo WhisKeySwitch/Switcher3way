@@ -16,6 +16,34 @@ own license text ships alongside it as `<lang>.license`.
 | `en` | [wooorm/dictionaries](https://github.com/wooorm/dictionaries) (SCOWL) | **MIT AND BSD** | `en_US` |
 | `ru` | [wooorm/dictionaries](https://github.com/wooorm/dictionaries) (Lebedev/Klukvin) | **BSD-3-Clause** | attribution only |
 | `uk` | [LibreOffice/dictionaries `uk_UA`](https://github.com/LibreOffice/dictionaries/tree/master/uk_UA) | **MPL 1.1** | file-level copyleft; keep under MPL |
+| `bg` | [LibreOffice/dictionaries `bg_BG`](https://github.com/LibreOffice/dictionaries/tree/master/bg_BG) (bgOffice) | **MPL 1.1** (of GPL-2 / LGPL-2 / MPL-1.1) | see the note below — the shipped COPYING understates it |
+| `sr` | [LibreOffice/dictionaries `sr`](https://github.com/LibreOffice/dictionaries/tree/master/sr) | **MPL 2.0** (of LGPL-3 / MPL-2 / GPL-3) | tri-licence stated in the package's own README |
+
+### The Bulgarian licence needs reading twice
+The `bg_BG` package ships a `COPYING` containing only the **GPL v2** text, and the packager metadata
+in `wooorm/dictionaries` claims `(GPL-2.0 OR LGPL-2.1 OR MPL-1.1)` while the licence file it links to
+contains no licence statement at all. Neither is sufficient on its own. The tri-licence is stated by
+the upstream **bgOffice** project itself:
+
+> «Лицензите, под които се разпространяват пакетите са GPLv2 или по-нова, LGPLv2 или по-нова и
+> MPLv1.1.» — https://bgoffice.sourceforge.net/
+
+That statement is quoted in `dict/bg.license` so the evidence travels with the file, and the original
+GPL-2 `COPYING` is retained beside it as `bg-COPYING-gpl2.txt`. We rely on the **MPL 1.1** branch,
+which puts Bulgarian on the same footing as Ukrainian.
+
+### Serbian is Cyrillic only, deliberately
+The upstream package also contains `sr-Latn`. It is not bundled: Serbian Latin and Serbian Cyrillic
+are a 1:1 transliteration of the same language, so shipping both would make every Serbian word valid
+in two "languages" at once and turn ordinary typing into a permanent ambiguity. Converting between
+the two scripts is transliteration, not layout correction, and is a different feature.
+
+### Languages considered and declined
+| Lang | Why not |
+|------|---------|
+| `be` Belarusian | CC BY-SA 4.0 **or** LGPLv3 — no permissive branch, the same objection that ruled out `dict_uk`. Viable on precision: `be↔ru` collides at 4.6%, below the `ru↔uk` 14.2% already shipped. |
+| `mk` Macedonian | Packaged only as GPL-3.0; absent from LibreOffice dictionaries. |
+| `kk` Kazakh, `ky` Kyrgyz, `tg` Tajik | No freely licensed Hunspell dictionary found in either source. Kazakh has the strongest user case of all of them, and is declined only for that. |
 
 ### Why not `dict_uk` for Ukrainian?
 The modern [`brown-uk/dict_uk`](https://github.com/brown-uk/dict_uk) dictionary *data* is

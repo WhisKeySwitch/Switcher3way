@@ -1,0 +1,23 @@
+Bulgarian spelling dictionary (bg_BG)
+
+Source:   bgOffice project — https://bgoffice.sourceforge.net/
+Packaged: LibreOffice/dictionaries, bg_BG
+
+LICENCE — tri-licensed, and this application relies on the MPL branch.
+
+The upstream project states, at https://bgoffice.sourceforge.net/ :
+
+    "Лицензите, под които се разпространяват пакетите са GPLv2 или по-нова,
+     LGPLv2 или по-нова и MPLv1.1."
+
+    ("The licences under which the packages are distributed are GPLv2 or later,
+      LGPLv2 or later, and MPLv1.1.")
+
+Switcher3way relies on the **MPL-1.1** branch, which places this dictionary on exactly
+the same footing as the bundled Ukrainian one, and keeps the MIT application code
+unaffected — the dictionary is aggregated data, not linked code.
+
+Note for whoever checks this next: the COPYING file shipped alongside the dictionary in
+LibreOffice/dictionaries contains only the GPL v2 text, which understates the terms. It is
+retained here as bg-COPYING-gpl2.txt. The tri-licence is stated by the upstream project,
+not by that file — which is why the statement is quoted above rather than merely cited.
