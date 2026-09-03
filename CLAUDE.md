@@ -126,7 +126,7 @@ Rationale + detail: `NOTES-3WAY.md`. Summary:
 1. **N-way detection** — `Sources/Switcher3wCore/NWayResolver.swift` (`evaluate`). Renders the typed
    keystrokes through *every* installed layout that has a macOS dictionary, validates each
    candidate in its own language, switches to the single unambiguous winner. Words valid in
-   **both** uk & ru (e.g. `там`, `добре`) convert to the preferred ambiguity language
+   **both** uk & ru (e.g. `там`, `город`) convert to the preferred ambiguity language
    (Auto-fix setting, default uk; "off" = leave alone); `PhraseTracker.swift` re-converts
    them when a later word locks the phrase to the other language (July 2026).
 2. **Rename** to Switcher3way (Info.plist identity, `build_app.sh`, all UI strings, menu header).
@@ -323,9 +323,14 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   gibberish in the typed language and word-shaped in exactly one other (`WordShape` +
   `NWayResolver.rescued`; ru/uk pair → ambiguity preference). Measured: 0 keep-side false
   conversions, recall 0.80 latin→cyrillic / 1.00 reverse (`RescueQualityTests`).
-- **`main` carries an unreleased fix:** settings that cannot be read are now reported and preserved
-  rather than silently replaced by defaults. Nothing user-visible changes unless a settings file goes
-  bad, so it rides the next release rather than justifying one. `windows/RELEASING.md` says so too.
+- **`main` carries two unreleased fixes.** Settings that cannot be read are now reported and
+  preserved rather than silently replaced by defaults — nothing user-visible changes unless a
+  settings file goes bad, so it rides the next release rather than justifying one
+  (`windows/RELEASING.md` says so too). And the manual cycle no longer lists the winning layout
+  twice: promotion matched the winner into the candidate list by rendered text alone, which for a
+  word built from letters uk and ru place identically found the *other* language and evicted it, so
+  one ⌥ tap changed nothing and the third language was unreachable. Found in a 1.5.1 field log as
+  `manual: 2 candidate(s): RussianWin→RussianWin`; this one IS user-visible.
 - **macOS visual pass done** (2026-08-25): W1/W2/W4 verified against the wireframes and approved
   (`openspec/changes/archive/2026-07-04-modernize-ui/tasks.md`, task 7.1). Still open there:
   the localization smoke test (task 7.2, switch interface language to uk/ru) and W3, which only

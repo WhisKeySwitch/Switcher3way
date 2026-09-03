@@ -411,33 +411,41 @@ public final class NWayResolver {
         // goes first, so one tap gives the "correct" layout in the typical case. Under uk/ru
         // ambiguity the preferred ambiguity language takes that spot instead — one ⌥ tap gives
         // the same answer auto-fix would.
-        var promoted: (layoutID: String, converted: String)?
+        var promoted: (layoutID: String, lang: String, converted: String)?
         // Unguarded: the precision guards restrain the app's own initiative, and the user pressing
         // the trigger is not that. A two-letter word still gets an answer.
         switch evaluate(keys: keys, capsLock: capsLock, phraseLang: nil, weighEvidence: false) {
         case .convert(let d), .rescued(let d):
-            promoted = (d.targetLayoutID, d.converted)
+            promoted = (d.targetLayoutID, d.lang, d.converted)
         case .ambiguous(_, let winners):
             if ambiguousLang != "off", let w = winners.first(where: { $0.lang == ambiguousLang }) {
-                promoted = (w.layoutID, w.converted)
+                promoted = (w.layoutID, w.lang, w.converted)
             }
         case .keep, .held:
             break
         }
-        // Match by rendered text, and carry the winner's LAYOUT — not just move its text to the
-        // front. uk and ru render every word built from their shared letters identically, so the
-        // dedup above keeps only whichever came first in rotation order and the winning layout is
-        // usually NOT the survivor. Reordering alone therefore produced the right word in the wrong
-        // layout: `хорошо` is Russian-only and used to leave the user typing Ukrainian, and the
-        // ambiguity preference could never move anything at all. Rewriting the id fixes both, and
-        // keeps the cycle one step long — an extra step showing identical text would read as the
-        // trigger doing nothing. The text match IS the collapse signal: candidates are unique by
-        // rendered string, so a winner absent by id but present by text was collapsed into it.
-        if let promoted,
-           let idx = candidates.firstIndex(where: { $0.converted == promoted.converted }) {
-            candidates.remove(at: idx)
-            candidates.insert(ManualCandidate(targetLayoutID: promoted.layoutID,
-                                              converted: promoted.converted), at: 0)
+        // Move the winner to the front, matching on the LAYOUT first. Text alone is not an
+        // identity here: uk and ru render every word built from their shared letters identically,
+        // and the language-aware dedup above deliberately keeps both, so a text match found
+        // whichever came first in rotation — usually the other language. Removing that one and
+        // inserting the winner listed the winner's layout twice and dropped the other language
+        // from the cycle: an ⌥ tap that changed nothing on screen, and a third language that
+        // could not be reached at all. A field log caught it as `RussianWin→RussianWin`.
+        if let promoted {
+            if let idx = candidates.firstIndex(where: { $0.targetLayoutID == promoted.layoutID }) {
+                candidates.insert(candidates.remove(at: idx), at: 0)
+            } else if let idx = candidates.firstIndex(where: {
+                          $0.converted == promoted.converted && lang(of: $0.targetLayoutID, in: layouts) == promoted.lang
+                      }) {
+                // The winner's layout is absent because dedup collapsed it into a same-language
+                // twin — `evaluate` keeps one layout per language and need not pick the one
+                // rotation kept (US vs ABC, RussianWin vs Russian). Same language and same text, so
+                // carry the winner's layout on the survivor instead of adding a step that would
+                // look identical: `хорошо` must not leave the user typing in the wrong Russian.
+                candidates.remove(at: idx)
+                candidates.insert(ManualCandidate(targetLayoutID: promoted.layoutID,
+                                                  converted: promoted.converted), at: 0)
+            }
         }
 
         CoreLog.write("manual: \(candidates.count) candidate(s): " +
@@ -447,6 +455,11 @@ public final class NWayResolver {
 
     /// Dedup key: the same text in two different languages is two different candidates.
     private func key(_ text: String, _ lang: String) -> String { lang + "\u{0}" + text }
+
+    /// The 2-letter language of a layout id, as the dedup key and the resolver's candidates spell it.
+    private func lang(of layoutID: String, in layouts: [Layout]) -> String {
+        String((layouts.first { $0.id == layoutID }?.lang ?? "").prefix(2))
+    }
 
     /// The list of layouts rotated so it starts right AFTER the layout `afterID`.
     private func rotate(_ layouts: [Layout], startingAfter afterID: String) -> [Layout] {

@@ -198,7 +198,7 @@ final class SettingsManager: @unchecked Sendable {
     }
 
     /// Language used for wrong-layout words whose letter core is valid in MORE than one
-    /// other language (the uk/ru shared vocabulary — «добре», «там»): "uk"/"ru" — convert
+    /// other language (the uk/ru shared vocabulary — «город», «там»): "uk"/"ru" — convert
     /// to that language; "off" — leave such words alone (the pre-phrase behavior).
     /// Default "uk". Read live on every evaluation — no restart needed.
     var ambiguousLang: String {
