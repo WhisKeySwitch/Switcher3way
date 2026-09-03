@@ -300,11 +300,15 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Current state
 
-- **macOS — 1.5.1** (August 2026): the gibberish rescue of 1.5.0, plus the two defects it
-  surfaced — a word may not END in four consonants (`Шкудфтв`/Ireland read as plausible Russian),
-  and the resolver no longer trusts a dictionary that answers wrong (see
-  `openspec/changes/quarantine-a-lying-dictionary`: one verdict per decision, canary probes,
-  verify-before-act). 1.4.0 was the typo-guard release.
+- **macOS — 1.5.2** (September 2026): the manual cycle lists the winning layout once, not twice.
+  Promotion matched the winner into the candidate list by rendered text alone, so for a word built
+  from letters uk and ru place identically it evicted the *other* language — one ⌥ tap changed
+  nothing on screen and the third language was unreachable; on the auto path the cycle collapsed to
+  a single step. Found in a field log as `manual: 2 candidate(s): RussianWin→RussianWin`.
+  1.5.1 carried the gibberish rescue of 1.5.0 plus the two defects it surfaced — a word may not END
+  in four consonants (`Шкудфтв`/Ireland read as plausible Russian), and the resolver no longer
+  trusts a dictionary that answers wrong (see `openspec/changes/quarantine-a-lying-dictionary`:
+  one verdict per decision, canary probes, verify-before-act). 1.4.0 was the typo-guard release.
   Feature-complete: 3-way auto + manual switching, custom icon, in-app updates from the fork's own
   releases (on the main repo since the August 2026 consolidation), modernized UI (toolbar-tab
   Settings, onboarding checklist, status-first menu with Pause), stable signing, abort-safe
@@ -323,14 +327,10 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   gibberish in the typed language and word-shaped in exactly one other (`WordShape` +
   `NWayResolver.rescued`; ru/uk pair → ambiguity preference). Measured: 0 keep-side false
   conversions, recall 0.80 latin→cyrillic / 1.00 reverse (`RescueQualityTests`).
-- **`main` carries two unreleased fixes.** Settings that cannot be read are now reported and
-  preserved rather than silently replaced by defaults — nothing user-visible changes unless a
-  settings file goes bad, so it rides the next release rather than justifying one
-  (`windows/RELEASING.md` says so too). And the manual cycle no longer lists the winning layout
-  twice: promotion matched the winner into the candidate list by rendered text alone, which for a
-  word built from letters uk and ru place identically found the *other* language and evicted it, so
-  one ⌥ tap changed nothing and the third language was unreachable. Found in a 1.5.1 field log as
-  `manual: 2 candidate(s): RussianWin→RussianWin`; this one IS user-visible.
+- **Unreleased on `main`: Bulgarian and Serbian, Windows only** (`windows/src/…/dict/`, with the
+  licence trail and the syllabic-R shape rule). Nothing in it touches the macOS sources, so it rides
+  the next `windows-v*` tag, not the macOS one. The settings-preservation fix this bullet used to
+  track shipped in Windows 0.5.0.
 - **macOS visual pass done** (2026-08-25): W1/W2/W4 verified against the wireframes and approved
   (`openspec/changes/archive/2026-07-04-modernize-ui/tasks.md`, task 7.1). Still open there:
   the localization smoke test (task 7.2, switch interface language to uk/ru) and W3, which only
