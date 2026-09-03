@@ -190,7 +190,7 @@ legible side by side.
   the Windows port, which shares this algorithm.
 - **`PhraseTracker.swift`** — phrase memory and retro-corrections; takes a renderer closure.
 
-`Tests/Switcher3wCoreTests/` covers it (69 cases, `swift test`): soft gates, evaluate outcomes,
+`Tests/Switcher3wCoreTests/` covers it (93 cases, `swift test`): soft gates, evaluate outcomes,
 manual plan, phrase tracking, the typo guard, and a **dictionary-quality** test measuring the real
 NSSpellChecker against `WordFixture.swift`. Everything except that last file is Foundation-only and
 guarded with `#if canImport(AppKit)`, so the decision core can be built — and its logic exercised —
