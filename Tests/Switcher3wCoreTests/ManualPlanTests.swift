@@ -10,7 +10,12 @@ final class ManualPlanTests: XCTestCase {
     private lazy var catalog = Fixture.catalog(current: Fixture.en)
     private lazy var dict = FakeDictionary([
         "en": ["hello"],
-        // "город" is valid in BOTH: a vegetable garden in Ukrainian, a city in Russian.
+        // "город" is valid in BOTH: a vegetable garden in Ukrainian, a city in Russian — the
+        // everyday shape of uk/ru ambiguity, and what the preference tests use.
+        // "добре" is also in both, but lopsidedly: in Ukrainian it is the ordinary adverb, while
+        // Russian accepts it only as the prepositional of «добро» («о добре»). Apple's ru
+        // dictionary does agree (checked), so it is a legitimate ambiguity fixture — just not an
+        // illustration of a word a Russian speaker would ever mean.
         "uk": ["привіт", "добре", "місто", "город"],
         "ru": ["привет", "добре", "город", "хорошо"],
     ])
@@ -117,6 +122,38 @@ final class ManualPlanTests: XCTestCase {
             XCTAssertEqual(p.candidates.first?.converted, "хорошо")
             XCTAssertEqual(p.candidates.first?.targetLayoutID, Fixture.ru,
                            "the dictionary winner leads, whatever the rotation order")
+        }
+    }
+
+    func testTheWinnerIsNeverListedTwice() {
+        // Promoting the winner used to match it into the list by rendered TEXT alone. For a word
+        // built from letters uk and ru place identically both layouts are in the list with the same
+        // text, so the match landed on the other language: it was removed and the winner inserted,
+        // leaving the winner's layout listed twice and the other language gone from the cycle. On
+        // screen that is an ⌥ tap that changes nothing and a language that cannot be reached at all
+        // — and on the auto path, where the seeding filters the decision's layout out, it collapsed
+        // the whole cycle to a single step. A field log caught it as `RussianWin→RussianWin`.
+        //
+        // Both routes to a winner are covered: the dictionary ("хорошо", Russian only) and the
+        // ambiguity preference ("город" — a city in Russian, a vegetable garden in Ukrainian, so
+        // either preference is a real answer rather than a technicality).
+        let cases: [(String, String, String)] = [
+            (latinFor("хорошо", lang: "ru"), "uk", Fixture.ru),
+            (latinFor("хорошо", lang: "ru"), "ru", Fixture.ru),
+            (latinFor("город", lang: "ru"), "uk", Fixture.uk),
+            (latinFor("город", lang: "ru"), "ru", Fixture.ru),
+        ]
+        for (latin, preference, expectedFirst) in cases {
+            guard let p = plan(latin, ambiguousLang: preference) else {
+                return XCTFail("expected a plan")
+            }
+            let ids = p.candidates.map(\.targetLayoutID)
+            XCTAssertEqual(Set(ids).count, ids.count,
+                           "every step must be a different layout (preference '\(preference)')")
+            XCTAssertEqual(Set(ids), [Fixture.uk, Fixture.ru],
+                           "and both languages stay reachable (preference '\(preference)')")
+            XCTAssertEqual(p.candidates.first?.targetLayoutID, expectedFirst,
+                           "the winner still leads (preference '\(preference)')")
         }
     }
 
