@@ -13,36 +13,39 @@ obvious before Partner Center rejects it.
 ## English (en)
 
 ```
-Version 0.5.0
+Version 0.6.0
 
-• New: words no dictionary knows are now converted too. A name or piece of jargon typed in the wrong layout used to stay as gibberish — "Kyiv" typed while a Ukrainian layout is active comes out as "Лншм", which no dictionary recognises either way, so nothing happened and you fixed it by hand.
-• The app now looks at a word's shape when no dictionary knows it. A word typed in the wrong layout is unpronounceable in the language it landed in, while exactly one alternative is a perfectly ordinary word shape for its own language. It converts only when exactly one language could plausibly have produced it.
-• Everything that guarded conversion before still guards it: names typed deliberately, camelCase, ALL-CAPS, code identifiers and vowel-less abbreviations stay exactly as you typed them.
+• Fixed: a spell checker that answers wrong is no longer believed. It goes through brief spells of rejecting real words, and the app was asking it twice about the same word — when the two answers disagreed, your conversion silently vanished. If you have ever typed a line, watched nothing happen and shrugged, this was often why.
+• Fixed: six reasons wrong-layout words were being left alone, found by reading twelve days of real logs. Among them: short words were second-guessed too eagerly, meaningless tokens like "10" or "." were deciding the language of your sentence, and "You're", "That's" and "Кто-то" were skipped over an apostrophe or a hyphen.
+• New: Bulgarian. Add the Bulgarian keyboard in Windows and it works like the others.
+• A Russian word typed on the Ukrainian layout now switches the layout, without retyping your text.
 ```
 
-_807 characters._
+_855 characters._
 
 ## Українська (uk)
 
 ```
-Версія 0.5.0
+Версія 0.6.0
 
-• Нове: тепер конвертуються й слова, яких немає в жодному словнику. Назва чи термін, набрані не в тій розкладці, раніше так і лишалися незрозумілим набором літер: «Kyiv», набране з українською розкладкою, виглядає як «Лншм», і жоден словник не знає ні того, ні того — тож нічого не відбувалося, і ви виправляли вручну.
-• Тепер, коли слова не знає жоден словник, застосунок дивиться на його форму. Слово, набране не в тій розкладці, неможливо вимовити мовою, якою воно з'явилося, і водночас рівно один із варіантів має цілком звичайну для своєї мови форму. Конвертація відбувається лише тоді, коли таку форму дає рівно одна мова.
-• Усі попередні запобіжники лишаються: навмисно набрані назви, camelCase, ВЕЛИКІ ЛІТЕРИ, ідентифікатори з коду та скорочення без голосних не змінюються.
+• Виправлено: словнику, який відповідає хибно, більше не вірять беззастережно. Він час від часу ненадовго починає відкидати справжні слова, а застосунок запитував його про те саме слово двічі — і коли дві відповіді розходилися, ваша конвертація тихо зникала. Якщо ви колись набирали рядок, бачили, що нічого не сталося, і махали рукою — часто причина була саме ця.
+• Виправлено: шість причин, чому слова, набрані не в тій розкладці, лишалися незмінними; знайдені під час читання дванадцяти днів реальних журналів. Серед них: короткі слова перевірялися надто прискіпливо, беззмістовні токени на кшталт «10» чи «.» визначали мову речення, а «You're», «That's» і «Кто-то» пропускалися через апостроф або дефіс.
+• Нове: болгарська. Додайте болгарську клавіатуру у Windows — і вона працюватиме так само, як інші.
+• Російське слово, набране українською розкладкою, тепер перемикає розкладку, не перенабираючи ваш текст.
 ```
 
-_795 characters._
+_927 characters._
 
 ## Русский (ru)
 
 ```
-Версия 0.5.0
+Версия 0.6.0
 
-• Новое: теперь конвертируются и слова, которых нет ни в одном словаре. Название или термин, набранные не в той раскладке, раньше так и оставались набором букв: «Kyiv», набранное с украинской раскладкой, выглядит как «Лншм», и ни один словарь не знает ни того, ни другого — поэтому ничего не происходило, и вы исправляли вручную.
-• Теперь, когда слова не знает ни один словарь, приложение смотрит на его форму. Слово, набранное не в той раскладке, невозможно произнести на языке, на котором оно появилось, и при этом ровно один из вариантов имеет совершенно обычную для своего языка форму. Преобразование происходит только тогда, когда такую форму даёт ровно один язык.
-• Все прежние предохранители сохраняются: намеренно набранные названия, camelCase, ЗАГЛАВНЫЕ, идентификаторы из кода и сокращения без гласных остаются как есть.
+• Исправлено: словарю, который отвечает неверно, больше не верят безоговорочно. Он время от времени ненадолго начинает отвергать настоящие слова, а приложение спрашивало его об одном и том же слове дважды — и когда два ответа расходились, ваша конвертация тихо исчезала. Если вы когда-нибудь набирали строку, видели, что ничего не произошло, и махали рукой — часто причина была именно эта.
+• Исправлено: шесть причин, по которым слова, набранные не в той раскладке, оставались нетронутыми; найдены при чтении двенадцати дней реальных журналов. Среди них: короткие слова проверялись слишком придирчиво, бессмысленные токены вроде «10» или «.» определяли язык предложения, а «You're», «That's» и «Кто-то» пропускались из-за апострофа или дефиса.
+• Новое: болгарский. Добавьте болгарскую клавиатуру в Windows — и она заработает так же, как остальные.
+• Русское слово, набранное на украинской раскладке, теперь переключает раскладку, не перенабирая ваш текст.
 ```
 
-_844 characters._
+_969 characters._
 

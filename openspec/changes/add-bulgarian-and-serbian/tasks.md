@@ -69,19 +69,35 @@
       through ЙЦУКЕН *flattered* it, because its real layout transliterates rather than scrambles.
       And a measurement taken before other work lands has to be retaken after it — the earlier 0.00%
       was true when written and false by the time it mattered.
-- [ ] 4.2 A Bulgarian sentence typed in the wrong layout converts; typed correctly it is left alone.
-      Needs the Bulgarian layout installed on the test machine, which is a change to the user's system
-      and has not been made without asking.
+- [x] 4.2 Verified on a packaged build with the Bulgarian layout installed, both directions — and
+      only the pair is evidence, since an app that converts everything passes the first half and one
+      that converts nothing passes the second:
+
+      ```
+      English layout active:    pdeokf -> "заедно" [bg] : Ok
+      Bulgarian layout active:  заедно kept, защото kept
+      ```
+
+      Only the first word exercises the wrong-layout direction: converting it switches the layout, so
+      the next word is typed correctly and rightly kept. That is the app working, and it is why the
+      second phase types the same keystrokes deliberately.
 - [x] 4.3 Moot for now — Serbian is not shipping. The vowel-set entry and `SerbianShapeTests` stay,
       skipping without the dictionary, so the syllabic-R work is not lost if Serbian returns.
-- [ ] 4.4 Windows end-to-end on a packaged build, as `rescue-wrong-layout-gibberish` task 5.3 did.
+- [x] 4.4 Covered by 4.2, which ran on a packaged build with a distinct identity so the installed
+      Store 0.5.0 stayed put. Afterwards: test package removed, dev certificate untrusted, settings
+      restored.
 - [ ] 4.5 macOS: the same core changes, with `NSSpellChecker` rather than bundled dictionaries — note
       that macOS may not *have* Bulgarian or Serbian dictionaries installed, in which case the
       language is simply skipped, and that difference should be checked rather than assumed.
 
 ## 5. Say so
 
-- [ ] 5.1 Store listing, what's-new and release notes in the existing three languages. Whether the
-      listing itself should also be offered in Bulgarian and Serbian is a separate decision.
-- [ ] 5.2 Record in `RELEASING.md` that the bundled-dictionary count has grown, and that this is the
-      point at which on-demand dictionaries were said to become worth reconsidering.
+- [x] 5.1 Release notes, `whats-new.md` (en/uk/ru) and the landing pages, shipped with 0.6.0. The
+      notes say plainly that Serbian was prepared and deliberately not shipped, and why — a language
+      that was announced and then quietly absent would be worse than one never mentioned. Whether the
+      listing should also be offered *in* Bulgarian is a separate decision, still open.
+- [x] 5.2 `RELEASING.md` records 0.6.0, the Bulgarian/Serbian split with both cost figures, and a
+      pointer to the layout tables they were measured with — because the naive expectation was wrong
+      for both languages, in opposite directions. The bundled dictionaries are 2.72 MB compressed of a
+      47.0 MB package; on-demand dictionaries were said to become worth reconsidering at a fourth or
+      fifth language, and at four this is not yet that point.

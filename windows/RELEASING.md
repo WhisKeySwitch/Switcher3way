@@ -9,27 +9,23 @@
 > dropped. The pattern to learn from: **verify in the flavour that ships.** All three passed testing
 > on an unpackaged build.
 >
-> Both channels are at **0.5.0** (the Store cleared certification; 0.5.0.0 is installed and live).
+> The MSI channel is at **0.6.0**; the Store is at **0.5.0** until 0.6.0 clears certification.
 > 0.2.8 was a Store-only submission; the MSI channel skipped it and went 0.2.7 → 0.2.9 → 0.3.0 → 0.4.0
-> → 0.4.1 → 0.5.0.
+> → 0.4.1 → 0.5.0 → 0.6.0.
 >
-> **`main` carries five unreleased Windows commits.** macOS has shipped all of it through 1.5.2;
-> Windows is still on 0.5.0 and has none of it. Two are user-visible and are the reason to cut the
-> next release rather than passengers on it:
+> **0.6.0 is the correctness release**, and the largest since the Store launch — most of it found by
+> reading twelve days of real logs rather than by testing ideas. A spell checker that answers wrong is
+> no longer believed (it has brief spells of rejecting real words, and the resolver was asking it twice
+> per decision, so disagreements silently ate conversions); six causes of missed wrong-layout words
+> from 5,731 automatic decisions; the rescue no longer accepts a word ending in four consonants; and
+> the manual cycle offers the winner as one step.
 >
-> - **A dictionary that answers wrong is no longer trusted blindly.** A whole line typed in the wrong
->   layout went unconverted, and the log showed the impossible — the candidate dump saying a word is
->   valid beside a verdict saying no language validates it. The spell checker goes through transient
->   episodes of answering wrong in *both* directions, and the resolver was asking it about the same
->   word twice per evaluation. Conversions were being silently eaten.
-> - **Six causes of missed wrong-layout words**, from 5,731 auto decisions across twelve days of field
->   logs. Among them: the typo guard ran two letters below the band its own constant documents, where
->   all 26 of its keeps were real words and none was a typo.
->
-> And three more: the gibberish rescue no longer accepts a word ending in four consonants; the manual
-> cycle offers the winner as one step rather than two; and **Bulgarian and Serbian are bundled** —
-> which is a feature, and needs its verification finished before it ships (sections 4-5 of
-> `openspec/changes/add-bulgarian-and-serbian`).
+> **Bulgarian ships; Serbian was prepared and deliberately did not.** Serbian's keyboard transliterates
+> rather than scrambles, so English typed on it becomes believable Serbian rather than noise, and
+> including it made English typing four times more likely to be converted by mistake (0.16% → 0.61%).
+> Bulgarian's layout scrambles and costs 0.04 points. Both numbers, and the layout tables they were
+> measured with, are in `openspec/changes/add-bulgarian-and-serbian` — read them before adding a
+> language, because the naive expectation was wrong for both.
 >
 > **0.5.0 is the gibberish-rescue release.** Words no dictionary knows — names, jargon, loanwords —
 > could never convert, because the resolver only switched to a language that *validates* the word. It
