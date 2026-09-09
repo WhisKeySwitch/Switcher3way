@@ -181,13 +181,16 @@ public class CollisionMatrixTests
         }
     }
 
-    /// <summary>
-    /// Serbian Cyrillic key positions. Serbian's real layout is known here, so it is rendered through
-    /// it rather than stood in for — and the difference is the point: this layout is positionally
-    /// aligned with Latin, so vowels land on vowels, where ЙЦУКЕН scrambles them. Bulgarian's BDS
-    /// table is not available here, so Bulgarian keeps the worst-case stand-in.
-    /// </summary>
-    private const string SrRow = "љњертзуиопшђасдфгхјклчћжџцвбнм,.";
+    // Real layout tables, read off Windows with ToUnicodeEx against each installed HKL rather than
+    // written from memory — the first version of this file guessed Serbian and got a character wrong,
+    // and guessed that Bulgarian would be BDS-like without checking.
+    //
+    // The two behave oppositely, and that is the whole finding. Bulgarian scrambles as ЙЦУКЕН does:
+    // `q`→`л`, `r`→`и`, `a`→`ь`, so a vowel does not land on a vowel and Latin text becomes noise.
+    // Serbian is positionally aligned with Serbian Latin, so it *transliterates*: `e`→`е`, `o`→`о`,
+    // `r`→`р`, `a`→`а`. English typed on it stays word-shaped and reads as plausible Serbian.
+    private const string BgRow = "луеишщксдзц;ьяаожгтнвмчюйъэфхп,.";   // 0402:00030402, as installed
+    private const string SrRow = "љњертзуиопшђасдфгхјклчћѕџцвбнм,.";   // 281A:00000C1A
 
     /// <summary>Renders each candidate through its own layout where that layout is known.</summary>
     private sealed class WideCatalog : ILayoutCatalog
@@ -208,7 +211,8 @@ public class CollisionMatrixTests
                     "en" => Keys[i],
                     "ru" => RuRow[i],
                     "sr" => SrRow[i],
-                    _ => UkRow[i],          // uk, and bg standing in at its worst case
+                    "bg" => BgRow[i],
+                    _ => UkRow[i],
                 });
             }
             return sb.ToString();

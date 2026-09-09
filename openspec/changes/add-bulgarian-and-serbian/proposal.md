@@ -60,11 +60,17 @@ This proposal recommended Bulgarian **and** Serbian on a measurement that said a
 existing users nothing. Re-measured after the dictionaries were bundled, with Serbian rendered
 through the layout Serbian actually uses, that is false for Serbian:
 
-| layouts installed | English typos wrongly converted |
-|---|---|
-| en + uk + ru | 5 / 3117 — 0.16% |
-| en + uk + ru + **bg** | 5 / 3117 — 0.16% (identical) |
-| en + uk + ru + **sr** | **19 / 3117 — 0.61%** |
+| layouts installed | Ukrainian typos | English typos |
+|---|---|---|
+| en + uk + ru | 0.15% | 0.16% |
+| en + uk + ru + **bg** | **0.19%** | 0.16% |
+| en + uk + ru + **sr** | 0.11% | **0.61%** |
+
+Every layout table read off Windows with `ToUnicodeEx` rather than assumed — which mattered twice.
+The Serbian table used at first was a character wrong, and Bulgarian had been given a stand-in on the
+assumption it uses BDS. The layout actually installed (`0402:00030402`) does scramble as assumed, so
+Bulgarian's conclusion survives; but it is **0.19%, not the 0.16% "identical" reported first** — two
+extra false conversions on Ukrainian, which the stand-in had hidden.
 
 The original figure used a worst-case stand-in — every candidate rendered through ЙЦУКЕН — on the
 reasoning that a real layout could only do better by diverging further. **For Serbian that reasoning

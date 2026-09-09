@@ -40,14 +40,22 @@ The Serbian Cyrillic layout is positionally aligned with Serbian Latin, so it **
 its own Cyrillic transliteration — and in a Slavic language a great many of those are real words.
 Measured against the English typo corpus, with Serbian installed:
 
-| layouts installed | English typos wrongly converted |
-|---|---|
-| en + uk + ru | 5 / 3117 — 0.16% |
-| en + uk + ru + **bg** | 5 / 3117 — 0.16% (identical) |
-| en + uk + ru + **sr** | **19 / 3117 — 0.61%** |
+Measured against both typo corpora, with every layout table read off Windows rather than assumed:
+
+| layouts installed | Ukrainian typos wrongly converted | English typos wrongly converted |
+|---|---|---|
+| en + uk + ru | 7 / 4711 — 0.15% | 5 / 3117 — 0.16% |
+| en + uk + ru + **bg** | 9 / 4711 — 0.19% | 5 / 3117 — 0.16% |
+| en + uk + ru + **sr** | 5 / 4711 — 0.11% | **19 / 3117 — 0.61%** |
 
 `trun`→`трун`, `reda`→`реда`, `takse`→`таксе`, `nera`→`нера`. Nearly four times the false-conversion
 rate, for anyone with the Serbian layout installed.
+
+**Bulgarian is not free either, and an earlier version of this note wrongly said it was.** With its
+real layout it costs two extra false conversions on the Ukrainian corpus — `овго`→`такт` — taking
+0.15% to 0.19%. That is a twentieth of Serbian's cost and it buys a working language, so it ships;
+but it is 0.04 points, not nothing, and the zero came from measuring Bulgarian through a layout it
+does not use.
 
 The benefit is small in the same measure: because that layout preserves word shape, 98% of
 English-typed-on-Serbian reads as plausible Serbian, so the gibberish rescue almost never has a single
