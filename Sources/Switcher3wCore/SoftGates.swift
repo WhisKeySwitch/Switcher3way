@@ -7,7 +7,15 @@ public enum SoftGates {
 
     public static func passes(_ typed: String, capsLock: Bool) -> Bool {
         guard typed.count >= 2 else { return false }                  // 1 letter (я/a/i/і): hopelessly ambiguous between layouts
-        guard typed.allSatisfy({ $0.isLetter }) else { return false } // digits/punctuation/URL/code/email
+        // digits/punctuation/URL/code/email — with one exception: an apostrophe or hyphen INSIDE the
+        // word. `you're`, `it's`, `кто-то`, `будь-ласка` are ordinary words of these languages, they
+        // already pass when typed in their own layout, and vetoing them as code cost `You're`,
+        // `That's` and `Кто-то` their conversion in a field log. Edges are trimmed by `letterCore`
+        // before this runs, so an apostrophe can only be internal here — but check anyway.
+        let chars = Array(typed)
+        for (i, c) in chars.enumerated() where !c.isLetter {
+            guard Self.isWordJoiner(c), i > 0, i < chars.count - 1 else { return false }
+        }
         // Applied whatever the shift state: a token drawn from two alphabets is a code identifier,
         // and Caps Lock has nothing to do with alphabets. This veto used to share a function with
         // the camelCase one below and was skipped along with it — so `приvit` passed the gates
@@ -20,6 +28,12 @@ public enum SoftGates {
             if hasInternalCapital(typed) { return false }             // camelCase / PascalCase
         }
         return true
+    }
+
+    /// The non-letters a word may carry inside it and still be a word: the apostrophe (straight or
+    /// typographic) and the hyphen. Nothing else — a digit, a slash, an underscore is code.
+    static func isWordJoiner(_ c: Character) -> Bool {
+        c == "'" || c == "\u{2019}" || c == "-"
     }
 
     static func isAllCaps(_ s: String) -> Bool {

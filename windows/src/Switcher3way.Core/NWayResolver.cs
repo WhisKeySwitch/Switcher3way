@@ -54,6 +54,56 @@ public sealed class NWayResolver
     /// </summary>
     public const int RescueFloor = 4;
 
+    /// <summary>
+    /// Whether a lone held word may settle on the strength of having no vowel in the language it
+    /// was typed in (<c>щт</c> for "on"). OFF: measured on macOS against the vowel-less abbreviation
+    /// fixture with the real dictionaries, the rule converted 8 of 76 legitimate tokens even with the
+    /// same-text exclusion (смс→cvc, тг→nu, мс→vc, dst→вые, tl→ед). The bar is zero. The Windows
+    /// measurement (<c>VowelLessHeldWordTests</c>, Hunspell) is re-read on every test run.
+    /// </summary>
+    public const bool VowelLessHeldWordEnabled = false;
+
+    /// <summary>
+    /// The vowel-less held-word rule as a predicate: a held word reading as exactly one language,
+    /// whose rendering differs from what was typed (a same-text sibling-language hit is not evidence
+    /// of noise), and which has no vowel of the typed language. <paramref name="enabled"/> defaults
+    /// to the measured switch above; tests pass true to exercise the predicate itself.
+    /// </summary>
+    public static bool HeldWordSettlesAlone(string original, IReadOnlyList<Winner> winners,
+                                            string typedVowels, bool enabled = VowelLessHeldWordEnabled)
+    {
+        if (!enabled || winners.Count != 1) return false;
+        var core = SoftGates.LetterCore(original).ToLowerInvariant();
+        if (SoftGates.LetterCore(winners[0].Converted).ToLowerInvariant() == core) return false;
+        return !WordShape.HasVowel(core, typedVowels);
+    }
+
+    /// <summary>
+    /// Does a word valid in the language being typed carry enough letters to settle what language
+    /// the phrase is in? From <see cref="UndecidableBelow"/> up, yes. Below it, no: the dictionaries
+    /// accept single letters and two-letter abbreviations (e, z, wt, ye), and in a field log those
+    /// locked the phrase to English 35 times and then had four- and five-letter Ukrainian words
+    /// refused as "disagreeing" with it.
+    /// </summary>
+    public static bool SettlesPhrase(string shownText) =>
+        SoftGates.LetterCore(shownText).Length >= UndecidableBelow;
+
+    /// <summary>
+    /// Which candidate an ambiguous word resolves to. The phrase lock wins when it is one of the
+    /// candidates; when it is not — the phrase reads as English and the word is Ukrainian or Russian
+    /// — it says nothing about which of the two is right, and the preference decides as if there were
+    /// no lock. Preference "off" with no usable lock resolves to nothing.
+    /// </summary>
+    public static (Winner Winner, bool ByLock)? ResolveAmbiguity(IReadOnlyList<Winner> winners,
+                                                                 string? lockedLang, string preference)
+    {
+        if (preference == "off") return null;
+        if (lockedLang is not null && winners.FirstOrDefault(w => w.Lang == lockedLang) is { } byLock)
+            return (byLock, true);
+        if (winners.FirstOrDefault(w => w.Lang == preference) is { } byPref) return (byPref, false);
+        return null;
+    }
+
     private sealed record Candidate(string LayoutId, string Lang, string Text, bool IsValid);
 
     private static string Two(string lang) => lang.Length <= 2 ? lang : lang.Substring(0, 2);
@@ -109,7 +159,17 @@ public sealed class NWayResolver
             if (!_dict.IsAvailable(lang)) continue;
             var rendered = _layouts.Render(keys, layout);
             if (rendered is null) continue;
-            var valid = _dict.IsValidWord(SoftGates.LetterCore(rendered).ToLowerInvariant(), lang);
+            // A token with no letters at all — "10", ".", "))" — is not a word anywhere, whatever the
+            // dictionary says: Hunspell and NSSpellChecker both accept the empty string, and that
+            // verdict used to make a number "valid in the current language" and lock the phrase to it.
+            var core = SoftGates.LetterCore(rendered);
+            // Under four letters the dictionary is not asked alone: its verdict must be corroborated
+            // by the language's list of short words people actually type. The spell checker calls
+            // `wt` an English word, which is how a Ukrainian `це` typed on the English layout came
+            // back "already a word in this layout's language" and was left on screen. See ShortWords.
+            var valid = core.Length > 0
+                        && ShortWords.Admits(core, lang)
+                        && _dict.IsValidWord(core.ToLowerInvariant(), lang);
             if (byLang.TryGetValue(lang, out var existing))
             {
                 if (valid && !existing.IsValid)
@@ -164,7 +224,11 @@ public sealed class NWayResolver
         // likelier story — that a key was missed in the language already being typed. Short words
         // cannot be checked that way at all, because at that length every string has a near miss, so
         // they are settled by the phrase around them instead.
-        var coreLength = SoftGates.LetterCore(current.Text).Length;
+        // Judged on the SHORTER of the two letter cores. The evidence is the winner's dictionary hit,
+        // and a hit on two letters means nothing whichever side it is on: "рухх" renders "he[[" whose
+        // core is "he", and judging by the four typed letters converted a typo into "he[[".
+        var currentCore = SoftGates.LetterCore(current.Text).ToLowerInvariant();
+        var coreLength = Math.Min(currentCore.Length, winners.Min(w => SoftGates.LetterCore(w.Converted).Length));
         if (weighEvidence && coreLength < NearMissTrustedFrom)
         {
             // Short enough that the near-miss cross-check below would fire on anything, so the phrase
@@ -189,8 +253,26 @@ public sealed class NWayResolver
         // check the likelier story: that it is a word of *this* language with one key missed. A
         // fumbled key is a simpler explanation than a keyboard that changed for one word and changed
         // back, and this is the check the resolver never had.
-        if (weighEvidence &&
-            TypoGuard.NearMiss(SoftGates.LetterCore(current.Text).ToLowerInvariant(), currentLang, _dict))
+        //
+        // Consulted only from NearMissTrustedFrom up. Four- and five-letter words fell out of the
+        // block above and landed here anyway, two letters below the band the constant documents —
+        // and at that length nearly every string has a real neighbour, so the guard refused 16
+        // wrong-layout words and not one typo in a twelve-day macOS field log.
+        //
+        // Skipped too when the winner's text IS the text on screen (a Russian word typed on the
+        // Ukrainian layout) AND the phrase already reads as the winner's language. Ukrainian holds a
+        // cognate one edit from nearly every Russian word, so on same-text words the guard always said
+        // "typo" and the layout never switched. But a Ukrainian typo is just as often a real Russian
+        // word (адже→даже, програма→программа: 15 of 1,399 corpus typos), and flipping the layout on
+        // those is the failure a Ukrainian writer left the app over. The phrase tells them apart.
+        var sameText = winners.All(w => SoftGates.LetterCore(w.Converted).ToLowerInvariant() == currentCore);
+        var phraseCorroborates = sameText && phraseLang is not null && winners.Any(w => w.Lang == phraseLang);
+        // Same-text words switch only with the phrase's word for it (see the Swift twin's comment):
+        // most of the corpus typos that are real Russian words are four and five letters, where no
+        // guard discriminates, so this is decided before the length band and without it.
+        if (weighEvidence && sameText && !phraseCorroborates) return new Outcome.Keep(KeepReason.SameTextUncorroborated);
+        if (weighEvidence && coreLength >= NearMissTrustedFrom && !phraseCorroborates &&
+            TypoGuard.NearMiss(currentCore, currentLang, _dict))
             return new Outcome.Keep(KeepReason.LooksLikeATypo);
 
         // About to act on a dictionary verdict. Confirm the dictionary is still answering

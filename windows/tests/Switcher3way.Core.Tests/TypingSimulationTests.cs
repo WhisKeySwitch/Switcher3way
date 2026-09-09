@@ -256,10 +256,22 @@ public class TypingSimulationTests
         // A real Ukrainian word, typed in the Ukrainian layout.
         Assert.Equal(KeepReason.ValidInCurrent, Assert.IsType<Outcome.Keep>(Eval("програма")).Reason);
 
-        // "друкую" with the д dropped. This is the real failure from the corpus: it renders as "here."
-        // in English, so a conversion genuinely is on the table — and the near-miss test finds "друкую"
-        // one key away in Ukrainian and stops it. This is the guard doing the job it was added for.
-        Assert.Equal(KeepReason.LooksLikeATypo, Assert.IsType<Outcome.Keep>(Eval("рукую")).Reason);
+        // A typo that renders as a real English word, six letters or more: the near-miss test finds the
+        // Ukrainian word one key away and stops it. This is the guard doing the job it was added for.
+        // (It used to be shown on "рукую"/"here.", but at five letters the guard is no longer consulted
+        // — at that length nearly every string has a real neighbour, and it refused 16 wrong-layout
+        // words for every 0 typos in a field log — so the example is found among longer typos.)
+        var corpusWords = PrecisionRecallCorpus.Uk.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w.Trim(',', '.', '!', '?', ':', ';').ToLowerInvariant()).Where(w => w.Length >= 7).Distinct();
+        var longTypos = corpusWords
+            .SelectMany(w => Enumerable.Range(0, w.Length).Select(i => w.Remove(i, 1))
+                             .Concat(Enumerable.Range(0, w.Length - 1).Select(i => w[..i] + w[i + 1] + w[i] + w[(i + 2)..])))
+            .Where(t => t.Length >= 6 && KeysFor(t) is not null);
+        var caught = longTypos.Where(t => Eval(t) is Outcome.Keep { Reason: KeepReason.LooksLikeATypo }).ToList();
+        _out.WriteLine($"typo guard examples (6+ letters): {string.Join(", ", caught)}");
+        Assert.NotEmpty(caught);
+        // At five letters the hit stands: "рукую" → "here." converts.
+        Assert.IsType<Outcome.Convert>(Eval("рукую"));
 
         // A fumble that is not a word anywhere. No conversion was ever on the table, so the near-miss
         // test is never paid — the reason is the cheaper one, and it says so.

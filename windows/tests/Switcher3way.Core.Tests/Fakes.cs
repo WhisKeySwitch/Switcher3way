@@ -25,8 +25,10 @@ internal sealed class FakeDict : IDictionaryValidator
 
     public bool IsAvailable(string lang) => _available.Contains(lang);
 
+    // Like the real validators: Hunspell and NSSpellChecker both find nothing to flag in an empty
+    // string and so call it valid. The resolver must never ask them about one.
     public bool IsValidWord(string word, string lang) =>
-        _words.TryGetValue(lang, out var set) && set.Contains(word);
+        word.Length == 0 ? IsAvailable(lang) : _words.TryGetValue(lang, out var set) && set.Contains(word);
 
     public string Alphabet(string lang) => Alphabets.TryGetValue(lang, out var a) ? a : "";
 

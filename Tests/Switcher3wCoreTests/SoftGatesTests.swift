@@ -25,6 +25,25 @@ final class SoftGatesTests: XCTestCase {
         XCTAssertFalse(SoftGates.passes("привіт!", capsLock: false))
     }
 
+    func testAdmitsAnInternalApostropheOrHyphen() {
+        // Contractions and hyphenated words are ordinary words of these languages, and they pass
+        // when typed in their own layout — vetoing them as code cost `You're`, `That's` and `Кто-то`
+        // their conversion in a field log.
+        XCTAssertTrue(SoftGates.passes("you're", capsLock: false))
+        XCTAssertTrue(SoftGates.passes("You\u{2019}re", capsLock: false))
+        XCTAssertTrue(SoftGates.passes("кто-то", capsLock: false))
+        XCTAssertTrue(SoftGates.passes("будь-ласка", capsLock: false))
+    }
+
+    func testOtherInternalPunctuationIsStillCode() {
+        XCTAssertFalse(SoftGates.passes("a_b", capsLock: false))
+        XCTAssertFalse(SoftGates.passes("a/b", capsLock: false))
+        XCTAssertFalse(SoftGates.passes("v2x", capsLock: false))
+        // Edge joiners are not words either (letterCore trims them before the gate normally runs).
+        XCTAssertFalse(SoftGates.passes("-abc", capsLock: false))
+        XCTAssertFalse(SoftGates.passes("abc'", capsLock: false))
+    }
+
     func testRejectsAcronymsWhenCapsLockIsOff() {
         XCTAssertFalse(SoftGates.passes("USA", capsLock: false))
         XCTAssertFalse(SoftGates.passes("НДС", capsLock: false))
@@ -69,10 +88,11 @@ final class SoftGatesTests: XCTestCase {
     }
 
     func testLetterCoreKeepsInteriorPunctuation() {
-        // Only the EDGES are trimmed — an interior character still fails the all-letters gate,
-        // which is what keeps "don't" and "a.b" out of the detector.
+        // Only the EDGES are trimmed — an interior character is kept, and the gate then decides:
+        // "a.b" is code and stays out, while "don't" is a word and passes (see the joiner tests).
         XCTAssertEqual(SoftGates.letterCore("don't"), "don't")
-        XCTAssertFalse(SoftGates.passes(SoftGates.letterCore("don't"), capsLock: false))
+        XCTAssertEqual(SoftGates.letterCore("a.b"), "a.b")
+        XCTAssertFalse(SoftGates.passes(SoftGates.letterCore("a.b"), capsLock: false))
     }
 
     func testLetterCoreOfNonLettersIsEmpty() {

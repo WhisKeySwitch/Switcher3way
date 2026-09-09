@@ -36,7 +36,22 @@ costs you trust.
 whether the language you are already typing in has a real word one keystroke away — a dropped letter,
 a doubled one, two letters swapped. If it does, the simpler explanation is that you missed a key, and
 the word is left alone. This is why fumbling a word while writing Ukrainian no longer throws it into
-English and drags the layout with it.
+English and drags the layout with it. The check is only consulted on words of six letters or more:
+below that nearly every string has some real word one key away, so it would refuse everything.
+Four- and five-letter words go by the dictionary and the phrase instead.
+
+**Very short words must be words people type.** Spell checkers accept a lot of two- and three-letter
+junk as English: `wt`, `ye`, `pf`. That mattered, because `це` typed on a Latin layout lands as `wt`,
+and the app used to see a valid English word and leave your Ukrainian alone. Below four letters the
+app now believes the dictionary only for words that are genuinely typed, in either alphabet, so
+`це`, `ну` and the like get fixed while `in`, `of` and `app` are still left as you wrote them.
+
+**A word spelled the same in Ukrainian and Russian** — `слишком` typed while the Ukrainian layout is
+active — is a special case: nothing on screen would change, only the layout. Because a Ukrainian typo
+is a real Russian word as often as not (`адже` mistyped as `даже`), the app moves the layout only once
+the phrase already reads as that language, and then without retyping anything; the chip shows the word
+and the new layout's flag. Contractions and hyphenated words (`you're`, `кто-то`) convert like any
+other word.
 
 **Very short words wait for their sentence.** Under about four letters, a dictionary hit means almost
 nothing — a quarter of all two-letter Latin strings are in the English dictionary, mostly as

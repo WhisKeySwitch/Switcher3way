@@ -270,9 +270,11 @@ internal sealed class Engine
                 Diagnostics.Log($"  auto: \"{kept}\" kept — {Explain(keep.Reason)}");
                 // A word already valid in the layout it was typed in settles what language this phrase
                 // is; nothing else the app sees is stronger. This used to be filed as Neutral, which
-                // threw the evidence away and left short words undecidable.
+                // threw the evidence away and left short words undecidable. But only a word with enough
+                // letters to mean something: "10", "e", "wt" used to lock the phrase too, and then the
+                // real words after them were refused for disagreeing (NWayResolver.SettlesPhrase).
                 _phrase.Record(word, kept, 1,
-                               keep.ValidInCurrent
+                               keep.ValidInCurrent && NWayResolver.SettlesPhrase(kept)
                                    ? new PhraseTracker.WordKind.Locked(LangOf(_catalog.CurrentLayoutId() ?? ""))
                                    : new PhraseTracker.WordKind.Neutral(), gen);
                 break;
@@ -298,6 +300,18 @@ internal sealed class Engine
                 if (only is null || only.Lang != _heldLang) { _heldLang = only?.Lang; _heldRun = only is null ? 0 : 1; }
                 else _heldRun++;
 
+                // A held word with no vowel at all in the language it landed in ("щт" for "on") is
+                // keyboard noise there, and that would let one-word messages settle without the second
+                // held word the run waits for. Measured first against legitimate vowel-less
+                // abbreviations (хз, смс, msg, pwd…) and it did not reach zero false conversions, so
+                // the switch behind HeldWordSettlesAlone is off and this branch does not run.
+                if (only is not null && !hardBoundary &&
+                    NWayResolver.HeldWordSettlesAlone(shown, defer.Winners, _dict.Vowels(cur)))
+                {
+                    Diagnostics.Log($"  auto: \"{shown}\" has no vowel in {cur}, settling -> [{only.Lang}]");
+                    SettleHeldRun(only.Lang, only.LayoutId, gen);
+                    break;
+                }
                 if (_heldRun >= HeldRunSettles && only is not null && !hardBoundary)
                     SettleHeldRun(only.Lang, only.LayoutId, gen);
                 break;
@@ -344,14 +358,23 @@ internal sealed class Engine
             case Outcome.Ambiguous amb:
             {
                 ForgetHeldRun();
-                // Prefer the phrase lock, else the setting. "off" or no matching winner → keep.
-                var target = _phrase.LockedLang ?? (_settings.AmbiguousLang == "off" ? null : _settings.AmbiguousLang);
-                var w = target is null ? null : amb.Winners.FirstOrDefault(x => x.Lang == target);
+                // The phrase lock decides only when it is one of the candidates; locked to English
+                // with a uk/ru word, the lock knows nothing about which, and the preference does.
+                // "off" with no usable lock → keep.
+                var lock_ = _phrase.LockedLang;
+                var pick = NWayResolver.ResolveAmbiguity(amb.Winners, lock_, _settings.AmbiguousLang);
+                var w = pick?.Winner;
                 if (w is null || _settings.IsNeverConvert(amb.Original, w.Converted))
                 {
+                    Diagnostics.Log($"  auto: \"{amb.Original}\" kept — valid in " +
+                                    string.Join("/", amb.Winners.Select(x => x.Lang).OrderBy(x => x)) +
+                                    ", nothing to choose between them");
                     _phrase.Record(word, amb.Original, 1, new PhraseTracker.WordKind.Neutral(), gen);
                     break;
                 }
+                Diagnostics.Log($"  auto: ambiguous -> [{w.Lang}] (" +
+                                (pick!.Value.ByLock ? "phrase lock"
+                                    : lock_ is null ? "preference" : $"preference; lock {lock_} not a candidate") + ")");
                 ConvertSingle(word, new Decision(w.LayoutId, amb.Original, w.Converted), boundary,
                               new PhraseTracker.WordKind.Defaulted(w.Lang), gen);
                 break;
@@ -406,6 +429,7 @@ internal sealed class Engine
     private static string Explain(KeepReason reason) => reason switch
     {
         KeepReason.ValidInCurrent => "already a word in this layout's language",
+        KeepReason.SameTextUncorroborated => "spelled the same in the other language, but the phrase does not read as it — leaving the layout alone",
         KeepReason.NotAWordAnywhere => "not a word in any installed language",
         KeepReason.NoCurrentLanguage => "current layout has no usable language",
         KeepReason.LooksLikeATypo => "reads as another language, but this one has a word one key away "

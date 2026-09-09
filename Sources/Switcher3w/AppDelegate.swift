@@ -507,7 +507,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             // one: nothing moves on screen either way, so without the reason a guard that is working
             // and a guard that never ran leave identical evidence.
             rslog("auto: keep — \(Self.explain(reason))")
-            if reason == .validInCurrent, let lang = currentLanguageCode() {
+            // …but only a word with enough letters to mean something. "10", "e", "wt" used to lock
+            // the phrase too, and then the real words after them were refused for disagreeing.
+            if reason == .validInCurrent, let lang = currentLanguageCode(),
+               let shown = NWay.resolver.renderCurrent(keys: keys), NWayResolver.settlesPhrase(shown) {
                 keepKind = .locked(lang: lang)
             }
         case .held(let original, let winners):
@@ -531,12 +534,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             rslog("auto: rescue → \(d.lang) — no dictionary knows it, but only \(d.lang) fits its shape")
         case .ambiguous(let original, let winners):
             forgetHeldRun()
-            let pref = phraseTracker.lockedLang ?? SettingsManager.shared.ambiguousLang
-            if pref != "off", let w = winners.first(where: { $0.lang == pref }) {
+            // The lock decides only when it is one of the candidates. Locked to English and the word
+            // is uk/ru, the lock knows nothing about which; the preference does (печально, 2026-09).
+            let lock = phraseTracker.lockedLang
+            if let (w, byLock) = NWayResolver.resolveAmbiguity(
+                    winners: winners, lockedLang: lock,
+                    preference: SettingsManager.shared.ambiguousLang) {
                 decision = NWayResolver.Decision(targetLayoutID: w.layoutID, lang: w.lang,
                                                  original: original, converted: w.converted)
                 wordKind = .defaulted(lang: w.lang)
-                rslog("auto: ambiguous → \(w.lang) (\(phraseTracker.lockedLang != nil ? "phrase lock" : "preference"))")
+                let how = byLock ? "phrase lock"
+                    : (lock.map { "preference; lock \($0) not a candidate" } ?? "preference")
+                rslog("auto: ambiguous → \(w.lang) (\(how))")
             } else {
                 // Valid in several languages with nothing to choose between them. Left alone, and
                 // said out loud: this is a decision like any other, and an unlogged decision is
@@ -580,6 +589,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         var correction: PhraseTracker.Correction?
         if case .locked(let lang) = wordKind {
             correction = phraseTracker.correction(toLang: lang, layoutID: decision.targetLayoutID)
+        }
+
+        // The same text in a sibling language (a Russian word typed on the Ukrainian layout): there
+        // is nothing to erase or retype, only a layout to move — so the rewrite, the dangerous code,
+        // is not run at all. The word buffer is left as it is: nothing on screen changed, and an
+        // ⌥ tap afterwards still cycles the word through the other layouts. A pending phrase
+        // correction does change earlier words' text, so that case takes the retype path below.
+        if decision.isLayoutOnly, correction == nil {
+            LayoutSwitcher.switchTo(layoutID: decision.targetLayoutID)
+            updateStatusIcon()
+            lastAutoConverted = (decision.original, Date())
+            rslog("auto: layout only → \(decision.targetLayoutID) — same text in \(decision.lang)")
+            caretIndicator?.conversionApplied(original: decision.original, converted: decision.converted)
+            phraseTracker.record(keys: keys, shownText: decision.converted, spacesAfter: bc,
+                                 kind: wordKind, ifGeneration: gen)
+            return
         }
 
         // Single-step cycle: record the layout BEFORE switching, so ⌥-undo restores
@@ -652,6 +677,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         case .phraseDisagrees:   return "too short to decide, and the phrase reads as another language"
         case .dictionaryUntrusted:
             return "the dictionary that matched failed its self-check just now — not acting on it"
+        case .sameTextUncorroborated:
+            return "spelled the same in the other language, but the phrase does not read as it — "
+                 + "leaving the layout alone"
         }
     }
 
@@ -683,7 +711,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             heldLang = only?.lang
             heldRun = only == nil ? 0 : 1
         }
-        guard heldRun >= Self.heldRunSettles, let only else { return }
+        guard let only else { return }
+        // A held word with no vowel at all in the language it landed in — "щт", "тщ", "Рш" — is
+        // keyboard noise there, and that would let one-word chat messages ("on", "no", "Hi") settle
+        // without the second held word the run waits for: 46 were held in a twelve-day log and 5
+        // runs ever settled. Measured first, against a fixture of legitimate vowel-less abbreviations
+        // (хз, смс, msg, pwd…), and it did not reach zero false conversions — so the switch behind
+        // `heldWordSettlesAlone` is off and this branch does not run. See the constant's comment.
+        if NWayResolver.heldWordSettlesAlone(original: original, winners: winners,
+                                             typedVowels: SystemDictionary().vowels(currentLang)) {
+            rslog("auto: held word has no vowel in \(currentLang), settling → \(only.lang)")
+            settleHeldRun(toLang: only.lang, layoutID: only.layoutID, gen: gen)
+            return
+        }
+        guard heldRun >= Self.heldRunSettles else { return }
         settleHeldRun(toLang: only.lang, layoutID: only.layoutID, gen: gen)
     }
 

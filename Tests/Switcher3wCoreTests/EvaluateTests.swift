@@ -54,6 +54,35 @@ final class EvaluateTests: XCTestCase {
         XCTAssertEqual(Set(winners.map(\.lang)), ["uk", "ru"])
     }
 
+    // MARK: - what the caller may lean on
+
+    func testOnlyAWordOfFourLettersSettlesThePhrase() {
+        // "e", "wt", "10" all come back "valid in the current language" from a real dictionary and
+        // used to lock the phrase to it; then четыре- and five-letter words were refused as
+        // disagreeing. From four letters the evidence is real.
+        for weak in ["e", "wt", "так", "10", "..", "(ok)"] {
+            XCTAssertFalse(NWayResolver.settlesPhrase(weak), weak)
+        }
+        for real in ["добре", "hello", "(місто)", "Wort!"] {
+            XCTAssertTrue(NWayResolver.settlesPhrase(real), real)
+        }
+    }
+
+    func testAmbiguityFollowsTheLockOnlyWhenTheLockIsACandidate() {
+        let uk = NWayResolver.Winner(lang: "uk", layoutID: Fixture.uk, converted: "печально")
+        let ru = NWayResolver.Winner(lang: "ru", layoutID: Fixture.ru, converted: "печально")
+        // Locked to ru: the lock decides, over a uk preference.
+        let byLock = NWayResolver.resolveAmbiguity(winners: [uk, ru], lockedLang: "ru", preference: "uk")
+        XCTAssertEqual(byLock?.winner.lang, "ru"); XCTAssertEqual(byLock?.byLock, true)
+        // Locked to en — not a candidate: the preference decides, as if there were no lock.
+        let byPref = NWayResolver.resolveAmbiguity(winners: [uk, ru], lockedLang: "en", preference: "uk")
+        XCTAssertEqual(byPref?.winner.lang, "uk"); XCTAssertEqual(byPref?.byLock, false)
+        // No lock: preference.
+        XCTAssertEqual(NWayResolver.resolveAmbiguity(winners: [uk, ru], lockedLang: nil, preference: "ru")?.winner.lang, "ru")
+        // Preference off: nothing chooses, even with an irrelevant lock.
+        XCTAssertNil(NWayResolver.resolveAmbiguity(winners: [uk, ru], lockedLang: "en", preference: "off"))
+    }
+
     func testKeepsWhenNoLanguageValidates() {
         guard case .keep = outcome("qwzx") else {
             return XCTFail("gibberish must be left alone")
@@ -68,18 +97,20 @@ final class EvaluateTests: XCTestCase {
     }
 
     func testAlwaysConvertOverridesTheDictionary() {
-        // "але" is a uk word; make the current-language render valid too so the normal path would
-        // keep it, then prove the explicit override still converts.
-        let latin = latinFor("але", lang: "uk")
+        // "місто" is a uk word; make the current-language render valid too so the normal path would
+        // keep it, then prove the explicit override still converts. Deliberately a long word: under
+        // four letters a dictionary hit no longer stands on its own (see `ShortWords`), so a short
+        // one could not set up the precondition this test needs.
+        let latin = latinFor("місто", lang: "uk")
         dict.words["en"]?.insert(latin)
         guard case .keep = outcome(latin) else {
             return XCTFail("precondition: this must be kept without the override")
         }
-        exceptions.always.insert("але")
+        exceptions.always.insert("місто")
         guard case .convert(let d) = outcome(latin) else {
             return XCTFail("always-convert must override a valid current-language word")
         }
-        XCTAssertEqual(d.converted, "але")
+        XCTAssertEqual(d.converted, "місто")
     }
 
     func testAlwaysConvertMatchesTheConvertedForm() {
