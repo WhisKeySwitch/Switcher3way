@@ -2,39 +2,54 @@ Switcher3way for Windows — direct-download preview. If you can use the
 [Microsoft Store version](https://apps.microsoft.com/detail/9MXFXL7GG3C5), prefer it: it is signed by
 Microsoft, needs no prerequisite, and updates itself.
 
-**Words no dictionary knows now get converted too.** Until this release, a name or a piece of jargon
-typed in the wrong layout stayed as gibberish and had to be fixed by hand.
+**More of your wrong-layout words get fixed, and fewer of your conversions get quietly lost.** This is
+the largest correctness release since the app went to the Store — most of it found by reading twelve
+days of real logs rather than by testing ideas.
 
-## New — names and jargon typed in the wrong layout
+## Fixed — a spell checker that answers wrong is no longer believed
 
-The app decided what to convert by asking a dictionary: if the keystrokes spell a real word in
-another language, they were meant for that language. That rule is exactly right for ordinary words
-and exactly wrong for everything a dictionary has never heard of — product names, tech jargon, proper
-nouns. `Kyiv` typed while the Ukrainian layout is active comes out as `Лншм`, and no dictionary
-anywhere validates either form, so nothing happened. Every such word cost you a manual fix.
+A whole line typed in the wrong layout would sometimes stay unconverted, and the log showed something
+impossible: the app's own record saying a word *is* a valid Ukrainian word, next to a verdict saying
+no language recognised it.
 
-The signal the app was missing is **shape, not vocabulary**. A word typed in the wrong layout is not
-merely unknown — it is unpronounceable in the language it landed in, while exactly one of the
-alternatives is a perfectly ordinary word shape for its own language. `Лншм` is not a possible
-Ukrainian word; `Kyiv` is an entirely normal English one. That asymmetry is what a person spots
-instantly, and the app now checks it.
+The spell checker goes through brief spells of answering wrong — real words rejected, keyboard mash
+accepted — and the app was asking it about the same word twice while making one decision. When the two
+answers disagreed, the conversion vanished with no sign that anything had happened.
 
-So when no dictionary recognises a word in any language, the app looks at its shape instead, and
-converts only when exactly one language could plausibly have produced it.
+It now checks the answer it is about to act on, at the moment of acting, and stops trusting a
+dictionary that has just contradicted itself. If you have ever typed a line, watched nothing happen,
+and shrugged — this was often why.
 
-**What deliberately still keeps.** This is a weaker signal than a dictionary match, so everything
-that guarded conversion before guards it here too — and the thresholds were chosen by measuring
-against real words that must not move, not by taste. `Kyiv` typed *in* the English layout, `PeopleOps`,
-`SSO`, `npm`, code identifiers and vowel-less abbreviations like `хз` all stay exactly as you typed
-them. Verified end to end on this build: five such words, zero touched.
+## Fixed — six reasons wrong-layout words were being left alone
 
-A rescued word is also held more loosely than a dictionary match — it will not decide what language
-the rest of your sentence is in, and a later word can still correct it.
+From 5,731 automatic decisions across twelve days. Each was found, measured, and either fixed or
+deliberately left off with the number written down:
 
-**A note for Ukrainian and Russian typists.** On Windows this mostly helps in one direction. The
-dictionaries shipped with the app already know a good deal of Ukrainian and Russian vocabulary, so
-jargon like `апка` or `тенанту` was usually converted already. What was not handled — and now is —
-are Latin names and terms typed while a Cyrillic layout is active.
+- **Short words were being second-guessed too eagerly.** The check that protects you from having typos
+  "corrected" was running on four- and five-letter words, where almost every string resembles some
+  real word. All 26 words it held back there were genuine, and not one was a typo.
+- **Meaningless tokens were deciding the language of your sentence.** `10`, `.`, `e` — a token with no
+  letters in it now settles nothing.
+- **`You're`, `That's` and `Кто-то`** were skipped because of an apostrophe or a hyphen.
+- **A Russian word typed on the Ukrainian layout** now switches the layout, without retyping your text,
+  once the sentence makes the language clear.
+- Two more, including one measured, found imperfect, and shipped **off** rather than shipped hopeful.
+
+## New — Bulgarian
+
+Bulgarian joins English, Ukrainian and Russian. Add the Bulgarian keyboard in Windows and it works the
+same way: type Bulgarian with the wrong layout active and the app puts it right.
+
+Serbian was prepared alongside it and **deliberately not shipped**. Its keyboard transliterates rather
+than scrambles — English text typed on it turns into believable Serbian words instead of nonsense — so
+including it made ordinary English typing four times more likely to be converted by mistake. Precision
+matters more than the language count; the measurement is in the repository.
+
+## Also
+
+- The rescue for words no dictionary knows no longer accepts a word ending in four consonants.
+  `Шкудфтв` — *Ireland* typed on a Russian layout — used to slip through.
+- Tapping the trigger offers the right layout as one step rather than two.
 
 ## Install
 
@@ -46,20 +61,19 @@ are Latin names and terms typed while a Cyrillic layout is active.
 4. Launch **Switcher3way** from the Start menu. It lives in the notification area; Windows 11 hides new
    tray icons, so expand it with the **^** chevron if you cannot see the flag.
 5. **Add a second keyboard layout** if you have not: Settings → Time & language → Language & region →
-   Add a language → **Ukrainian** or **Russian**. Switcher3way converts *between* the layouts Windows
-   has installed, so with only one there is nothing for it to convert between — the app tells you so
-   rather than sitting silent.
+   Add a language → **Ukrainian**, **Russian** or **Bulgarian**. Switcher3way converts *between* the
+   layouts Windows has installed, so with only one there is nothing for it to convert between.
 
 ## Verify the download
 
-SHA-256 of `Switcher3way-0.5.0-win-x64.msi`:
+SHA-256 of `Switcher3way-0.6.0-win-x64.msi`:
 
 ```
-8fab71fcf78f01f49d7ec2740cfa05ff6751d731922de2192b2f2b222b2f1cfd
+832842c185e1b5d0d9ed44d86367159aef6981ae321ee6e3e5b949edc5f2ec7c
 ```
 
 ```powershell
-(Get-FileHash .\Switcher3way-0.5.0-win-x64.msi -Algorithm SHA256).Hash
+(Get-FileHash .\Switcher3way-0.6.0-win-x64.msi -Algorithm SHA256).Hash
 ```
 
 The in-app updater checks this same checksum before installing anything.
@@ -72,12 +86,10 @@ The in-app updater checks this same checksum before installing anything.
   characters, so rather than attempt a replacement that cannot land it leaves the word alone. The
   trigger still converts it.
 - **Cannot rewrite text inside windows running as administrator** unless Switcher3way is also running
-  as administrator — Windows blocks synthesized input from a lower integrity level. The app reports
-  this rather than silently doing nothing.
+  as administrator — Windows blocks synthesized input from a lower integrity level.
 - Password fields are deliberately excluded from processing.
 - Replacing a very long selection — near the 200-character limit — still takes a few seconds, because
-  erasing the old text remains one keystroke per character. Going faster was tried and measured, and
-  every faster method lost keystrokes; the delay is what the receiving application needs.
+  erasing the old text remains one keystroke per character.
 - In applications that expose no text to accessibility tools, the app cannot check its own work. It
   says so in the debug log and behaves as before rather than guessing.
 

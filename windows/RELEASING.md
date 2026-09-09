@@ -9,9 +9,23 @@
 > dropped. The pattern to learn from: **verify in the flavour that ships.** All three passed testing
 > on an unpackaged build.
 >
-> The MSI channel is at **0.5.0**; the Store is at **0.4.1** until 0.5.0 clears certification.
+> The MSI channel is at **0.6.0**; the Store is at **0.5.0** until 0.6.0 clears certification.
 > 0.2.8 was a Store-only submission; the MSI channel skipped it and went 0.2.7 → 0.2.9 → 0.3.0 → 0.4.0
-> → 0.4.1 → 0.5.0.
+> → 0.4.1 → 0.5.0 → 0.6.0.
+>
+> **0.6.0 is the correctness release**, and the largest since the Store launch — most of it found by
+> reading twelve days of real logs rather than by testing ideas. A spell checker that answers wrong is
+> no longer believed (it has brief spells of rejecting real words, and the resolver was asking it twice
+> per decision, so disagreements silently ate conversions); six causes of missed wrong-layout words
+> from 5,731 automatic decisions; the rescue no longer accepts a word ending in four consonants; and
+> the manual cycle offers the winner as one step.
+>
+> **Bulgarian ships; Serbian was prepared and deliberately did not.** Serbian's keyboard transliterates
+> rather than scrambles, so English typed on it becomes believable Serbian rather than noise, and
+> including it made English typing four times more likely to be converted by mistake (0.16% → 0.61%).
+> Bulgarian's layout scrambles and costs 0.04 points. Both numbers, and the layout tables they were
+> measured with, are in `openspec/changes/add-bulgarian-and-serbian` — read them before adding a
+> language, because the naive expectation was wrong for both.
 >
 > **0.5.0 is the gibberish-rescue release.** Words no dictionary knows — names, jargon, loanwords —
 > could never convert, because the resolver only switched to a language that *validates* the word. It
