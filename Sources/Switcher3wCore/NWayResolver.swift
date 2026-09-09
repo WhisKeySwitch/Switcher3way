@@ -42,6 +42,11 @@ public final class NWayResolver {
             self.original = original
             self.converted = converted
         }
+
+        /// The winning rendering is the text already on screen — a Russian word typed on the
+        /// Ukrainian layout, or the reverse. Nothing needs erasing or retyping; only the layout
+        /// moves, so the caller must not run the rewrite for it.
+        public var isLayoutOnly: Bool { original == converted }
     }
 
     /// One language that validates the typed word (returned when more than one does).
@@ -69,6 +74,11 @@ public final class NWayResolver {
         /// The dictionary that produced the winner failed its canaries when asked to confirm, so
         /// its verdict is not evidence right now. Doing nothing beats converting a name into mash.
         case dictionaryUntrusted
+        /// Spelled identically in a sibling language (a Russian word on the Ukrainian layout, or the
+        /// reverse), and the phrase does not read as that language. Only the layout could move, and
+        /// a Ukrainian typo is a real Russian word as often as not — so without the phrase's word
+        /// for it, the layout stays.
+        case sameTextUncorroborated
     }
 
     /// Full evaluation result. `.ambiguous` carries every validating language so the caller
@@ -111,6 +121,58 @@ public final class NWayResolver {
     /// `RescueQualityTests` against the checked-in fixture.
     public static let rescueFloor = 4
 
+    /// Does a word that is valid in the language being typed carry enough letters to settle what
+    /// language the phrase is in? From `undecidableBelow` up, yes — nothing the app sees is stronger.
+    /// Below it, no: the dictionaries accept single letters and two-letter abbreviations (`e`, `z`,
+    /// `wt`, `ye`), and in a field log those locked the phrase to English 35 times and then had
+    /// four- and five-letter Ukrainian words refused as "disagreeing" with it. The same floor the
+    /// other direction already uses, for the same reason.
+    public static func settlesPhrase(_ shownText: String) -> Bool {
+        SoftGates.letterCore(Array(shownText)).count >= undecidableBelow
+    }
+
+    /// Which candidate an ambiguous word resolves to. The phrase lock wins when it is one of the
+    /// candidates; when it is not — the phrase reads as English and the word is Ukrainian or Russian
+    /// — it says nothing about which of the two is right, and the preference decides as if there
+    /// were no lock. `preference == "off"` with no usable lock resolves to nothing. `byLock` says
+    /// which rule chose, for the log.
+    public static func resolveAmbiguity(winners: [Winner], lockedLang: String?, preference: String)
+        -> (winner: Winner, byLock: Bool)? {
+        guard preference != "off" else { return nil }
+        if let lockedLang, let w = winners.first(where: { $0.lang == lockedLang }) {
+            return (w, true)
+        }
+        if let w = winners.first(where: { $0.lang == preference }) { return (w, false) }
+        return nil
+    }
+
+    /// Whether a lone held word may settle on the strength of having no vowel in the language it
+    /// was typed in (`щт` for "on", `Рш` for "Hi"). OFF, and the reason is a number that has moved:
+    /// measured against `VowelLessFixture` with the real dictionaries, the rule first converted 18
+    /// of 76 legitimate vowel-less abbreviations — 11 same-text uk→ru flips (хз, пн, вт, чт, пт,
+    /// сб, др, мб, тчк, тк) and 7 dictionary junk on two- and three-letter strings (смс→`cvc`,
+    /// тг→`nu`, мс→`vc`, dst→`вые`, tl→`ед`). Excluding same-text winners, as the predicate
+    /// below does, left 8; the short-word allow-list then took the junk winners out and left **2**,
+    /// both of them `см` (centimetre) reading as `cv`, which is on the English list because people
+    /// do type CV. The bar for a rule that trades precision on the shortest words the app touches
+    /// is zero, and tuning the list to reach it would be tuning the evidence — so it stays off. The
+    /// Windows port measures 0/76; both must be clean before the constant moves. The measurement
+    /// stays in the suite (`VowelLessHeldWordMeasurement` prints it) so the number is re-read
+    /// whenever the dictionaries change.
+    public static let vowelLessHeldWordEnabled = false
+
+    /// The vowel-less held-word rule as a predicate: a held word reading as exactly one language,
+    /// whose rendering differs from what was typed (a same-text sibling-language hit is not
+    /// evidence of noise), and which has no vowel of the typed language. `enabled` defaults to the
+    /// measured switch above; tests pass `true` to exercise the predicate itself.
+    public static func heldWordSettlesAlone(original: String, winners: [Winner], typedVowels: String,
+                                            enabled: Bool = vowelLessHeldWordEnabled) -> Bool {
+        guard enabled, winners.count == 1 else { return false }
+        let core = SoftGates.letterCore(Array(original)).lowercased()
+        guard SoftGates.letterCore(Array(winners[0].converted)).lowercased() != core else { return false }
+        return !WordShape.hasVowel(core, vowels: typedVowels)
+    }
+
     /// Legacy single-winner view of `evaluate` — nil unless exactly one language matches.
     public func resolve(keys: [TypedKey], capsLock: Bool) -> Decision? {
         if case .convert(let d) = evaluate(keys: keys, capsLock: capsLock) { return d }
@@ -149,7 +211,18 @@ public final class NWayResolver {
             let lang = String(layout.lang.prefix(2))
             guard dict.isAvailable(lang) else { continue }
             guard let rendered = rendered(keys, in: layout.id) else { continue }
-            let valid = dict.isValidWord(SoftGates.letterCore(Array(rendered)).lowercased(), lang: lang)
+            // A token with no letters at all — "10", ".", "))" — is not a word anywhere, whatever the
+            // dictionary says: NSSpellChecker and Hunspell both accept the empty string, and that
+            // verdict used to make a number "valid in the current language" and lock the phrase to
+            // it (field log 2026-09: "10" locked English, then хвилин was refused as disagreeing).
+            let core = SoftGates.letterCore(Array(rendered))
+            // Under four letters the dictionary is not asked alone: its verdict must be corroborated
+            // by the language's list of short words people actually type. `NSSpellChecker` calls `wt`
+            // an English word, which is how a Ukrainian `це` typed on the English layout came back
+            // "already a word in this layout's language" and was left on screen. See `ShortWords`.
+            let valid = !core.isEmpty
+                && ShortWords.admits(core, lang: lang)
+                && dict.isValidWord(core.lowercased(), lang: lang)
             if let existing = byLang[lang] {
                 if valid && !existing.isValid {   // a valid render outweighs any other
                     byLang[lang] = Candidate(layoutID: layout.id, lang: lang, string: rendered, isValid: true)
@@ -219,7 +292,14 @@ public final class NWayResolver {
         // How far the dictionary hit can be trusted depends almost entirely on how long the word is,
         // and the two guards below cover different bands of that. Short words cannot be cross-checked
         // for a typo at all — at that length every string has a near miss — so the phrase arbitrates.
-        let coreLength = SoftGates.letterCore(Array(current.string)).count
+        // Judged on the SHORTER of the two letter cores. The evidence is the winner's dictionary hit,
+        // and a hit on two letters means nothing whichever side it is on: "рухх" (a doubled letter on
+        // рух) renders "he[[" whose core is "he", and judging by the four typed letters converted a
+        // typo into "he[[". Punctuation keys are letters on the other layout ([ is х, ; is ж), so
+        // the two cores differ in length routinely.
+        let currentCore = SoftGates.letterCore(Array(current.string)).lowercased()
+        let coreLength = min(currentCore.count,
+                             winners.map { SoftGates.letterCore(Array($0.converted)).count }.min() ?? currentCore.count)
         if weighEvidence && coreLength < Self.nearMissTrustedFrom {
             if let phraseLang, let byPhrase = winners.first(where: { $0.lang == phraseLang }) {
                 guard dict.verifyTrust(byPhrase.lang) else {
@@ -249,9 +329,34 @@ public final class NWayResolver {
         // Before accepting "this is a word in another language", check the likelier story: that it is
         // a word of *this* language with one key missed. A fumbled key is a simpler explanation than
         // a keyboard that changed for one word and changed back, and this check was never made.
-        if weighEvidence,
-           TypoGuard.nearMiss(SoftGates.letterCore(Array(current.string)).lowercased(),
-                              lang: currentLang, dict: dict) {
+        //
+        // Consulted only from `nearMissTrustedFrom` up. Four- and five-letter words fell through the
+        // block above and landed here anyway, two letters below the band the constant documents —
+        // and at that length nearly every string has a real neighbour, so the guard refused Дякую,
+        // Слава, давай, Лови, chat, fine… 16 wrong-layout words and not one typo in a twelve-day log.
+        //
+        // The same text in a sibling language — a Russian word typed on the Ukrainian layout, or the
+        // reverse — is a different question from every other conversion: nothing on screen would
+        // change, only the layout. Ukrainian holds a cognate one edit from nearly every Russian
+        // word, so the near-miss guard always called these typos and the layout never switched; 10
+        // of 10 such keeps in a field log were real Russian. But a Ukrainian typo IS a real Russian
+        // word as often as not (адже→даже, слово→слов, добре→добр: 15 of 1,399 corpus typos, most of
+        // them four and five letters where no guard discriminates), and flipping the layout on those
+        // is the failure a Ukrainian writer left the app over. The phrase tells the two apart: a
+        // Russian writer has already had a ы/э word converted and the phrase locked to ru; a
+        // Ukrainian typist has not. So same-text words switch only with the phrase's word for it,
+        // and then without the near-miss guard, which has nothing to add.
+        let sameText = winners.allSatisfy {
+            SoftGates.letterCore(Array($0.converted)).lowercased() == currentCore
+        }
+        let phraseCorroborates = sameText && phraseLang != nil && winners.contains { $0.lang == phraseLang }
+        if weighEvidence, sameText, !phraseCorroborates {
+            CoreLog.write("nway: nil — same text in \(winners.map(\.lang).sorted().joined(separator: "/")),"
+                          + " phrase does not corroborate a layout switch [\(dump)]")
+            return .keep(.sameTextUncorroborated)
+        }
+        if weighEvidence, coreLength >= Self.nearMissTrustedFrom, !phraseCorroborates,
+           TypoGuard.nearMiss(currentCore, lang: currentLang, dict: dict) {
             CoreLog.write("nway: nil — near miss of a \(currentLang) word, reading it as a typo [\(dump)]")
             return .keep(.looksLikeATypo)
         }
@@ -272,6 +377,9 @@ public final class NWayResolver {
             return .ambiguous(original: current.string, winners: trusted)
         }
         let winner = trusted[0]
+        if sameText {
+            CoreLog.write("nway: same text\(phraseCorroborates ? ", phrase agrees" : ""), layout only → \(winner.lang) [\(dump)]")
+        }
         return .convert(Decision(targetLayoutID: winner.layoutID, lang: winner.lang,
                                  original: current.string, converted: winner.converted))
     }

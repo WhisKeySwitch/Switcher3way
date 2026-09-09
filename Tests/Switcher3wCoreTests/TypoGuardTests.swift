@@ -26,9 +26,11 @@ final class TypoGuardTests: XCTestCase {
     private lazy var catalog = Fixture.catalog(current: Fixture.uk)
     private lazy var dict: FakeDictionary = {
         let d = FakeDictionary([
-            "en": ["here", "ft", "of", "we", "hello"],
-            "uk": ["друкую", "текст", "адже", "привіт", "як", "ти", "пишеш"],
-            "ru": ["даже", "программа"],
+            // "friend"/"акшути" are not real words; the fixture is a set, and what these two test
+            // is the length band, which only needs a valid en render and a one-edit uk neighbour.
+            "en": ["here", "ft", "of", "we", "hello", "friend", "you're"],
+            "uk": ["друкую", "текст", "адже", "привіт", "як", "ти", "пишеш", "акшути", "хороше"],
+            "ru": ["даже", "программа", "хорошо"],
         ])
         // The near-miss check needs the language's letters to build a word's neighbours. Production
         // takes these from the keyboard layout; here they are stated outright.
@@ -48,13 +50,83 @@ final class TypoGuardTests: XCTestCase {
     // MARK: - the reported failure
 
     func testAFumbledWordIsNotReadAsTheWrongLayout() {
-        // "рукую" is "друкую" with the д dropped. On a US layout those keystrokes read "here." —
-        // genuinely an English word, so a conversion really is on the table. The near-miss check
-        // finds "друкую" one keystroke away and declines, which is the whole point.
-        guard case .keep(let reason) = resolver.evaluate(keys: typing("рукую"), capsLock: false) else {
+        // "акшутв" is "акшути" with one letter wrong. On a US layout those keystrokes read
+        // "friend" — an English word, so a conversion really is on the table. Six letters, so the
+        // near-miss check is trusted: it finds the neighbour and declines, which is the whole point.
+        guard case .keep(let reason) = resolver.evaluate(keys: typing("акшутв"), capsLock: false) else {
             return XCTFail("a typo of a Ukrainian word was converted")
         }
         XCTAssertEqual(reason, .looksLikeATypo)
+    }
+
+    // MARK: - the guard is consulted only where it was measured to discriminate
+
+    func testAFiveLetterWordIsNotSecondGuessedByTheNearMissCheck() {
+        // "рукую" is one letter from "друкую" AND reads "here." on the US layout. At five letters
+        // nearly every string has a real neighbour (30–40% false alarms measured at four), so the
+        // guard is not consulted and the dictionary hit stands. This used to keep, two letters below
+        // the documented band — Дякую, Слава, давай, Лови, chat, fine in a twelve-day log, no typos.
+        guard case .convert(let d) = resolver.evaluate(keys: typing("рукую"), capsLock: false) else {
+            return XCTFail("a five-letter wrong-layout word was refused by the near-miss check")
+        }
+        XCTAssertEqual(d.lang, "en")
+    }
+
+    func testTheSameTextInASiblingLanguageSwitchesOnlyTheLayoutWhenThePhraseAgrees() {
+        // "хорошо" typed on the Ukrainian layout: not Ukrainian, Russian, and spelled identically
+        // there. Ukrainian holds "хороше" one edit away, so the near-miss check would call it a
+        // typo — but the phrase has already locked to Russian (a ы/э word converted earlier), which
+        // is the corroboration a Ukrainian typist never produces. Layout switch, nothing to retype.
+        guard case .convert(let d) = resolver.evaluate(keys: typing("хорошо"), capsLock: false,
+                                                       phraseLang: "ru") else {
+            return XCTFail("a same-text Russian word on the Ukrainian layout was kept despite a ru phrase")
+        }
+        XCTAssertEqual(d.lang, "ru")
+        XCTAssertTrue(d.isLayoutOnly)
+        XCTAssertEqual(d.original, d.converted)
+    }
+
+    func testTheSameTextWithoutAPhraseKeepsTheLayoutAndSaysWhy() {
+        // The same word with nothing settled: a Ukrainian typo is as often a real Russian word
+        // (адже→даже, добре→добр: 15 of 1,399 corpus typos, most too short for any guard), and
+        // flipping the layout on it is the failure a Ukrainian writer left over. Kept, with a reason
+        // of its own — the log must say the layout was deliberately left, not that a typo was seen.
+        for word in ["хорошо", "даже"] {   // six letters and four: the rule does not depend on length
+            dict.words["ru"]?.insert("даже")
+            guard case .keep(let reason) = resolver.evaluate(keys: typing(word), capsLock: false) else {
+                return XCTFail("\(word): a same-text word with no phrase was converted")
+            }
+            XCTAssertEqual(reason, .sameTextUncorroborated, word)
+        }
+    }
+
+    func testTheShortWordBandIsJudgedOnTheWinnersCoreToo() {
+        // "рухх" (рух with a doubled letter) renders "he[[" — a core of two letters, "he", which the
+        // English dictionary accepts. Four typed letters do not make that hit worth more; the shorter
+        // core decides, and two letters is held for the phrase, not converted.
+        dict.words["en"]?.insert("he"); dict.words["uk"]?.insert("рух")
+        guard case .held = resolver.evaluate(keys: typing("рухх"), capsLock: false) else {
+            return XCTFail("a two-letter dictionary hit decided a word on its own")
+        }
+    }
+
+    func testAContractionPassesTheGates() {
+        // "you're" typed on the Ukrainian layout is "нщгєку" — the apostrophe key is є there.
+        guard case .convert(let d) = resolver.evaluate(keys: typing("нщгєку"), capsLock: false) else {
+            return XCTFail("a contraction was vetoed as code")
+        }
+        XCTAssertEqual(d.converted, "you're")
+    }
+
+    func testATokenWithoutLettersIsNotAWordAnywhere() {
+        // The real validators accept an empty string, and the fake mirrors that. "1" and "11"
+        // used to come back "valid in the current language" — and lock the phrase to it.
+        for token in ["1", "11"] {
+            guard case .keep(let reason) = resolver.evaluate(keys: Fixture.keys(token), capsLock: false) else {
+                return XCTFail("\(token) was not kept")
+            }
+            XCTAssertEqual(reason, .notAWordAnywhere, token)
+        }
     }
 
     func testAUkrainianTypoIsNotDraggedIntoRussian() {

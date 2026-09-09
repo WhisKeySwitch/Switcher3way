@@ -14,8 +14,16 @@ public static class SoftGates
     public static bool PassesSoftGates(string typed, bool capsLock)
     {
         if (typed.Length < 2) return false;                     // 1 letter (я/a/i/і): hopelessly ambiguous
-        foreach (var ch in typed)
-            if (!char.IsLetter(ch)) return false;               // digits/punctuation/URL/code/email
+        // digits/punctuation/URL/code/email — with one exception: an apostrophe or hyphen INSIDE the
+        // word. "you're", "it's", "кто-то", "будь-ласка" are ordinary words of these languages and
+        // already pass when typed in their own layout; vetoing them as code cost "You're", "That's"
+        // and "Кто-то" their conversion in a field log. Edges are trimmed by LetterCore before this
+        // runs, so a joiner can only be internal here — but check anyway.
+        for (int i = 0; i < typed.Length; i++)
+        {
+            if (char.IsLetter(typed[i])) continue;
+            if (!IsWordJoiner(typed[i]) || i == 0 || i == typed.Length - 1) return false;
+        }
         // Under Caps Lock everything is UPPERCASE — not an acronym, not camelCase — so skip these two.
         if (!capsLock)
         {
@@ -24,6 +32,12 @@ public static class SoftGates
         }
         return true;
     }
+
+    /// <summary>
+    /// The non-letters a word may carry inside it and still be a word: the apostrophe (straight or
+    /// typographic) and the hyphen. Nothing else — a digit, a slash, an underscore is code.
+    /// </summary>
+    private static bool IsWordJoiner(char c) => c == '\'' || c == '\u2019' || c == '-';
 
     private static bool IsAllCaps(string s) =>
         s == s.ToUpperInvariant() && s != s.ToLowerInvariant();

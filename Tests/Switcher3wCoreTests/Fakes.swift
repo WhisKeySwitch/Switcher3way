@@ -30,7 +30,10 @@ final class FakeDictionary: DictionaryValidating {
     }
 
     func isValidWord(_ word: String, lang: String) -> Bool {
-        words[lang]?.contains(word.lowercased()) ?? false
+        // Like the real validators: NSSpellChecker and Hunspell both find nothing to flag in an
+        // empty string and so call it valid. The resolver must never ask them about one.
+        if word.isEmpty { return isAvailable(lang) }
+        return words[lang]?.contains(word.lowercased()) ?? false
     }
 }
 

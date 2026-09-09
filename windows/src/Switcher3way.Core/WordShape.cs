@@ -93,6 +93,18 @@ public static class WordShape
     /// answer is then false ("cannot vouch for it"), and callers must treat that as "do not act",
     /// never as gibberish.
     /// </summary>
+    /// <summary>
+    /// Does <paramref name="word"/> (lower-cased letter core) contain any vowel of the language? An
+    /// empty vowel set answers true ("cannot say it has none"), so the rule built on this fails open.
+    /// </summary>
+    public static bool HasVowel(string word, string vowels)
+    {
+        if (vowels.Length == 0) return true;
+        var set = new HashSet<char>(vowels.ToLowerInvariant());
+        foreach (var ch in word) if (set.Contains(ch)) return true;
+        return false;
+    }
+
     public static bool IsPlausible(string word, string vowels, string lang)
     {
         if (vowels.Length == 0) return false;

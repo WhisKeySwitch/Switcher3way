@@ -178,6 +178,14 @@ legible side by side.
   `letterCore` trimming, shared verbatim by the 2-way and N-way paths.
 - **`TypoGuard.swift`** — `nearMiss`: does the language being typed hold a word one edit away?
   Port of the Windows `TypoGuard`, and the answer to the same defect — see below.
+- **`ShortWords.swift`** — the curated short words of en/uk/ru. Below four letters a dictionary hit
+  is not believed on its own, on either side of the decision: `NSSpellChecker` calls `wt` an English
+  word, which is how a Ukrainian `це` typed on the Latin layout came back "already a word in this
+  layout's language" and was left on screen (the September 2026 report). An **allow**-list, because
+  the junk is unbounded and the real short words are a small closed set. Omissions are the dangerous
+  direction — a word missing from its own language's list can be converted away — so the lists are
+  generous and gated by coverage over real prose (`ShortWordPrecisionTests`). The Windows
+  `ShortWords.cs` is **generated from this file**; edit here and regenerate, never both.
 - **`NWayResolver.swift`** — `evaluate` / `manualPlan` / `render`. Instance-based; the executable
   owns one (`NWay.resolver`).
   **Precision is the hard constraint, and it is measured rather than asserted.** A false conversion
@@ -190,7 +198,7 @@ legible side by side.
   the Windows port, which shares this algorithm.
 - **`PhraseTracker.swift`** — phrase memory and retro-corrections; takes a renderer closure.
 
-`Tests/Switcher3wCoreTests/` covers it (93 cases, `swift test`): soft gates, evaluate outcomes,
+`Tests/Switcher3wCoreTests/` covers it (123 cases, `swift test`): soft gates, evaluate outcomes,
 manual plan, phrase tracking, the typo guard, and a **dictionary-quality** test measuring the real
 NSSpellChecker against `WordFixture.swift`. Everything except that last file is Foundation-only and
 guarded with `#if canImport(AppKit)`, so the decision core can be built — and its logic exercised —
@@ -300,7 +308,26 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Current state
 
-- **macOS — 1.5.2** (September 2026): the manual cycle lists the winning layout once, not twice.
+- **macOS — 1.6.0** (September 2026, `openspec/changes/stop-missing-wrong-layout-words`): the
+  recall release. A twelve-day field log (5,731 auto decisions, 121 manual triggers) showed the app
+  leaving wrong-layout words alone for six reasons, all now fixed or measured: the typo guard ran on
+  4–5 letter words two letters below its documented band (all 26 of its keeps were real words, 0
+  typos); the phrase was locked by tokens with no evidence ("10", ".", "e", "wt" — 35 of 48
+  phrase-disagree keeps); an uk/ru ambiguity was dropped when the lock was English; contractions and
+  hyphenated words failed the letters-only gate; a Russian word typed on the Ukrainian layout never
+  switched the layout (now it does, without retyping, once the phrase reads as ru — unconditional it
+  flipped 15/1399 uk typos into ru); and a lone vowel-less held word ("щт"/on) still waits, because
+  the rule measured 8/76 false conversions on real abbreviations and ships OFF behind
+  `NWayResolver.vowelLessHeldWordEnabled`. Measured on the Windows corpus: recall 51.7→57.5% and
+  51.8→69.9%, paragraph damage 0→0, per-word typo precision 0→1/1399 and 0→1/1049. Windows core
+  carries the same edits and rides the next `windows-v*` tag.
+  Then the sixth cause, reported from the field as "it keeps converting це into wt": it converted
+  nothing — Ukrainian typed with the English layout active lands as `wt`, the dictionary calls that
+  an English word, and the app kept it. `ShortWords.swift` now requires a short hit to be a word
+  people type (see the architecture map). Coverage over real prose 100% in all three languages; the
+  same change took the dormant vowel-less rule's false conversions from 8/76 to 2/76 on macOS and
+  0/76 on Windows.
+  1.5.2: the manual cycle lists the winning layout once, not twice.
   Promotion matched the winner into the candidate list by rendered text alone, so for a word built
   from letters uk and ru place identically it evicted the *other* language — one ⌥ tap changed
   nothing on screen and the third language was unreachable; on the auto path the cycle collapsed to
@@ -338,6 +365,14 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Known issues / next steps
 
+- **Short-word lists are curated, so they are never finished** — `ShortWords.swift` decides which
+  short dictionary hits are believed. A word missing from its own language's list can be converted
+  away when the phrase is already settled the other way, so treat an "it converted a word I meant"
+  report as a missing entry first, and add it with a coverage case. Bulgarian and Serbian have no
+  list at all and fall through to the dictionary alone, which is the pre-fix behaviour.
+- **Lone short messages** ("Hi", "no", "так" as the whole message) still need the trigger: the held
+  run wants two short words, and the vowel-less extension measured 8/76 false conversions
+  (`VowelLessHeldWordMeasurement` prints the number every run; flip the constant if it ever reads 0).
 - **Package size** — 94% of the 46.7 MB Windows package is the bundled .NET + WinUI runtime;
   dictionaries are 5%. Trimming measures at **68% off** (45.9 → 14.5 MB compressed) and breaks three
   things, two of them silently — most seriously browser password-field detection, because

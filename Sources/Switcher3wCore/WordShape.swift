@@ -74,6 +74,17 @@ public enum WordShape {
         "grpc", "nginx", "systemd", "npm", "pnpm", "wysiwyg",
     ]
 
+    /// Does `word` (lower-cased letter core) contain any vowel of the language? A word of these
+    /// languages does; a two- or three-letter string with none — `щт` for "on", `тщ` for "no", `Рш`
+    /// for "Hi", `nfr` for "так" — is keyboard noise in the language it landed in, and that is the
+    /// extra evidence that lets a lone held word settle without waiting for a second one. An empty
+    /// vowel set answers `true` ("cannot say it has none"), so the rule fails open like the rest.
+    public static func hasVowel(_ word: String, vowels: String) -> Bool {
+        guard !vowels.isEmpty else { return true }
+        let vowelSet = Set(vowels.lowercased())
+        return word.contains { vowelSet.contains($0) }
+    }
+
     /// Is `word` (lower-cased letter core) shaped like a word of the language whose vowels these
     /// are? An empty vowel set means the language's shape is unknown — the answer is then `false`
     /// ("cannot vouch for it"), and callers must treat that as "do not act", never as gibberish.

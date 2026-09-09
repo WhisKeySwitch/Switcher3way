@@ -127,6 +127,24 @@ final class CaretIndicator {
     private func chipText(original: String, converted: String) -> NSAttributedString {
         let font = NSFont.systemFont(ofSize: 13)
         let out = NSMutableAttributedString()
+        if original == converted {
+            // Nothing was rewritten — the word is spelled the same in both languages and only the
+            // layout moved. Striking the word through and writing it again would say the opposite,
+            // so the chip shows the word once and the flag of the layout it is now on.
+            out.append(NSAttributedString(string: converted, attributes: [
+                .font: NSFont.systemFont(ofSize: 13, weight: .medium), .foregroundColor: NSColor.white,
+            ]))
+            out.append(NSAttributedString(string: "  →  ", attributes: [
+                .font: font, .foregroundColor: NSColor.white.withAlphaComponent(0.55),
+            ]))
+            out.append(NSAttributedString(string: flagProvider(), attributes: [.font: NSFont.systemFont(ofSize: 14)]))
+            let hint = L10n.chipUndoHint(L10n.triggerSymbol(SettingsManager.shared.triggerKey))
+            out.append(NSAttributedString(string: "   \(hint)", attributes: [
+                .font: NSFont.systemFont(ofSize: 11),
+                .foregroundColor: NSColor.white.withAlphaComponent(0.45),
+            ]))
+            return out
+        }
         out.append(NSAttributedString(string: original, attributes: [
             .font: font,
             .foregroundColor: NSColor.white.withAlphaComponent(0.55),

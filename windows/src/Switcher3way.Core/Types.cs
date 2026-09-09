@@ -11,7 +11,15 @@ public readonly record struct TypedKey(int KeyCode, bool Shift, bool Caps, char?
 public sealed record Layout(string Id, string? Lang);
 
 /// <summary>An auto-conversion decision: switch to <see cref="TargetLayoutId"/> and rewrite the word.</summary>
-public sealed record Decision(string TargetLayoutId, string Original, string Converted);
+public sealed record Decision(string TargetLayoutId, string Original, string Converted)
+{
+    /// <summary>
+    /// The winning rendering is the text already on screen — a Russian word typed on the Ukrainian
+    /// layout, or the reverse. Nothing needs erasing or retyping; only the layout moves, so the
+    /// caller must not run the rewrite for it.
+    /// </summary>
+    public bool IsLayoutOnly => Original == Converted;
+}
 
 /// <summary>One language that validates the typed word (carried when more than one does).</summary>
 public sealed record Winner(string Lang, string LayoutId, string Converted);
@@ -93,6 +101,13 @@ public enum KeepReason
     /// verdict is not evidence right now. Doing nothing beats converting a name into mash.
     /// </summary>
     DictionaryUntrusted,
+    /// <summary>
+    /// Spelled identically in a sibling language (a Russian word on the Ukrainian layout, or the
+    /// reverse), and the phrase does not read as that language. Only the layout could move, and a
+    /// Ukrainian typo is a real Russian word as often as not — so without the phrase's word for it,
+    /// the layout stays.
+    /// </summary>
+    SameTextUncorroborated,
 }
 
 /// <summary>One step of the manual cycle: a target layout and how the input looks in it.</summary>
