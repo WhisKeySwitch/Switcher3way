@@ -55,17 +55,25 @@
       the shape signal is weak, so the rescue will rarely fire — and safely, because two plausible
       candidates means "keep". Serbian gains the dictionary path; it gains little from the rescue.
       Worth knowing before anyone reads a quiet log and calls it a bug.
-- [ ] 3.3 Extend the shape fixture with real Serbian and Bulgarian must-keep tokens, so the thresholds
-      are measured for these languages rather than inherited from the ones they were tuned on.
+- [ ] 3.3 Extend the shape fixture with real Bulgarian must-keep tokens, so its thresholds are
+      measured rather than inherited from the languages they were tuned on.
 
 ## 4. Verify
 
-- [ ] 4.1 Collision matrix and the degradation test re-run with the dictionaries bundled rather than
-      staged; the existing corpora must still convert **0.00%** of typos.
-- [ ] 4.2 A Bulgarian and a Serbian sentence typed in the wrong layout convert; the same sentences
-      typed correctly are left alone.
-- [ ] 4.3 The syllabic-R words specifically: `крв`, `прст`, `врх`, `трг`, `црн`, `брз`, `крст`, `врт`,
-      `смрт` typed correctly in Serbian are not converted into anything.
+- [x] 4.1 Re-run against the bundled dictionaries, and **the result overturned the proposal.** The
+      0.00% baseline no longer exists: the field-log work loosened the typo guard in the 4-5 band, so
+      today's three languages sit at 0.15%/0.16%. Against that, **Bulgarian is free and Serbian is
+      not** — 0.16% → 0.61% for English typos. Serbian removed; see the correction in the proposal.
+
+      Two lessons worth keeping. The worst-case stand-in was not the worst case: rendering Serbian
+      through ЙЦУКЕН *flattered* it, because its real layout transliterates rather than scrambles.
+      And a measurement taken before other work lands has to be retaken after it — the earlier 0.00%
+      was true when written and false by the time it mattered.
+- [ ] 4.2 A Bulgarian sentence typed in the wrong layout converts; typed correctly it is left alone.
+      Needs the Bulgarian layout installed on the test machine, which is a change to the user's system
+      and has not been made without asking.
+- [x] 4.3 Moot for now — Serbian is not shipping. The vowel-set entry and `SerbianShapeTests` stay,
+      skipping without the dictionary, so the syllabic-R work is not lost if Serbian returns.
 - [ ] 4.4 Windows end-to-end on a packaged build, as `rescue-wrong-layout-gibberish` task 5.3 did.
 - [ ] 4.5 macOS: the same core changes, with `NSSpellChecker` rather than bundled dictionaries — note
       that macOS may not *have* Bulgarian or Serbian dictionaries installed, in which case the

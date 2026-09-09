@@ -9,9 +9,27 @@
 > dropped. The pattern to learn from: **verify in the flavour that ships.** All three passed testing
 > on an unpackaged build.
 >
-> The MSI channel is at **0.5.0**; the Store is at **0.4.1** until 0.5.0 clears certification.
+> Both channels are at **0.5.0** (the Store cleared certification; 0.5.0.0 is installed and live).
 > 0.2.8 was a Store-only submission; the MSI channel skipped it and went 0.2.7 → 0.2.9 → 0.3.0 → 0.4.0
 > → 0.4.1 → 0.5.0.
+>
+> **`main` carries five unreleased Windows commits.** macOS has shipped all of it through 1.5.2;
+> Windows is still on 0.5.0 and has none of it. Two are user-visible and are the reason to cut the
+> next release rather than passengers on it:
+>
+> - **A dictionary that answers wrong is no longer trusted blindly.** A whole line typed in the wrong
+>   layout went unconverted, and the log showed the impossible — the candidate dump saying a word is
+>   valid beside a verdict saying no language validates it. The spell checker goes through transient
+>   episodes of answering wrong in *both* directions, and the resolver was asking it about the same
+>   word twice per evaluation. Conversions were being silently eaten.
+> - **Six causes of missed wrong-layout words**, from 5,731 auto decisions across twelve days of field
+>   logs. Among them: the typo guard ran two letters below the band its own constant documents, where
+>   all 26 of its keeps were real words and none was a typo.
+>
+> And three more: the gibberish rescue no longer accepts a word ending in four consonants; the manual
+> cycle offers the winner as one step rather than two; and **Bulgarian and Serbian are bundled** —
+> which is a feature, and needs its verification finished before it ships (sections 4-5 of
+> `openspec/changes/add-bulgarian-and-serbian`).
 >
 > **0.5.0 is the gibberish-rescue release.** Words no dictionary knows — names, jargon, loanwords —
 > could never convert, because the resolver only switched to a language that *validates* the word. It

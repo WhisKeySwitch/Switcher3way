@@ -54,6 +54,31 @@ neither uses, so their renderings coincide with Russian and Ukrainian instead of
 layouts can only do better. The reason is that the typo guard and the short-word phrase rules decide
 before candidate languages are consulted — the precision work is what makes expansion affordable.
 
+## Correction: Serbian is not shipping
+
+This proposal recommended Bulgarian **and** Serbian on a measurement that said adding them cost
+existing users nothing. Re-measured after the dictionaries were bundled, with Serbian rendered
+through the layout Serbian actually uses, that is false for Serbian:
+
+| layouts installed | English typos wrongly converted |
+|---|---|
+| en + uk + ru | 5 / 3117 — 0.16% |
+| en + uk + ru + **bg** | 5 / 3117 — 0.16% (identical) |
+| en + uk + ru + **sr** | **19 / 3117 — 0.61%** |
+
+The original figure used a worst-case stand-in — every candidate rendered through ЙЦУКЕН — on the
+reasoning that a real layout could only do better by diverging further. **For Serbian that reasoning
+is backwards.** The Serbian Cyrillic layout is positionally aligned with Latin, so it *transliterates*
+rather than scrambles: `trun`→`трун`, `reda`→`реда`, `nera`→`нера`. English text typed on it becomes
+plausible Serbian instead of noise, and a scrambling stand-in flattered it.
+
+The benefit is small by the same mechanism: 98% of English-typed-on-Serbian reads as plausible
+Serbian, so the rescue rarely has a single winner and keeps. High cost, low benefit — Serbian is
+removed and the measurement kept.
+
+**Bulgarian ships.** Its BDS layout scrambles, its cost is nil to two decimal places, and its licence
+is clean.
+
 ## What Changes
 
 - **Bundle Bulgarian and Serbian** (LibreOffice `bg_BG` and `sr`, both tri-licensed with **MPL-1.1**

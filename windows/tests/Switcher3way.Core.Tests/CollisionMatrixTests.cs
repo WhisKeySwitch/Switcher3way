@@ -27,10 +27,13 @@ public class CollisionMatrixTests
     private readonly ITestOutputHelper _out;
     public CollisionMatrixTests(ITestOutputHelper o) => _out = o;
 
-    /// <summary>Where the candidate dictionaries are staged for the experiment.</summary>
-    private static readonly string Dir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                     "Temp", "dictprobe");
+    /// <summary>
+    /// The bundled dictionaries. This began as an experiment against a staged folder, to price
+    /// Bulgarian and Serbian before committing to them; now that they ship, it runs against what
+    /// ships, so the matrix and the degradation figure are re-measured on every build rather than
+    /// quoted from a proposal.
+    /// </summary>
+    private static readonly string Dir = Path.Combine(AppContext.BaseDirectory, "dict");
 
     /// <summary>Base forms from a Hunspell .dic — the word before any affix flags.</summary>
     private static List<string> Words(string lang, int max)
@@ -51,14 +54,17 @@ public class CollisionMatrixTests
     [Fact]
     public void Cross_language_collision_matrix()
     {
-        if (!Directory.Exists(Dir) || !File.Exists(Path.Combine(Dir, "be.dic")))
+        if (!Directory.Exists(Dir) || !File.Exists(Path.Combine(Dir, "bg.dic")))
         {
-            _out.WriteLine($"candidate dictionaries not staged in {Dir} — skipping");
+            _out.WriteLine($"dictionaries not found in {Dir} — skipping");
             return;
         }
 
         var dict = new HunspellDictionaryValidator(Dir);
-        var langs = new[] { "en", "ru", "uk", "be", "bg", "sr" };
+        // Whatever is bundled. Belarusian was measured during the proposal and declined on licensing,
+        // so it is no longer here to sample.
+        var langs = new[] { "en", "ru", "uk", "be", "bg", "sr" }
+            .Where(l => File.Exists(Path.Combine(Dir, l + ".dic"))).ToArray();
         const int sample = 20000;
 
         var words = langs.ToDictionary(l => l, l => Words(l, sample));
@@ -103,13 +109,15 @@ public class CollisionMatrixTests
     {
         if (!Directory.Exists(Dir) || !File.Exists(Path.Combine(Dir, "bg.dic")))
         {
-            _out.WriteLine($"candidate dictionaries not staged in {Dir} — skipping");
+            _out.WriteLine($"dictionaries not found in {Dir} — skipping");
             return;
         }
         var dict = new HunspellDictionaryValidator(Dir);
 
         foreach (var (corpus, own) in new[] { (PrecisionRecallCorpus.Uk, "uk"), (PrecisionRecallCorpus.En, "en") })
             foreach (var installed in new[] { new[] { "en", "uk", "ru" },
+                                              new[] { "en", "uk", "ru", "bg" },
+                                              new[] { "en", "uk", "ru", "sr" },
                                               new[] { "en", "uk", "ru", "bg", "sr" } })
             {
                 var r = new NWayResolver(new WideCatalog(own, installed), dict, new NoAlways2());
@@ -173,7 +181,15 @@ public class CollisionMatrixTests
         }
     }
 
-    /// <summary>Every Cyrillic candidate rendered through ЙЦУКЕН — the worst case, see the test.</summary>
+    /// <summary>
+    /// Serbian Cyrillic key positions. Serbian's real layout is known here, so it is rendered through
+    /// it rather than stood in for — and the difference is the point: this layout is positionally
+    /// aligned with Latin, so vowels land on vowels, where ЙЦУКЕН scrambles them. Bulgarian's BDS
+    /// table is not available here, so Bulgarian keeps the worst-case stand-in.
+    /// </summary>
+    private const string SrRow = "љњертзуиопшђасдфгхјклчћжџцвбнм,.";
+
+    /// <summary>Renders each candidate through its own layout where that layout is known.</summary>
     private sealed class WideCatalog : ILayoutCatalog
     {
         private readonly string _current; private readonly string[] _ids;
@@ -187,7 +203,13 @@ public class CollisionMatrixTests
             {
                 int i = Keys.IndexOf((char)k.KeyCode);
                 if (i < 0) return null;
-                sb.Append(layout.Id == "en" ? Keys[i] : layout.Id == "ru" ? RuRow[i] : UkRow[i]);
+                sb.Append(layout.Id switch
+                {
+                    "en" => Keys[i],
+                    "ru" => RuRow[i],
+                    "sr" => SrRow[i],
+                    _ => UkRow[i],          // uk, and bg standing in at its worst case
+                });
             }
             return sb.ToString();
         }

@@ -17,7 +17,6 @@ own license text ships alongside it as `<lang>.license`.
 | `ru` | [wooorm/dictionaries](https://github.com/wooorm/dictionaries) (Lebedev/Klukvin) | **BSD-3-Clause** | attribution only |
 | `uk` | [LibreOffice/dictionaries `uk_UA`](https://github.com/LibreOffice/dictionaries/tree/master/uk_UA) | **MPL 1.1** | file-level copyleft; keep under MPL |
 | `bg` | [LibreOffice/dictionaries `bg_BG`](https://github.com/LibreOffice/dictionaries/tree/master/bg_BG) (bgOffice) | **MPL 1.1** (of GPL-2 / LGPL-2 / MPL-1.1) | see the note below — the shipped COPYING understates it |
-| `sr` | [LibreOffice/dictionaries `sr`](https://github.com/LibreOffice/dictionaries/tree/master/sr) | **MPL 2.0** (of LGPL-3 / MPL-2 / GPL-3) | tri-licence stated in the package's own README |
 
 ### The Bulgarian licence needs reading twice
 The `bg_BG` package ships a `COPYING` containing only the **GPL v2** text, and the packager metadata
@@ -32,7 +31,34 @@ That statement is quoted in `dict/bg.license` so the evidence travels with the f
 GPL-2 `COPYING` is retained beside it as `bg-COPYING-gpl2.txt`. We rely on the **MPL 1.1** branch,
 which puts Bulgarian on the same footing as Ukrainian.
 
-### Serbian is Cyrillic only, deliberately
+### Serbian was bundled, measured, and taken back out
+Its licence is clean (LGPL-3 / **MPL-2** / GPL-3, reader's choice) and its dictionary is good. It was
+removed because of what its *keyboard layout* does.
+
+The Serbian Cyrillic layout is positionally aligned with Serbian Latin, so it **transliterates**:
+`a`→`а`, `e`→`е`, `o`→`о`, `r`→`р`. English text typed on it does not turn into noise, it turns into
+its own Cyrillic transliteration — and in a Slavic language a great many of those are real words.
+Measured against the English typo corpus, with Serbian installed:
+
+| layouts installed | English typos wrongly converted |
+|---|---|
+| en + uk + ru | 5 / 3117 — 0.16% |
+| en + uk + ru + **bg** | 5 / 3117 — 0.16% (identical) |
+| en + uk + ru + **sr** | **19 / 3117 — 0.61%** |
+
+`trun`→`трун`, `reda`→`реда`, `takse`→`таксе`, `nera`→`нера`. Nearly four times the false-conversion
+rate, for anyone with the Serbian layout installed.
+
+The benefit is small in the same measure: because that layout preserves word shape, 98% of
+English-typed-on-Serbian reads as plausible Serbian, so the gibberish rescue almost never has a single
+winner and keeps instead. Serbian would gain little and cost a lot. `CollisionMatrixTests` and
+`SerbianShapeTests` stay in the suite and skip without the dictionary, so the finding is re-testable
+rather than a paragraph to trust.
+
+What would change the answer is evidence about which direction Serbian users actually type in, or a
+rule that demands more of a Serbian target than of a scrambling layout's.
+
+### If Serbian returns, it is Cyrillic only
 The upstream package also contains `sr-Latn`. It is not bundled: Serbian Latin and Serbian Cyrillic
 are a 1:1 transliteration of the same language, so shipping both would make every Serbian word valid
 in two "languages" at once and turn ordinary typing into a permanent ambiguity. Converting between
