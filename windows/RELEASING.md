@@ -225,8 +225,9 @@ log says either `toast: registered` or `toast: registration failed`.
 > **0.6.0 adds a fourth Store listing, in Bulgarian**, so the language the release adds is also a
 > language the listing is written in. It is a new listing rather than an edit, and it needs its own
 > description, features, search terms and copyright line — all in [`store-listing.md`](store-listing.md).
-> The interface itself is still only partly translated into Bulgarian, and the Bulgarian description
-> says so rather than letting the listing imply otherwise. **It also has no screenshots yet**, and the
+> The Bulgarian interface was completed alongside it — all 131 strings, verified with
+> `python windows/tools/check-localization.py --require en,uk,ru,bg` — so `<Resources>` now declares
+> `bg` too. **The Bulgarian listing has no screenshots yet**, and the
 > Store requires at least one per listing: images are uploaded per language and the CSV can only point
 > at assets that already exist, so they have to be added in the browser before Bulgarian can ship.
 > The Bulgarian captions are written and waiting in `store-listing.md`.
@@ -253,9 +254,9 @@ The API list and the current-word-only lifetime are what earn the approval; drop
 
 *Medium form (~1,260 characters), if a future field is more generous:*
 
-> Switcher3way fixes words typed in the wrong keyboard layout across English, Ukrainian and Russian: it
-> detects that a finished word is nonsense in the active layout but a real word in another installed one,
-> retypes it and switches the layout.
+> Switcher3way fixes words typed in the wrong keyboard layout across English, Ukrainian, Russian and
+> Bulgarian: it detects that a finished word is nonsense in the active layout but a real word in another
+> installed one, retypes it and switches the layout.
 >
 > That has to work in whatever application the user is typing in, which the app container prevents:
 >
@@ -277,7 +278,7 @@ The API list and the current-word-only lifetime are what earn the approval; drop
 *Long form, for a reviewer who comes back with questions:*
 
 > **What the app does.** Switcher3way corrects words typed in the wrong keyboard layout across English,
-> Ukrainian and Russian: it notices that a finished word is nonsense in the active layout but a real
+> Ukrainian, Russian and Bulgarian: it notices that a finished word is nonsense in the active layout but a real
 > word in another installed one, retypes it correctly, and switches the layout. A manual trigger key
 > does the same on demand for the last word or the current selection.
 >

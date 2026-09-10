@@ -22,7 +22,7 @@ internal static class LayoutStatus
     /// </summary>
     public static string LangName(string two) => two switch
     {
-        "en" or "uk" or "ru" or "be" => Loc.T("lang." + two),
+        "en" or "uk" or "ru" or "be" or "bg" => Loc.T("lang." + two),
         _ => two.ToUpperInvariant(),
     };
 }
