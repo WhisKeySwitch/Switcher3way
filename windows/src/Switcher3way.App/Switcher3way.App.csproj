@@ -117,6 +117,7 @@
     <EmbeddedResource Include="..\..\..\docs\user-guide.md" WithCulture="false"><LogicalName>user-guide.md</LogicalName></EmbeddedResource>
     <EmbeddedResource Include="..\..\..\docs\user-guide.uk.md" WithCulture="false"><LogicalName>user-guide.uk.md</LogicalName></EmbeddedResource>
     <EmbeddedResource Include="..\..\..\docs\user-guide.ru.md" WithCulture="false"><LogicalName>user-guide.ru.md</LogicalName></EmbeddedResource>
+    <EmbeddedResource Include="..\..\..\docs\user-guide.bg.md" WithCulture="false"><LogicalName>user-guide.bg.md</LogicalName></EmbeddedResource>
   </ItemGroup>
 
 </Project>
