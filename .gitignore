@@ -24,3 +24,7 @@ signing/*.pfx
 windows/src/Switcher3way.App/AppPackages/
 windows/dist/
 windows/publish/
+
+# Python bytecode from windows/tools/*.py
+__pycache__/
+*.pyc
