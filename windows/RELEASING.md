@@ -26,6 +26,8 @@
 > Bulgarian's layout scrambles and costs 0.04 points. Both numbers, and the layout tables they were
 > measured with, are in `openspec/changes/add-bulgarian-and-serbian` — read them before adding a
 > language, because the naive expectation was wrong for both.
+> The user-facing release notes say nothing about Serbian, and should not: no published build ever
+> offered it, so explaining an absence only invites the question. The reasoning lives here.
 >
 > **0.5.0 is the gibberish-rescue release.** Words no dictionary knows — names, jargon, loanwords —
 > could never convert, because the resolver only switched to a language that *validates* the word. It

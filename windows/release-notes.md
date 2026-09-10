@@ -40,11 +40,6 @@ deliberately left off with the number written down:
 Bulgarian joins English, Ukrainian and Russian. Add the Bulgarian keyboard in Windows and it works the
 same way: type Bulgarian with the wrong layout active and the app puts it right.
 
-Serbian was prepared alongside it and **deliberately not shipped**. Its keyboard transliterates rather
-than scrambles — English text typed on it turns into believable Serbian words instead of nonsense — so
-including it made ordinary English typing four times more likely to be converted by mistake. Precision
-matters more than the language count; the measurement is in the repository.
-
 ## Also
 
 - The rescue for words no dictionary knows no longer accepts a word ending in four consonants.
