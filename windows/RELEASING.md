@@ -213,8 +213,14 @@ log says either `toast: registered` or `toast: registration failed`.
 ### Submission pack (paste into Partner Center)
 
 > The **What's new in this version** field — the one part that changes on every submission — lives in
-> [`whats-new.md`](whats-new.md), with all three languages together so it can be copied without
+> [`whats-new.md`](whats-new.md), with all four languages together so it can be copied without
 > hunting through the listing. Everything else is below.
+>
+> **0.6.0 adds a fourth Store listing, in Bulgarian**, so the language the release adds is also a
+> language the listing is written in. It is a new listing rather than an edit, and it needs its own
+> description, features, search terms and copyright line — all in [`store-listing.md`](store-listing.md).
+> The interface itself is still only partly translated into Bulgarian, and the Bulgarian description
+> says so rather than letting the listing imply otherwise.
 
 
 **Privacy policy URL** — required, because a keyboard hook can access personal information:

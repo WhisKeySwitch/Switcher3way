@@ -1,8 +1,14 @@
 # Microsoft Store listing copy
 
 Ready to paste into Partner Center → **Store listings**. One listing per language: English (en),
-Ukrainian (uk), Russian (ru) — the three languages the app itself converts between, which is also what
-`Package.appxmanifest` declares under `<Resources>`.
+Ukrainian (uk), Russian (ru), Bulgarian (bg) — the four languages the app converts between since
+0.6.0.
+
+That is no longer the same set as `Package.appxmanifest`'s `<Resources>`, which stays at en/uk/ru, and
+the difference is deliberate: `<Resources>` declares the languages the *interface* is fully translated
+into, and Bulgarian is one of the thirteen that are only partly translated. A listing may be written in
+any language regardless. The Bulgarian description says so outright rather than letting a
+Bulgarian-language listing imply a Bulgarian-language app.
 
 ## What the form actually asks for
 
@@ -21,7 +27,7 @@ search results:
 | **Additional license terms** | 10,000 chars | **Leave blank.** Blank means Microsoft's Standard Application License Terms, which is the normal arrangement for a free app. MIT already reaches the user: `LICENSE` ships inside the package (`Switcher3way.App.csproj` copies it next to the exe), which is what the licence requires. Pasting MIT here would add its warranty disclaimer *on top of* Microsoft's terms and invites questions about which governs |
 | **Developed by** | 255 chars | `IronMade` |
 
-Keep the three languages in step — if you edit one, edit all three.
+Keep the four languages in step — if you edit one, edit all four.
 
 ---
 
@@ -30,8 +36,8 @@ Keep the three languages in step — if you edit one, edit all three.
 ### Description
 
 Typed in the wrong keyboard layout? Switcher3way spots it and fixes it. Type ghbdsn and it becomes
-привіт, the layout switches, and you carry on. English, Ukrainian and Russian — free, offline and open
-source.
+привіт, the layout switches, and you carry on. English, Ukrainian, Russian and Bulgarian — free,
+offline and open source.
 
 You know the moment: half a sentence in and you realise the layout was wrong. Switcher3way takes that
 moment away.
@@ -41,9 +47,9 @@ it correctly and switches the layout for you. Not a guess on every word — only
 sense in another layout's language and nonsense in the current one. Short fragments and ambiguous
 scraps are left alone, because a wrong fix is worse than a missed one.
 
-Three languages, not two. Most layout fixers flip between two layouts. Switcher3way reads every layout
+Four languages, not two. Most layout fixers flip between two layouts. Switcher3way reads every layout
 Windows has installed and checks each candidate against that language's dictionary, so English,
-Ukrainian and Russian all work together.
+Ukrainian, Russian and Bulgarian all work together.
 
 Words that exist in both Ukrainian and Russian — там, добре — go to whichever language you prefer, and
 if a later word makes the phrase clearly the other one, the app goes back and corrects itself.
@@ -84,21 +90,21 @@ licence.
 
 BEFORE YOU START
 
-Add both keyboard layouts in Windows first — English and Ukrainian or Russian — or there is nothing for
-the app to switch between. Switcher3way lives in the notification area and has no main window; a short
+Add both keyboard layouts in Windows first — English and Ukrainian, Russian or Bulgarian — or there is
+nothing for the app to switch between. Switcher3way lives in the notification area and has no main window; a short
 welcome flow appears the first time you run it.
 
 Works wherever your keystrokes come from — a directly attached keyboard, Remote Desktop, a virtual
 machine, a remapped keyboard, or the on-screen keyboard.
 
-The interface is fully translated into English, Ukrainian and Russian. Thirteen more languages are
-partly translated and fall back to English for anything not yet covered; the language picker says which
-is which.
+The interface is fully translated into English, Ukrainian and Russian. Thirteen more languages,
+Bulgarian among them, are partly translated and fall back to English for anything not yet covered; the
+language picker says which is which.
 
 ### Product features
 
 - Fixes words typed in the wrong keyboard layout automatically, as you finish each word
-- Three languages together — English, Ukrainian and Russian — not just a two-layout toggle
+- Four languages together — English, Ukrainian, Russian and Bulgarian — not just a two-layout toggle
 - Checks every layout Windows has installed against that language's dictionary
 - Names and jargon no dictionary contains are fixed by their shape, while deliberate names, camelCase, ALL-CAPS and vowel-less abbreviations are left alone
 - Words valid in both Ukrainian and Russian follow your preference, and are corrected later if the phrase proves otherwise
@@ -113,8 +119,8 @@ is which.
 
 ### What's new in this version
 
-Lives in [`whats-new.md`](whats-new.md), alongside the other two languages, so the
-three blocks can be copied into Partner Center without scrolling this file.
+Lives in [`whats-new.md`](whats-new.md), alongside the other three languages, so the
+four blocks can be copied into Partner Center without scrolling this file.
 
 ### Search terms
 
@@ -133,8 +139,8 @@ russian keyboard
 ### Опис
 
 Набрали не в тій розкладці? Switcher3way це помітить і виправить. Наберіть ghbdsn — і це стане привіт,
-розкладка перемкнеться, а ви просто продовжите писати. Англійська, українська та російська —
-безкоштовно, без інтернету, з відкритим кодом.
+розкладка перемкнеться, а ви просто продовжите писати. Англійська, українська, російська та
+болгарська — безкоштовно, без інтернету, з відкритим кодом.
 
 Знайомий момент: пів речення вже набрано, і аж тоді ви розумієте, що розкладка була не та.
 Switcher3way прибирає цей момент.
@@ -144,9 +150,9 @@ Switcher3way прибирає цей момент.
 відбувається лише тоді, коли слово має сенс мовою іншої розкладки й не має сенсу поточною. Короткі
 уривки та неоднозначні залишки лишаються недоторканими, бо помилкове виправлення гірше за пропущене.
 
-Три мови, а не дві. Більшість подібних програм перемикається між двома розкладками. Switcher3way
+Чотири мови, а не дві. Більшість подібних програм перемикається між двома розкладками. Switcher3way
 читає всі розкладки, встановлені у Windows, і перевіряє кожен варіант словником відповідної мови —
-тому англійська, українська та російська працюють разом.
+тому англійська, українська, російська та болгарська працюють разом.
 
 Слова, які існують і українською, і російською — там, добре — переходять у мову, яку ви обрали. А якщо
 наступне слово робить фразу однозначно іншою мовою, застосунок повертається й виправляє себе сам.
@@ -190,19 +196,21 @@ Kyiv — цілком звичайне англійське. Switcher3way бач
 
 ПЕРЕД ПОЧАТКОМ
 
-Спершу додайте у Windows обидві розкладки — англійську та українську чи російську — інакше застосунку
-не буде між чим перемикатися. Switcher3way живе в області повідомлень і не має головного вікна; під
+Спершу додайте у Windows обидві розкладки — англійську та українську, російську чи болгарську —
+інакше застосунку не буде між чим перемикатися. Switcher3way живе в області повідомлень і не має головного вікна; під
 час першого запуску з'явиться короткий вступний покроковий екран.
 
-Потрібна фізична клавіатура: застосунок не бачить введення з екранної клавіатури.
+Працює незалежно від того, звідки надходять натискання клавіш — безпосередньо підключена клавіатура,
+віддалений робочий стіл, віртуальна машина, перепризначена клавіатура чи екранна клавіатура.
 
-Інтерфейс повністю перекладено англійською, українською та російською. Ще тринадцять мов перекладено
-частково — там, де перекладу ще немає, показується англійська; у виборі мови це позначено.
+Інтерфейс повністю перекладено англійською, українською та російською. Ще тринадцять мов, серед них
+болгарська, перекладено частково — там, де перекладу ще немає, показується англійська; у виборі мови
+це позначено.
 
 ### Можливості
 
 - Автоматично виправляє слова, набрані не в тій розкладці, щойно слово завершено
-- Три мови разом — англійська, українська та російська, а не просто перемикач двох розкладок
+- Чотири мови разом — англійська, українська, російська та болгарська, а не просто перемикач двох розкладок
 - Назви та сленг, яких немає в словниках, виправляються за формою слова, а навмисні назви, camelCase, ВЕЛИКІ ЛІТЕРИ й скорочення без голосних лишаються незмінними
 - Перевіряє кожну встановлену у Windows розкладку словником відповідної мови
 - Слова, дійсні і українською, і російською, ідуть за вашим вибором, а згодом виправляються, якщо фраза виявилася іншою
@@ -217,8 +225,8 @@ Kyiv — цілком звичайне англійське. Switcher3way бач
 
 ### Що нового
 
-Lives in [`whats-new.md`](whats-new.md), alongside the other two languages, so the
-three blocks can be copied into Partner Center without scrolling this file.
+Lives in [`whats-new.md`](whats-new.md), alongside the other three languages, so the
+four blocks can be copied into Partner Center without scrolling this file.
 
 ### Ключові слова
 
@@ -237,8 +245,8 @@ layout switcher
 ### Описание
 
 Набрали не в той раскладке? Switcher3way это заметит и исправит. Наберите ghbdsn — и это превратится
-в привіт, раскладка переключится, а вы просто продолжите писать. Английский, украинский и русский —
-бесплатно, без интернета, с открытым исходным кодом.
+в привіт, раскладка переключится, а вы просто продолжите писать. Английский, украинский, русский и
+болгарский — бесплатно, без интернета, с открытым исходным кодом.
 
 Знакомый момент: полфразы уже набрано, и только тогда вы понимаете, что раскладка была не та.
 Switcher3way избавляет от этого момента.
@@ -249,9 +257,9 @@ Switcher3way избавляет от этого момента.
 обрывки и неоднозначные остатки остаются нетронутыми, потому что неверное исправление хуже
 пропущенного.
 
-Три языка, а не два. Большинство подобных программ переключается между двумя раскладками.
+Четыре языка, а не два. Большинство подобных программ переключается между двумя раскладками.
 Switcher3way читает все раскладки, установленные в Windows, и проверяет каждый вариант словарём
-соответствующего языка — поэтому английский, украинский и русский работают вместе.
+соответствующего языка — поэтому английский, украинский, русский и болгарский работают вместе.
 
 Слова, которые существуют и в украинском, и в русском — там, добре — переходят в тот язык, который вы
 предпочли. А если следующее слово делает фразу однозначно другой, программа возвращается и исправляет
@@ -296,19 +304,21 @@ Store не устанавливает никаких сетевых соедин
 
 ПЕРЕД НАЧАЛОМ
 
-Сначала добавьте в Windows обе раскладки — английскую и украинскую или русскую — иначе программе не
-между чем переключаться. Switcher3way живёт в области уведомлений и не имеет главного окна; при первом
+Сначала добавьте в Windows обе раскладки — английскую и украинскую, русскую или болгарскую — иначе
+программе не между чем переключаться. Switcher3way живёт в области уведомлений и не имеет главного окна; при первом
 запуске появится короткий вступительный экран.
 
-Нужна физическая клавиатура: программа не видит ввод с экранной клавиатуры.
+Работает независимо от того, откуда приходят нажатия клавиш — напрямую подключённая клавиатура,
+удалённый рабочий стол, виртуальная машина, переназначенная клавиатура или экранная клавиатура.
 
-Интерфейс полностью переведён на английский, украинский и русский. Ещё тринадцать языков переведены
-частично — там, где перевода ещё нет, показывается английский; в выборе языка это отмечено.
+Интерфейс полностью переведён на английский, украинский и русский. Ещё тринадцать языков, среди них
+болгарский, переведены частично — там, где перевода ещё нет, показывается английский; в выборе языка
+это отмечено.
 
 ### Возможности
 
 - Автоматически исправляет слова, набранные не в той раскладке, как только слово закончено
-- Три языка вместе — английский, украинский и русский, а не просто переключатель двух раскладок
+- Четыре языка вместе — английский, украинский, русский и болгарский, а не просто переключатель двух раскладок
 - Проверяет каждую установленную в Windows раскладку словарём соответствующего языка
 - Названия и сленг, которых нет в словарях, исправляются по форме слова, а намеренные названия, camelCase, ЗАГЛАВНЫЕ и сокращения без гласных остаются нетронутыми
 - Слова, верные и в украинском, и в русском, следуют вашему выбору и исправляются позже, если фраза оказалась другой
@@ -323,8 +333,8 @@ Store не устанавливает никаких сетевых соедин
 
 ### Что нового
 
-Lives in [`whats-new.md`](whats-new.md), alongside the other two languages, so the
-three blocks can be copied into Partner Center without scrolling this file.
+Lives in [`whats-new.md`](whats-new.md), alongside the other three languages, so the
+four blocks can be copied into Partner Center without scrolling this file.
 
 ### Ключевые слова
 
@@ -335,6 +345,112 @@ three blocks can be copied into Partner Center without scrolling this file.
 украинская раскладка
 keyboard layout
 layout switcher
+
+## Български (bg)
+
+### Описание
+
+Писали сте с грешна клавиатурна подредба? Switcher3way го забелязва и го поправя. Напишете pdeokf —
+и се получава заедно, подредбата се сменя, а вие продължавате нататък. Английски, украински, руски и
+български — безплатно, без интернет, с отворен код.
+
+Познат момент: половин изречение вече е написано и чак тогава осъзнавате, че подредбата е била
+грешна. Switcher3way премахва този момент.
+
+Приложението следи думата, която пишете, и когато тя явно е написана с грешна подредба, я
+пренаписва правилно и сменя подредбата вместо вас. Това не е налучкване при всяка дума: поправка има
+само когато думата има смисъл на езика на друга подредба и няма смисъл на текущия. Кратките откъси и
+двусмислените остатъци остават недокоснати, защото погрешната поправка е по-лоша от пропуснатата.
+
+Четири езика, а не два. Повечето подобни програми превключват между две подредби. Switcher3way чете
+всички подредби, инсталирани в Windows, и проверява всеки вариант с речника на съответния език —
+затова английският, украинският, руският и българският работят заедно.
+
+Думи, които съществуват и в украинския, и в руския — там, добре — отиват към езика, който сте
+предпочели. А ако следваща дума направи фразата еднозначно на другия език, приложението се връща и се
+поправя само.
+
+Имената и професионалният жаргон също се поправят, макар да ги няма в нито един речник. Напишете
+Linux с активна българска подредба — и получавате Всхкй: форма, каквато никоя българска дума не може
+да има, докато Linux е съвсем обикновена английска дума. Switcher3way вижда тази разлика и я поправя.
+А това, което само изглежда необичайно, остава недокоснато: нарочно написано име, camelCase, ГЛАВНИ
+БУКВИ, идентификатори от код и съкращения без гласни остават точно както сте ги написали.
+
+ПОПРАВЯЙТЕ И САМИ
+
+Натиснете клавиша-тригер — по подразбиране двойно Ctrl, също Pause/Break, F9 и други — за да
+преобразувате последната написана дума. Маркирайте текст и натиснете тригера, за да преобразувате
+маркираното. Натиснете отново, без да пишете между натисканията, за да минете през останалите
+подредби, и още веднъж — за да върнете първоначалния текст. Тригерът ви се подчинява дори там,
+където автоматичната поправка се въздържа.
+
+Всяка поправка показва малък надпис под поправената дума с напомняне за клавиша за отмяна, така че
+промяната никога не е незабележима.
+
+КЪДЕТО ПРИЛОЖЕНИЕТО НЕ СЕ НАМЕСВА
+
+Полетата за пароли са изключени, включително полетата за пароли в уеб страници. Мениджърите на пароли
+и терминалите са изключени по подразбиране, а вие можете да изключите всяко друго приложение. Отделни
+думи могат да се добавят към списък «никога да не се преобразуват» — с едно щракване, когато
+поправката е била излишна — или към списък «винаги да се преобразуват».
+
+Спрете работата за половин час, за час или до рестартиране. Изключете автоматичната поправка и
+оставете само ръчния тригер. Разрешете подредбата да се помни за всяко приложение поотделно, за да ви
+връща смяната на прозорци там, където сте били.
+
+ПОВЕРИТЕЛНОСТ ПО ЗАМИСЪЛ
+
+Нищо от написаното не се съхранява и не се изпраща. Натисканията на клавиши за текущата дума се пазят
+само в паметта и се изхвърлят веднага щом думата завърши. Поправката на дълга фраза за момент поставя
+поправения текст в клипборда, за да бъде вмъкнат наведнъж, и веднага връща предишното ви съдържание;
+по-кратките поправки се изписват и не докосват клипборда. Тази версия от Store не прави никакви
+мрежови връзки. Проверката на думите използва речници, вградени в приложението. Целият изходен код е
+публичен под лиценза MIT.
+
+ПРЕДИ ДА ЗАПОЧНЕТЕ
+
+Първо добавете в Windows и двете подредби — английската и българската, украинската или руската —
+иначе няма между какво да се превключва. Switcher3way живее в областта за уведомления и няма главен
+прозорец; при първото стартиране се появява кратък начален екран.
+
+Работи независимо откъде идват натисканията на клавиши — пряко свързана клавиатура, отдалечен работен
+плот, виртуална машина, преназначена клавиатура или екранната клавиатура.
+
+Интерфейсът е преведен изцяло на английски, украински и руски. Българският е сред тринадесетте езика
+с частичен превод: където превод още няма, се показва английски, а изборът на език го отбелязва.
+
+### Възможности
+
+- Автоматично поправя думи, написани с грешната клавиатурна подредба, веднага щом думата завърши
+- Четири езика заедно — английски, украински, руски и български, а не просто превключвател между две подредби
+- Проверява всяка инсталирана в Windows подредба с речника на съответния език
+- Имена и жаргон, каквито няма в речниците, се поправят по формата на думата, а нарочните имена, camelCase, ГЛАВНИ БУКВИ и съкращенията без гласни остават непроменени
+- Думи, валидни и в украинския, и в руския, следват вашия избор и се поправят по-късно, ако фразата се окаже друга
+- Ръчен тригер — по подразбиране двойно Ctrl — преобразува последната дума или маркирания текст
+- Повторно натискане минава през останалите подредби, още едно — отменя
+- Надпис под поправената дума показва какво се е променило и как да се отмени
+- Полетата за пароли, мениджърите на пароли и терминалите не се засягат; можете да изключите всяко приложение
+- Списъци «никога да не се преобразува» и «винаги да се преобразува» за отделни думи
+- Пауза за половин час, за час или до рестартиране
+- По желание — запомняне на подредбата за всяко приложение
+- Никакви мрежови връзки, никаква телеметрия, нищо не се съхранява — отворен код под лиценза MIT
+
+### Какво е новото
+
+Lives in [`whats-new.md`](whats-new.md), alongside the other three languages, so the
+four blocks can be copied into Partner Center without scrolling this file.
+
+### Ключови думи
+
+клавиатурна подредба
+смяна на подредбата
+грешна подредба
+българска подредба
+кирилица
+keyboard layout
+layout switcher
+
+---
 
 ---
 
@@ -351,15 +467,29 @@ appear literally. Paragraph breaks and the ALL-CAPS section headings are the onl
 they are other people's product names and Store policy 10.1.1 rejects listings that use trademarks the
 publisher does not own.
 
-**The examples are honest.** ghbdsn → привіт is what the app actually produces with an English layout
-active and Ukrainian preferred — the same string the self-test prints. Don't swap in an example without
-checking that it converts.
+**The examples are honest, and now they are pinned.** ghbdsn → привіт is what the app actually
+produces with an English layout active and Ukrainian preferred — the same string the self-test prints.
+Don't swap in an example without checking that it converts; `StoreListingExampleTests` asserts all four
+of them against the real dictionaries and the real layout tables, so a dictionary or resolver change
+that falsifies the copy fails the build instead of reaching a reader who tries it.
+
+**The Bulgarian examples are true of Bulgarian (Typewriter) and only that one.** Windows offers five
+Bulgarian layouts, and `pdeokf` means nothing on the phonetic ones. Typewriter — BDS — is what you get
+when you tell Windows to add Bulgarian, so it is what the copy assumes; the table was read off Windows
+with `ToUnicodeEx` rather than copied from a reference. `pdeokf` → заедно was also verified end to end
+on a packaged build, and Linux → Всхкй is the names-and-jargon example because a string with no vowel
+at all cannot be a Bulgarian word while Linux is an ordinary English one.
 
 **No "physical keyboard required" claim.** It was true until 0.2.7: the hook ignored all injected input,
 which made the app inert on a tablet using the on-screen keyboard — and failed Store certification twice.
 Our own synthesized keys are now tagged, so everything else counts as real typing.
 
-**Every claim needs checking against the code, not memory.** Two were wrong in the first draft. The
+**Every claim needs checking against the code, not memory.** Three were wrong. Two in the first
+draft, and one that survived a year: the Ukrainian and Russian descriptions still said a physical
+keyboard was required and that the on-screen keyboard was invisible to the app. That stopped being
+true in 0.2.7 — the note below records it being removed — but it was only removed from the English
+text, so the two translations went on making a claim that had already failed certification twice. That
+is the argument for editing all four listings in one pass rather than the one being read. The
 pause durations are 30 minutes / 1 hour / until restart (`TrayFlyoutWindow.xaml.cs`), not "ten minutes".
 And the interface was described as "available in 16 languages" on the strength of `Loc.cs` holding 16
 language blocks — but the WinUI rewrite had added ~50 strings hard-coded in English, so Ukrainian and
@@ -372,12 +502,15 @@ partly translated. Recheck if the copy is reused for a later version.
 ## Copyright and trademark info
 
 One line per listing, 200-character limit. It names the project's own copyright first, then the upstream
-fork and the dictionary licences — the MPL 1.1 Ukrainian dictionary is the one with a real notice
-obligation, and the `LICENSE` shipped in the package carries the full texts.
+fork and the dictionary licences — the MPL 1.1 Ukrainian and Bulgarian dictionaries are the ones with a
+real notice obligation, and the `LICENSE` shipped in the package carries the full texts. Bulgarian is
+tri-licensed upstream (GPL-2 / LGPL-2 / MPL-1.1) and we rely on the MPL branch, which is why it is
+grouped with Ukrainian rather than listed separately; the evidence is in `dict/bg.license`.
 
-- **en** — (c) 2026 IronMade. MIT License. A fork of RuSwitcher, (c) 2025 Rashns. Bundled Hunspell dictionaries: en/ru BSD, uk MPL 1.1. Full notices ship with the app.
-- **uk** — (c) 2026 IronMade. Ліцензія MIT. Форк RuSwitcher, (c) 2025 Rashns. Вбудовані словники Hunspell: en/ru BSD, uk MPL 1.1. Повні тексти постачаються із застосунком.
-- **ru** — (c) 2026 IronMade. Лицензия MIT. Форк RuSwitcher, (c) 2025 Rashns. Встроенные словари Hunspell: en/ru BSD, uk MPL 1.1. Полные тексты поставляются с программой.
+- **en** — (c) 2026 IronMade. MIT License. A fork of RuSwitcher, (c) 2025 Rashns. Bundled Hunspell dictionaries: en/ru BSD, uk/bg MPL 1.1. Full notices ship with the app.
+- **uk** — (c) 2026 IronMade. Ліцензія MIT. Форк RuSwitcher, (c) 2025 Rashns. Вбудовані словники Hunspell: en/ru BSD, uk/bg MPL 1.1. Повні тексти постачаються із застосунком.
+- **ru** — (c) 2026 IronMade. Лицензия MIT. Форк RuSwitcher, (c) 2025 Rashns. Встроенные словари Hunspell: en/ru BSD, uk/bg MPL 1.1. Полные тексты поставляются с программой.
+- **bg** — (c) 2026 IronMade. Лиценз MIT. Форк на RuSwitcher, (c) 2025 Rashns. Вградени речници Hunspell: en/ru BSD, uk/bg MPL 1.1. Пълните текстове се доставят с приложението.
 
 Use the © character rather than "(c)" if the field accepts it — these are written in ASCII only so they
 survive being copied out of this file.

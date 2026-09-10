@@ -189,7 +189,7 @@ public class CollisionMatrixTests
     // `q`→`л`, `r`→`и`, `a`→`ь`, so a vowel does not land on a vowel and Latin text becomes noise.
     // Serbian is positionally aligned with Serbian Latin, so it *transliterates*: `e`→`е`, `o`→`о`,
     // `r`→`р`, `a`→`а`. English typed on it stays word-shaped and reads as plausible Serbian.
-    private const string BgRow = "луеишщксдзц;ьяаожгтнвмчюйъэфхп,.";   // 0402:00030402, as installed
+    private const string BgRow = "луеишщксдзц;ьяаожгтнвмчюйъэфхп,.";   // 0402:00000402, Typewriter/BDS
     private const string SrRow = "љњертзуиопшђасдфгхјклчћѕџцвбнм,.";   // 281A:00000C1A
 
     /// <summary>Renders each candidate through its own layout where that layout is known.</summary>
