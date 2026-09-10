@@ -1,0 +1,590 @@
+﻿Field,ID,Type (Type),default,en-us,uk,ru,bg
+Description,2,Text,,"Typed in the wrong keyboard layout? Switcher3way spots it and fixes it. Type ghbdsn and it becomes
+привіт, the layout switches, and you carry on. English, Ukrainian and Russian — free, offline and open
+source.
+
+You know the moment: half a sentence in and you realise the layout was wrong. Switcher3way takes that
+moment away.
+
+It watches the word you are typing and, when the word is clearly in the wrong keyboard layout, retypes
+it correctly and switches the layout for you. Not a guess on every word — only when the word makes
+sense in another layout's language and nonsense in the current one. Short fragments and ambiguous
+scraps are left alone, because a wrong fix is worse than a missed one.
+
+Three languages, not two. Most layout fixers flip between two layouts. Switcher3way reads every layout
+Windows has installed and checks each candidate against that language's dictionary, so English,
+Ukrainian and Russian all work together.
+
+Words that exist in both Ukrainian and Russian — там, добре — go to whichever language you prefer, and
+if a later word makes the phrase clearly the other one, the app goes back and corrects itself.
+
+FIX IT YOURSELF, TOO
+
+Tap the trigger key — a double tap of Ctrl by default, or Pause/Break, F9 and others — to convert the
+last word you typed. Select any text and tap it to convert the selection instead. Tap again with
+nothing typed in between to step through the other layouts, and once more to get your original text
+back. The trigger obeys you even where automatic fixing holds back.
+
+Every fix shows a small chip under the corrected word, with a reminder of the undo key, so a change is
+never silent.
+
+WHERE IT STAYS OUT OF THE WAY
+
+Password fields are excluded, including password boxes on web pages. Password managers and terminals
+are excluded by default, and you can exclude any other app yourself. Individual words can be added to
+a never-convert list — one click when a fix was wrong — or to an always-convert list.
+
+Pause it for half an hour, an hour, or until you restart. Turn automatic fixing off and keep the manual
+trigger. Let it remember a layout per application, so switching windows puts you back where you were.
+
+PRIVATE BY DESIGN
+
+Nothing you type is stored or transmitted. Keystrokes for the current word are held in memory and
+discarded the moment the word ends. This Store version makes no network connections at all. Word
+checking uses dictionaries built into the app. The whole source is public under the MIT licence.
+
+BEFORE YOU START
+
+Add both keyboard layouts in Windows first — English and Ukrainian or Russian — or there is nothing for
+the app to switch between. Switcher3way lives in the notification area and has no main window; a short
+welcome flow appears the first time you run it.
+
+A physical keyboard is required: the app cannot see input from the on-screen touch keyboard.
+
+The interface is available in 16 languages.","Набрали не в тій розкладці? Switcher3way це помітить і виправить. Наберіть ghbdsn — і це стане привіт, розкладка перемкнеться, а ви просто продовжите друкувати. Англійська, українська та російська — безкоштовно, без інтернету, з відкритим кодом.
+
+Знайомий момент: пів речення вже набрано, і аж тоді ви розумієте, що розкладка була не та. Switcher3way прибирає цей момент.
+
+Застосунок дивиться на слово, яке ви набираєте, і коли слово явно набране не в тій розкладці — перенабирає його правильно та перемикає розкладку. Це не вгадування на кожному слові: виправлення відбувається лише тоді, коли слово має сенс мовою іншої розкладки й не має сенсу поточною. Короткі уривки та неоднозначні залишки лишаються недоторканими, бо помилкове виправлення гірше за пропущене.
+
+Три мови, а не дві. Більшість подібних програм перемикається між двома розкладками. Switcher3way читає всі розкладки, встановлені у Windows, і перевіряє кожен варіант словником відповідної мови — тому англійська, українська та російська працюють разом.
+
+Слова, які існують і українською, і російською — там, добре — переходять у мову, яку ви обрали. А якщо наступне слово робить фразу однозначно іншою мовою, застосунок повертається й виправляє себе сам.
+
+ВИПРАВЛЯЙТЕ Й САМОСТІЙНО
+
+Натисніть клавішу-тригер — типово подвійний Ctrl, також доступні Pause/Break, F9 та інші — щоб конвертувати останнє набране слово. Виділіть будь-який текст, і тригер конвертує саме виділення.
+Натисніть ще раз, нічого не набираючи між натисканнями, щоб перейти до наступної розкладки, і ще раз — щоб повернути початковий текст. Тригер слухається вас навіть там, де автоматичне виправлення стримується.
+
+Кожне виправлення показує невелику підказку під словом із нагадуванням про клавішу скасування, тож зміна ніколи не буває непомітною.
+
+ДЕ ЗАСТОСУНОК НЕ ВТРУЧАЄТЬСЯ
+
+Поля паролів виключено, включно з полями паролів на вебсторінках. Менеджери паролів і термінали виключено типово, і ви можете виключити будь-який інший застосунок. Окремі слова можна додати до списку «ніколи не конвертувати» — одним клацанням, коли виправлення було зайвим — або до списку «конвертувати завжди».
+
+Призупиніть роботу на півгодини, годину або до перезапуску. Вимкніть автоматичне виправлення й залиште лише ручний тригер. Дозвольте запам'ятовувати розкладку для кожного застосунку окремо, щоб перехід між вікнами повертав вас туди, де ви були.
+
+ПРИВАТНІСТЬ ЗА ЗАМОВЧУВАННЯМ
+
+Ніщо з набраного не зберігається й не передається. Натискання клавіш для поточного слова тримаються лише в пам'яті та видаляються, щойно слово завершене. Ця версія зі Store не робить жодних мережевих з'єднань. Перевірка слів використовує словники, вбудовані в застосунок. Увесь вихідний код відкритий за ліцензією MIT.
+
+ПЕРЕД ПОЧАТКОМ
+
+Спершу додайте у Windows обидві розкладки — англійську та українську чи російську — інакше застосунку не буде між чим перемикатися. Switcher3way живе в області повідомлень і не має головного вікна; під час першого запуску з'явиться короткий вступний покроковий екран.
+
+Потрібна фізична клавіатура: застосунок не бачить введення з екранної клавіатури.
+
+Інтерфейс доступний 16 мовами.","Набрали не в той раскладке? Switcher3way это заметит и исправит. Наберите ghbdsn — и это превратится в привіт, раскладка переключится, а вы просто продолжите писать. Английский, украинский и русский — бесплатно, без интернета, с открытым исходным кодом.
+
+Знакомый момент: полфразы уже набрано, и только тогда вы понимаете, что раскладка была не та.
+Switcher3way избавляет от этого момента.
+
+Программа смотрит на слово, которое вы набираете, и когда слово явно набрано не в той раскладке, перенабирает его правильно и переключает раскладку. Это не угадывание на каждом слове: исправление происходит только если слово осмысленно на языке другой раскладки и бессмысленно на текущем. Короткие обрывки и неоднозначные остатки остаются нетронутыми, потому что неверное исправление хуже пропущенного.
+
+Три языка, а не два. Большинство подобных программ переключается между двумя раскладками.
+Switcher3way читает все раскладки, установленные в Windows, и проверяет каждый вариант словарём соответствующего языка — поэтому английский, украинский и русский работают вместе.
+
+Слова, которые существуют и в украинском, и в русском — там, добре — переходят в тот язык, который вы предпочли. А если следующее слово делает фразу однозначно другой, программа возвращается и исправляет себя сама.
+
+ИСПРАВЛЯЙТЕ И ВРУЧНУЮ
+
+Нажмите клавишу-триггер — по умолчанию двойной Ctrl, также доступны Pause/Break, F9 и другие — чтобы преобразовать последнее набранное слово. Выделите любой текст, и триггер преобразует именно выделение.
+Нажмите ещё раз, ничего не набирая между нажатиями, чтобы перейти к следующей раскладке, и ещё раз — чтобы вернуть исходный текст. Триггер слушается вас даже там, где автоматическое исправление воздерживается.
+
+Каждое исправление показывает небольшую подсказку под словом с напоминанием о клавише отмены, так что изменение никогда не остаётся незамеченным.
+
+ГДЕ ПРОГРАММА НЕ ВМЕШИВАЕТСЯ
+
+Поля паролей исключены, включая поля паролей на веб-страницах. Менеджеры паролей и терминалы исключены по умолчанию, и вы можете исключить любое другое приложение. Отдельные слова можно добавить в список
+«никогда не преобразовывать» — одним щелчком, когда исправление оказалось лишним — или в список «преобразовывать всегда».
+
+Приостановите работу на полчаса, час или до перезапуска. Отключите автоматическое исправление и оставьте только ручной триггер. Разрешите запоминать раскладку для каждого приложения отдельно, чтобы переход между окнами возвращал вас туда, где вы были.
+
+ПРИВАТНОСТЬ ПО УМОЛЧАНИЮ
+
+Ничего из набранного не сохраняется и не передаётся. Нажатия клавиш для текущего слова хранятся только в памяти и отбрасываются, как только слово закончилось. Эта версия из Store не устанавливает никаких сетевых соединений. Проверка слов использует словари, встроенные в программу. Весь исходный код открыт по лицензии MIT.
+
+ПЕРЕД НАЧАЛОМ
+
+Сначала добавьте в Windows обе раскладки — английскую и украинскую или русскую — иначе программе не между чем переключаться. Switcher3way живёт в области уведомлений и не имеет главного окна; при первом запуске появится короткий вступительный экран.
+
+Нужна физическая клавиатура: программа не видит ввод с экранной клавиатуры.
+
+Интерфейс доступен на 16 языках.
+",
+ReleaseNotes,3,Text,,"Version 0.6.0
+
+• Fixed: a spell checker that answers wrong is no longer believed. It goes through brief spells of rejecting real words, and the app was asking it twice about the same word — when the two answers disagreed, your conversion silently vanished. If you have ever typed a line, watched nothing happen and shrugged, this was often why.
+• Fixed: six reasons wrong-layout words were being left alone, found by reading twelve days of real logs. Among them: short words were second-guessed too eagerly, meaningless tokens like ""10"" or ""."" were deciding the language of your sentence, and ""You're"", ""That's"" and ""Кто-то"" were skipped over an apostrophe or a hyphen.
+• New: Bulgarian. Add the Bulgarian keyboard in Windows and it works like the others.
+• A Russian word typed on the Ukrainian layout now switches the layout, without retyping your text.","Версія 0.6.0
+
+• Виправлено: словнику, який відповідає хибно, більше не вірять беззастережно. Він час від часу ненадовго починає відкидати справжні слова, а застосунок запитував його про те саме слово двічі — і коли дві відповіді розходилися, ваша конвертація тихо зникала. Якщо ви колись набирали рядок, бачили, що нічого не сталося, і махали рукою — часто причина була саме ця.
+• Виправлено: шість причин, чому слова, набрані не в тій розкладці, лишалися незмінними; знайдені під час читання дванадцяти днів реальних журналів. Серед них: короткі слова перевірялися надто прискіпливо, беззмістовні токени на кшталт «10» чи «.» визначали мову речення, а «You're», «That's» і «Кто-то» пропускалися через апостроф або дефіс.
+• Нове: болгарська. Додайте болгарську клавіатуру у Windows — і вона працюватиме так само, як інші.
+• Російське слово, набране українською розкладкою, тепер перемикає розкладку, не перенабираючи ваш текст.","Версия 0.5.0
+
+• Новое: теперь конвертируются и слова, которых нет ни в одном словаре. Название или термин, набранные не в той раскладке, раньше так и оставались набором букв: «Kyiv», набранное с украинской раскладкой, выглядит как «Лншм», и ни один словарь не знает ни того, ни другого — поэтому ничего не происходило, и вы исправляли вручную.
+• Теперь, когда слова не знает ни один словарь, приложение смотрит на его форму. Слово, набранное не в той раскладке, невозможно произнести на языке, на котором оно появилось, и при этом ровно один из вариантов имеет совершенно обычную для своего языка форму. Преобразование происходит только тогда, когда такую форму даёт ровно один язык.
+• Все прежние предохранители сохраняются: намеренно набранные названия, camelCase, ЗАГЛАВНЫЕ, идентификаторы из кода и сокращения без гласных остаются как есть.",
+Title,4,Text,,Switcher3Way,Switcher3Way,Switcher3Way,
+ShortTitle,5,Text,,,,,
+SortTitle,6,Text,,,,,
+VoiceTitle,7,Text,,,,,
+ShortDescription,8,Text,,,,,
+DevStudio,9,Text,,IronMade,IronMade,IronMade,
+CopyrightTrademarkInformation,12,Text,,"© 2026 IronMade. MIT License. A fork of RuSwitcher, © 2025 Rashns. Bundled Hunspell dictionaries: en/ru BSD, uk MPL 1.1. Full notices ship with the app.","© 2026 IronMade. Ліцензія MIT. Форк RuSwitcher, © 2025 Rashns. Вбудовані словники Hunspell: en/ru BSD, uk MPL 1.1. Повні тексти постачаються із застосунком.","© 2026 IronMade. Лицензия MIT. Форк RuSwitcher, © 2025 Rashns. Встроенные словари Hunspell: en/ru BSD, uk MPL 1.1. Полные тексты поставляются с программой.",
+AdditionalLicenseTerms,13,Text,,,,,
+DesktopScreenshot1,100,Relative path (or URL to file in Partner Center),,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566588/listingassets/3028089770564672566,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566590/listingassets/3050723826662830255,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566592/listingassets/3065377674610953135,
+DesktopScreenshot2,101,Relative path (or URL to file in Partner Center),,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566588/listingassets/3069030699445577600,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566590/listingassets/3005238284131224810,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566592/listingassets/3012339943934759037,
+DesktopScreenshot3,102,Relative path (or URL to file in Partner Center),,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566588/listingassets/3028493107046277255,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566590/listingassets/3002526182196033900,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566592/listingassets/3020015898729766828,
+DesktopScreenshot4,103,Relative path (or URL to file in Partner Center),,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566588/listingassets/3067229337593597386,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566590/listingassets/3067045999303826015,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566592/listingassets/3000724691742693158,
+DesktopScreenshot5,104,Relative path (or URL to file in Partner Center),,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566588/listingassets/3066964640777926170,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566590/listingassets/3067015153601843310,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566592/listingassets/3057358706634229457,
+DesktopScreenshot6,105,Relative path (or URL to file in Partner Center),,,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566590/listingassets/3053994336736649212,,
+DesktopScreenshot7,106,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot8,107,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot9,108,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot10,109,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot11,110,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot12,111,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot13,112,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot14,113,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot15,114,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot16,115,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot17,116,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot18,117,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot19,118,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot20,119,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot21,120,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot22,121,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot23,122,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot24,123,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot25,124,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot26,125,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot27,126,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot28,127,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot29,128,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshot30,129,Relative path (or URL to file in Partner Center),,,,,
+DesktopScreenshotCaption1,150,Text,,"Type a word in the wrong layout and keep going. Switcher3way rewrites it and switches the layout, showing what changed and how to undo it.","Наберіть слово не в тій розкладці й продовжуйте. Switcher3way перепише його та перемкне розкладку, показавши, що змінилось і як це скасувати.","Наберите слово не в той раскладке и продолжайте. Switcher3way перепишет его и переключит раскладку, показав, что изменилось и как это отменить.",
+DesktopScreenshotCaption2,151,Text,," Everything from the notification area: current layout, master switch, Auto-fix, and pause for half an hour, an hour or until restart",Нічого не треба налаштовувати: Switcher3way читає всі встановлені у Windows розкладки й перевіряє кожну словником її мови.,"Всё из области уведомлений: текущая раскладка, главный выключатель, автоисправление и пауза на полчаса, час или до перезапуска.",
+DesktopScreenshotCaption3,152,Text,,Pick the trigger that suits your keyboard. Tap it to convert the last word or a selection; tap again to cycle layouts or undo.,"Усе з області повідомлень: поточна розкладка, головний вимикач, автовиправлення та пауза на півгодини, годину чи до перезапуску.","Выберите триггер под свою клавиатуру. Нажмите, чтобы преобразовать последнее слово или выделение; ещё раз — чтобы перебрать раскладки или отменить.",
+DesktopScreenshotCaption4,153,Text,," Words that exist in both Ukrainian and Russian go to the language you prefer — and are corrected later if the rest of the phrase says otherwise.","Виберіть тригер, який пасує вашій клавіатурі. Натисніть, щоб конвертувати останнє слово або виділення; ще раз — щоб перебрати розкладки чи скасувати.","Слова, которые есть и в украинском, и в русском, конвертируются в выбранную вами раскладку — а позже исправляются, если далее фраза на другом языке.",
+DesktopScreenshotCaption5,154,Text,,"Password fields are never touched. Password managers and terminals are excluded by default, and you can exclude any app or single word.","Слова, які існують і українською, і російською, конвертуються у задану вами розкладку — а згодом виправляються, якщо решта фрази іншою мовою.","Поля паролей не затрагиваются никогда. Менеджеры паролей и терминалы исключены по умолчанию, и вы можете исключить любое приложение или отдельное слово.",
+DesktopScreenshotCaption6,155,Text,,,"Поля паролів не зачіпаються ніколи. Менеджери паролів і термінали виключені типово, і ви можете виключити будь-який застосунок чи окреме слово.",,
+DesktopScreenshotCaption7,156,Text,,,,,
+DesktopScreenshotCaption8,157,Text,,,,,
+DesktopScreenshotCaption9,158,Text,,,,,
+DesktopScreenshotCaption10,159,Text,,,,,
+DesktopScreenshotCaption11,160,Text,,,,,
+DesktopScreenshotCaption12,161,Text,,,,,
+DesktopScreenshotCaption13,162,Text,,,,,
+DesktopScreenshotCaption14,163,Text,,,,,
+DesktopScreenshotCaption15,164,Text,,,,,
+DesktopScreenshotCaption16,165,Text,,,,,
+DesktopScreenshotCaption17,166,Text,,,,,
+DesktopScreenshotCaption18,167,Text,,,,,
+DesktopScreenshotCaption19,168,Text,,,,,
+DesktopScreenshotCaption20,169,Text,,,,,
+DesktopScreenshotCaption21,170,Text,,,,,
+DesktopScreenshotCaption22,171,Text,,,,,
+DesktopScreenshotCaption23,172,Text,,,,,
+DesktopScreenshotCaption24,173,Text,,,,,
+DesktopScreenshotCaption25,174,Text,,,,,
+DesktopScreenshotCaption26,175,Text,,,,,
+DesktopScreenshotCaption27,176,Text,,,,,
+DesktopScreenshotCaption28,177,Text,,,,,
+DesktopScreenshotCaption29,178,Text,,,,,
+DesktopScreenshotCaption30,179,Text,,,,,
+MobileScreenshot1,200,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot2,201,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot3,202,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot4,203,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot5,204,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot6,205,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot7,206,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot8,207,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot9,208,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot10,209,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot11,210,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot12,211,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot13,212,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot14,213,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot15,214,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot16,215,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot17,216,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot18,217,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot19,218,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot20,219,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot21,220,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot22,221,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot23,222,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot24,223,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot25,224,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot26,225,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot27,226,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot28,227,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot29,228,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshot30,229,Relative path (or URL to file in Partner Center),,,,,
+MobileScreenshotCaption1,250,Text,,,,,
+MobileScreenshotCaption2,251,Text,,,,,
+MobileScreenshotCaption3,252,Text,,,,,
+MobileScreenshotCaption4,253,Text,,,,,
+MobileScreenshotCaption5,254,Text,,,,,
+MobileScreenshotCaption6,255,Text,,,,,
+MobileScreenshotCaption7,256,Text,,,,,
+MobileScreenshotCaption8,257,Text,,,,,
+MobileScreenshotCaption9,258,Text,,,,,
+MobileScreenshotCaption10,259,Text,,,,,
+MobileScreenshotCaption11,260,Text,,,,,
+MobileScreenshotCaption12,261,Text,,,,,
+MobileScreenshotCaption13,262,Text,,,,,
+MobileScreenshotCaption14,263,Text,,,,,
+MobileScreenshotCaption15,264,Text,,,,,
+MobileScreenshotCaption16,265,Text,,,,,
+MobileScreenshotCaption17,266,Text,,,,,
+MobileScreenshotCaption18,267,Text,,,,,
+MobileScreenshotCaption19,268,Text,,,,,
+MobileScreenshotCaption20,269,Text,,,,,
+MobileScreenshotCaption21,270,Text,,,,,
+MobileScreenshotCaption22,271,Text,,,,,
+MobileScreenshotCaption23,272,Text,,,,,
+MobileScreenshotCaption24,273,Text,,,,,
+MobileScreenshotCaption25,274,Text,,,,,
+MobileScreenshotCaption26,275,Text,,,,,
+MobileScreenshotCaption27,276,Text,,,,,
+MobileScreenshotCaption28,277,Text,,,,,
+MobileScreenshotCaption29,278,Text,,,,,
+MobileScreenshotCaption30,279,Text,,,,,
+XboxScreenshot1,300,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot2,301,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot3,302,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot4,303,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot5,304,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot6,305,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot7,306,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot8,307,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot9,308,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot10,309,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot11,310,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot12,311,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot13,312,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot14,313,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot15,314,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot16,315,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot17,316,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot18,317,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot19,318,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot20,319,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot21,320,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot22,321,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot23,322,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot24,323,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot25,324,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot26,325,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot27,326,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot28,327,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot29,328,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshot30,329,Relative path (or URL to file in Partner Center),,,,,
+XboxScreenshotCaption1,350,Text,,,,,
+XboxScreenshotCaption2,351,Text,,,,,
+XboxScreenshotCaption3,352,Text,,,,,
+XboxScreenshotCaption4,353,Text,,,,,
+XboxScreenshotCaption5,354,Text,,,,,
+XboxScreenshotCaption6,355,Text,,,,,
+XboxScreenshotCaption7,356,Text,,,,,
+XboxScreenshotCaption8,357,Text,,,,,
+XboxScreenshotCaption9,358,Text,,,,,
+XboxScreenshotCaption10,359,Text,,,,,
+XboxScreenshotCaption11,360,Text,,,,,
+XboxScreenshotCaption12,361,Text,,,,,
+XboxScreenshotCaption13,362,Text,,,,,
+XboxScreenshotCaption14,363,Text,,,,,
+XboxScreenshotCaption15,364,Text,,,,,
+XboxScreenshotCaption16,365,Text,,,,,
+XboxScreenshotCaption17,366,Text,,,,,
+XboxScreenshotCaption18,367,Text,,,,,
+XboxScreenshotCaption19,368,Text,,,,,
+XboxScreenshotCaption20,369,Text,,,,,
+XboxScreenshotCaption21,370,Text,,,,,
+XboxScreenshotCaption22,371,Text,,,,,
+XboxScreenshotCaption23,372,Text,,,,,
+XboxScreenshotCaption24,373,Text,,,,,
+XboxScreenshotCaption25,374,Text,,,,,
+XboxScreenshotCaption26,375,Text,,,,,
+XboxScreenshotCaption27,376,Text,,,,,
+XboxScreenshotCaption28,377,Text,,,,,
+XboxScreenshotCaption29,378,Text,,,,,
+XboxScreenshotCaption30,379,Text,,,,,
+HolographicScreenshot1,400,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot2,401,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot3,402,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot4,403,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot5,404,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot6,405,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot7,406,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot8,407,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot9,408,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot10,409,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot11,410,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot12,411,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot13,412,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot14,413,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot15,414,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot16,415,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot17,416,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot18,417,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot19,418,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot20,419,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot21,420,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot22,421,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot23,422,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot24,423,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot25,424,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot26,425,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot27,426,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot28,427,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot29,428,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshot30,429,Relative path (or URL to file in Partner Center),,,,,
+HolographicScreenshotCaption1,450,Text,,,,,
+HolographicScreenshotCaption2,451,Text,,,,,
+HolographicScreenshotCaption3,452,Text,,,,,
+HolographicScreenshotCaption4,453,Text,,,,,
+HolographicScreenshotCaption5,454,Text,,,,,
+HolographicScreenshotCaption6,455,Text,,,,,
+HolographicScreenshotCaption7,456,Text,,,,,
+HolographicScreenshotCaption8,457,Text,,,,,
+HolographicScreenshotCaption9,458,Text,,,,,
+HolographicScreenshotCaption10,459,Text,,,,,
+HolographicScreenshotCaption11,460,Text,,,,,
+HolographicScreenshotCaption12,461,Text,,,,,
+HolographicScreenshotCaption13,462,Text,,,,,
+HolographicScreenshotCaption14,463,Text,,,,,
+HolographicScreenshotCaption15,464,Text,,,,,
+HolographicScreenshotCaption16,465,Text,,,,,
+HolographicScreenshotCaption17,466,Text,,,,,
+HolographicScreenshotCaption18,467,Text,,,,,
+HolographicScreenshotCaption19,468,Text,,,,,
+HolographicScreenshotCaption20,469,Text,,,,,
+HolographicScreenshotCaption21,470,Text,,,,,
+HolographicScreenshotCaption22,471,Text,,,,,
+HolographicScreenshotCaption23,472,Text,,,,,
+HolographicScreenshotCaption24,473,Text,,,,,
+HolographicScreenshotCaption25,474,Text,,,,,
+HolographicScreenshotCaption26,475,Text,,,,,
+HolographicScreenshotCaption27,476,Text,,,,,
+HolographicScreenshotCaption28,477,Text,,,,,
+HolographicScreenshotCaption29,478,Text,,,,,
+HolographicScreenshotCaption30,479,Text,,,,,
+SurfaceHubScreenshot11,510,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot12,511,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot13,512,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot14,513,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot15,514,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot16,515,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot17,516,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot18,517,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot19,518,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot20,519,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot21,520,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot22,521,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot23,522,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot24,523,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot25,524,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot26,525,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot27,526,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot28,527,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot29,528,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshot30,529,Relative path (or URL to file in Partner Center),,,,,
+SurfaceHubScreenshotCaption11,560,Text,,,,,
+SurfaceHubScreenshotCaption12,561,Text,,,,,
+SurfaceHubScreenshotCaption13,562,Text,,,,,
+SurfaceHubScreenshotCaption14,563,Text,,,,,
+SurfaceHubScreenshotCaption15,564,Text,,,,,
+SurfaceHubScreenshotCaption16,565,Text,,,,,
+SurfaceHubScreenshotCaption17,566,Text,,,,,
+SurfaceHubScreenshotCaption18,567,Text,,,,,
+SurfaceHubScreenshotCaption19,568,Text,,,,,
+SurfaceHubScreenshotCaption20,569,Text,,,,,
+SurfaceHubScreenshotCaption21,570,Text,,,,,
+SurfaceHubScreenshotCaption22,571,Text,,,,,
+SurfaceHubScreenshotCaption23,572,Text,,,,,
+SurfaceHubScreenshotCaption24,573,Text,,,,,
+SurfaceHubScreenshotCaption25,574,Text,,,,,
+SurfaceHubScreenshotCaption26,575,Text,,,,,
+SurfaceHubScreenshotCaption27,576,Text,,,,,
+SurfaceHubScreenshotCaption28,577,Text,,,,,
+SurfaceHubScreenshotCaption29,578,Text,,,,,
+SurfaceHubScreenshotCaption30,579,Text,,,,,
+StoreLogo720x1080,600,Relative path (or URL to file in Partner Center),,,,,
+StoreLogo1080x1080,601,Relative path (or URL to file in Partner Center),,,,,
+StoreLogo300x300,602,Relative path (or URL to file in Partner Center),,,,,
+OverrideLogosForWin10,603,True/False,,False,False,False,False
+StoreLogoOverride150x150,604,Relative path (or URL to file in Partner Center),,,,,
+StoreLogoOverride71x71,605,Relative path (or URL to file in Partner Center),,,,,
+PromoImage1920x1080,606,Relative path (or URL to file in Partner Center),,,,,
+PromoImage2400x1200,607,Relative path (or URL to file in Partner Center),,,,,
+XboxBrandedKeyArt584x800,608,Relative path (or URL to file in Partner Center),,,,,
+XboxTitledHero1920x1080,609,Relative path (or URL to file in Partner Center),,,,,
+XboxFeaturedPromo1080x1080,610,Relative path (or URL to file in Partner Center),,,,,
+OptionalPromo358x358,611,Relative path (or URL to file in Partner Center),,,,,
+OptionalPromo1000x800,612,Relative path (or URL to file in Partner Center),,,,,
+OptionalPromo414x180,613,Relative path (or URL to file in Partner Center),,,,,
+Feature1,700,Text,,"Fixes words typed in the wrong keyboard layout automatically, as you finish each word","Автоматично виправляє слова, набрані не в тій розкладці, щойно слово завершено","Автоматически исправляет слова, набранные не в той раскладке, как только набор слова окончен",
+Feature2,701,Text,,"Three languages together — English, Ukrainian and Russian — not just a two-layout toggle","Три мови разом — англійська, українська та російська, а не просто перемикач двох розкладок","Три языка одновременно — английский, украинский и русский, а не просто переключатель двух раскладок",
+Feature3,702,Text,,Checks every layout Windows has installed against that language's dictionary,Перевіряє кожну встановлену у Windows розкладку словником відповідної мови,Проверяет каждую установленную в Windows раскладку словарём соответствующего языка,
+Feature4,703,Text,,"Words valid in both Ukrainian and Russian follow your preference, and are corrected later if the phrase proves otherwise","Слова, дійсні і українською, і російською, ідуть за вашим вибором, а згодом виправляються, якщо фраза виявилася іншою мовою","Слова, верные и в украинском, и в русском, следуют вашему выбору и исправляются позже, если фраза оказалась на другом языке",
+Feature5,704,Text,,Manual trigger — double Ctrl by default — converts the last word or the current selection,Ручний тригер — типово подвійний Ctrl — конвертує останнє слово або виділений текст,Ручной триггер — по умолчанию двойной Ctrl — преобразует последнее слово или выделенный текст,
+Feature6,705,Text,,"Tap the trigger again to step through the other layouts, once more to undo","Повторне натискання перебирає інші розкладки, ще одне — скасовує","Повторное нажатие перебирает другие раскладки, ещё одно — отменяет",
+Feature7,706,Text,,A chip under the corrected word shows what changed and how to undo it,"Поля паролів, менеджери паролів і термінали не зачіпаються; можна виключити будь-який застосунок","Подсказка под исправленным словом показывает, что изменилось и как это отменить",
+Feature8,707,Text,,"Password fields, password managers and terminals are left alone; you can exclude any ap",Списки «ніколи не конвертувати» та «конвертувати завжди» для окремих слів,"Поля паролей, менеджеры паролей и терминалы не исключены по умолчанию; можно исключить любое приложение",
+Feature9,708,Text,,Never-convert and always-convert lists for individual words,"Пауза на півгодини, годину або до перезапуску",Списки «никогда не преобразовывать» и «преобразовывать всегда» для частных случаев и имен собственных,
+Feature10,709,Text,,"Pause for half an hour, an hour, or until restart",Необов'язкове запам'ятовування розкладки для кожного застосунку,"Пауза на полчаса, час или до перезапуска",
+Feature11,710,Text,,Optional per-application layout memory,"Жодних мережевих з'єднань, жодної телеметрії, нічого не зберігається — відкритий код за ліцензією MIT",Необязательное запоминание раскладки для каждого приложения,
+Feature12,711,Text,,"No network connections, no telemetry, nothing stored — open source under the MIT licence",,"Никаких сетевых соединений, никакой телеметрии, ничего не сохраняется — открытый код по лицензии MIT",
+Feature13,712,Text,,,,,
+Feature14,713,Text,,,,,
+Feature15,714,Text,,,,,
+Feature16,715,Text,,,,,
+Feature17,716,Text,,,,,
+Feature18,717,Text,,,,,
+Feature19,718,Text,,,,,
+Feature20,719,Text,,,,,
+MinimumHardwareReq1,800,Text,,,,,
+MinimumHardwareReq2,801,Text,,,,,
+MinimumHardwareReq3,802,Text,,,,,
+MinimumHardwareReq4,803,Text,,,,,
+MinimumHardwareReq5,804,Text,,,,,
+MinimumHardwareReq6,805,Text,,,,,
+MinimumHardwareReq7,806,Text,,,,,
+MinimumHardwareReq8,807,Text,,,,,
+MinimumHardwareReq9,808,Text,,,,,
+MinimumHardwareReq10,809,Text,,,,,
+MinimumHardwareReq11,810,Text,,,,,
+RecommendedHardwareReq1,850,Text,,,,,
+RecommendedHardwareReq2,851,Text,,,,,
+RecommendedHardwareReq3,852,Text,,,,,
+RecommendedHardwareReq4,853,Text,,,,,
+RecommendedHardwareReq5,854,Text,,,,,
+RecommendedHardwareReq6,855,Text,,,,,
+RecommendedHardwareReq7,856,Text,,,,,
+RecommendedHardwareReq8,857,Text,,,,,
+RecommendedHardwareReq9,858,Text,,,,,
+RecommendedHardwareReq10,859,Text,,,,,
+RecommendedHardwareReq11,860,Text,,,,,
+SearchTerm1,900,Text,,keyboard layout switcher,виправлення розкладки клавіатури,переключатель раскладки,
+SearchTerm2,901,Text,,keyboard layout fixer,перемикання розкладок клавіатури,исправление раскладки клавиатуры,
+SearchTerm3,902,Text,,multilingual keyboard switch,багатомовне введення тексту,переключение раскладки автоматически,
+SearchTerm4,903,Text,,language layout autocorrect,безкоштовний перемикач розкладок,исправитель неправильной раскладки,
+SearchTerm5,904,Text,,,автоматичний перемикач клавіатури,смена раскладки клавиатуры,
+SearchTerm6,905,Text,,,,автоматическое исправление раскладки,
+SearchTerm7,906,Text,,,,переключатель языков клавиатуры,
+TrailerToPlayAtTopOfListing,999,Relative path (or URL to file in Partner Center),,,,,
+Trailer1,1000,Relative path (or URL to file in Partner Center),,,,,
+Trailer2,1001,Relative path (or URL to file in Partner Center),,,,,
+Trailer3,1002,Relative path (or URL to file in Partner Center),,,,,
+Trailer4,1003,Relative path (or URL to file in Partner Center),,,,,
+Trailer5,1004,Relative path (or URL to file in Partner Center),,,,,
+Trailer6,1005,Relative path (or URL to file in Partner Center),,,,,
+Trailer7,1006,Relative path (or URL to file in Partner Center),,,,,
+Trailer8,1007,Relative path (or URL to file in Partner Center),,,,,
+Trailer9,1008,Relative path (or URL to file in Partner Center),,,,,
+Trailer10,1009,Relative path (or URL to file in Partner Center),,,,,
+Trailer11,1010,Relative path (or URL to file in Partner Center),,,,,
+Trailer12,1011,Relative path (or URL to file in Partner Center),,,,,
+Trailer13,1012,Relative path (or URL to file in Partner Center),,,,,
+Trailer14,1013,Relative path (or URL to file in Partner Center),,,,,
+Trailer15,1014,Relative path (or URL to file in Partner Center),,,,,
+TrailerTitle1,1020,Text,,,,,
+TrailerTitle2,1021,Text,,,,,
+TrailerTitle3,1022,Text,,,,,
+TrailerTitle4,1023,Text,,,,,
+TrailerTitle5,1024,Text,,,,,
+TrailerTitle6,1025,Text,,,,,
+TrailerTitle7,1026,Text,,,,,
+TrailerTitle8,1027,Text,,,,,
+TrailerTitle9,1028,Text,,,,,
+TrailerTitle10,1029,Text,,,,,
+TrailerTitle11,1030,Text,,,,,
+TrailerTitle12,1031,Text,,,,,
+TrailerTitle13,1032,Text,,,,,
+TrailerTitle14,1033,Text,,,,,
+TrailerTitle15,1034,Text,,,,,
+TrailerThumbnail1,1040,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail2,1041,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail3,1042,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail4,1043,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail5,1044,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail6,1045,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail7,1046,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail8,1047,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail9,1048,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail10,1049,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail11,1050,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail12,1051,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail13,1052,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail14,1053,Relative path (or URL to file in Partner Center),,,,,
+TrailerThumbnail15,1054,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption1,1055,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption2,1056,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption3,1057,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption4,1058,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption5,1059,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption6,1060,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption7,1061,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption8,1062,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption9,1063,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption10,1064,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption11,1065,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption12,1066,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption13,1067,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption14,1068,Relative path (or URL to file in Partner Center),,,,,
+TrailerClosedCaption15,1069,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription1,1070,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription2,1071,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription3,1072,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription4,1073,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription5,1074,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription6,1075,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription7,1076,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription8,1077,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription9,1078,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription10,1079,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription11,1080,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription12,1081,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription13,1082,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription14,1083,Relative path (or URL to file in Partner Center),,,,,
+TrailerAudioDescription15,1084,Relative path (or URL to file in Partner Center),,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,

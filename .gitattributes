@@ -1,0 +1,5 @@
+# The Partner Center listing export is uploaded back to the Store byte for byte. Its rows end CRLF
+# while the newlines *inside* quoted description fields are bare LF, and line-ending normalisation
+# cannot tell the two apart — with core.autocrlf on it rewrites the in-field newlines too, silently
+# changing the description that gets uploaded. Store and check out exactly what is here.
+windows/listing-data.csv -text
