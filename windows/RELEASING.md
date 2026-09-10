@@ -216,11 +216,20 @@ log says either `toast: registered` or `toast: registration failed`.
 > [`whats-new.md`](whats-new.md), with all four languages together so it can be copied without
 > hunting through the listing. Everything else is below.
 >
+> **The listing text is generated, not pasted.** `python windows/tools/build-listing-csv.py` rewrites
+> [`listing-data.csv`](listing-data.csv) — a Partner Center export — from `store-listing.md` and
+> `whats-new.md`, then you import it under **Store listings → Import listings**. Editing four
+> listings by hand in the browser is how the Store came to be missing a product feature, holding a
+> bullet truncated mid-word, and describing 0.5.0 in Russian while describing 0.6.0 in English.
+>
 > **0.6.0 adds a fourth Store listing, in Bulgarian**, so the language the release adds is also a
 > language the listing is written in. It is a new listing rather than an edit, and it needs its own
 > description, features, search terms and copyright line — all in [`store-listing.md`](store-listing.md).
 > The interface itself is still only partly translated into Bulgarian, and the Bulgarian description
-> says so rather than letting the listing imply otherwise.
+> says so rather than letting the listing imply otherwise. **It also has no screenshots yet**, and the
+> Store requires at least one per listing: images are uploaded per language and the CSV can only point
+> at assets that already exist, so they have to be added in the browser before Bulgarian can ship.
+> The Bulgarian captions are written and waiting in `store-listing.md`.
 
 
 **Privacy policy URL** — required, because a keyboard hook can access personal information:

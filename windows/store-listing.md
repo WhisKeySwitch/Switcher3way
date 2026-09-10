@@ -21,13 +21,32 @@ search results:
 | **Description** (required) | 10,000 chars | Plain text. Blank lines separate paragraphs; markdown is not rendered, so no backticks or asterisks |
 | **What's new in this version** | 1,500 chars | **Leave blank on the first submission** — the form says so, and there is no previous Store version to compare against. Use the text below from the *second* submission onwards |
 | **Product features** | 20 items, 200 chars each | One box per bullet; "Add more" for each. Displayed as a bulleted list |
-| **Search terms** | 7 terms, 30 chars each, 21 words total | Not shown to customers |
+| **Search terms** | 7 terms, 30 chars each, 21 words total | Not shown to customers. **The documented 30 is not what the form enforced** — the Ukrainian and Russian terms Partner Center holds are 32–36 characters. The script warns and uploads them anyway rather than shortening someone's terms on the strength of a number in a doc |
 | **Screenshots** | at least 1, 1366×768 or larger | Each has its own caption field |
 | **Copyright and trademark info** | 200 chars | Optional, but fill it — see below |
 | **Additional license terms** | 10,000 chars | **Leave blank.** Blank means Microsoft's Standard Application License Terms, which is the normal arrangement for a free app. MIT already reaches the user: `LICENSE` ships inside the package (`Switcher3way.App.csproj` copies it next to the exe), which is what the licence requires. Pasting MIT here would add its warranty disclaimer *on top of* Microsoft's terms and invites questions about which governs |
 | **Developed by** | 255 chars | `IronMade` |
 
-Keep the four languages in step — if you edit one, edit all four.
+Keep the four languages in step — if you edit one, edit all four. You do not have to do that by
+hand, and by hand is how they came apart:
+
+```powershell
+python windows/tools/build-listing-csv.py     # this file + whats-new.md -> windows/listing-data.csv
+```
+
+Partner Center can export all four listings as one CSV and take the edited file back
+(**Store listings → Export/Import listings**). `listing-data.csv` is the last export, and the script
+rewrites every text field in it from the copy below, checks each against the Store's limits, and
+leaves the screenshot rows alone. Download a fresh export first if the listing has changed in the
+browser since, because that file — not this one — is what carries the image assets.
+
+What that fixed the first time it ran says why it exists. The Store was missing the product-feature
+bullet about words no dictionary knows, written here for 0.5.0 and never pasted in; one bullet had
+lost its last character to a bad paste (`exclude any ap`); the Russian What's-new still described
+0.5.0 while English and Ukrainian described 0.6.0; and every description carried this file's
+100-column line wraps as hard breaks, so the live English listing broke a line in the middle of
+*"Type ghbdsn and it becomes / привіт"*. The script unwraps paragraphs, which is what the field
+actually wants.
 
 ---
 
@@ -124,13 +143,10 @@ four blocks can be copied into Partner Center without scrolling this file.
 
 ### Search terms
 
-keyboard layout
-layout switcher
-wrong layout
-ukrainian keyboard
-russian keyboard
-розкладка
-раскладка
+keyboard layout switcher
+keyboard layout fixer
+multilingual keyboard switch
+language layout autocorrect
 
 ---
 
@@ -230,13 +246,11 @@ four blocks can be copied into Partner Center without scrolling this file.
 
 ### Ключові слова
 
-розкладка клавіатури
-перемикач розкладки
-не та розкладка
-українська розкладка
-keyboard layout
-layout switcher
-раскладка
+виправлення розкладки клавіатури
+перемикання розкладок клавіатури
+багатомовне введення тексту
+безкоштовний перемикач розкладок
+автоматичний перемикач клавіатури
 
 ---
 
@@ -338,13 +352,13 @@ four blocks can be copied into Partner Center without scrolling this file.
 
 ### Ключевые слова
 
-раскладка клавиатуры
 переключатель раскладки
-не та раскладка
-русская раскладка
-украинская раскладка
-keyboard layout
-layout switcher
+исправление раскладки клавиатуры
+переключение раскладки автоматически
+исправитель неправильной раскладки
+смена раскладки клавиатуры
+автоматическое исправление раскладки
+переключатель языков клавиатуры
 
 ## Български (bg)
 
@@ -442,13 +456,13 @@ four blocks can be copied into Partner Center without scrolling this file.
 
 ### Ключови думи
 
-клавиатурна подредба
 смяна на подредбата
-грешна подредба
-българска подредба
+поправяне на подредбата
+грешна клавиатурна подредба
+автоматична смяна на езика
+превключвател на подредби
 кирилица
-keyboard layout
-layout switcher
+безплатен превключвател
 
 ---
 
@@ -462,6 +476,10 @@ example rather than with "Switcher3way is an application that…".
 
 **No markdown, no backticks.** The Description box renders plain text; asterisks and backticks would
 appear literally. Paragraph breaks and the ALL-CAPS section headings are the only structure available.
+
+**The search terms here are the ones Partner Center holds.** The first draft of this file invented
+its own — shorter, and never uploaded — so for a year the file and the Store disagreed and nobody
+could tell which was right. Whatever is written here is now what `build-listing-csv.py` uploads.
 
 **No competitor names in the search terms.** "Punto Switcher" and similar would pull real traffic, but
 they are other people's product names and Store policy 10.1.1 rejects listings that use trademarks the
@@ -523,6 +541,13 @@ At least one is required; up to 10 are allowed. Each must be **1366×768 or larg
 is too small, so compose each shot on a full 1920×1080 screen rather than cropping tight to the window.
 PNG. Captions are a separate field per image, 200 characters each.
 
+**Screenshots and their captions are not generated from this file.** Each image is uploaded per
+listing language and gets its own asset URL, and a caption is bound to an image slot rather than to
+the text below — the English and Russian listings use shots 1, 2, 4, 5 and 6, the Ukrainian one uses
+all six. `build-listing-csv.py` therefore leaves both alone. The Bulgarian listing has no images yet;
+the Store requires at least one, so they have to be uploaded in Partner Center before that listing can
+be submitted, and the Bulgarian captions below are ready to paste when they are.
+
 Order matters: the first screenshot is the one shown in search results and at the top of the listing,
 so it must be the app *doing its job*, not a settings page.
 
@@ -539,6 +564,7 @@ the frame where the chip is at full opacity.
 - **en** — Type a word in the wrong layout and keep going. Switcher3way rewrites it and switches the layout, showing what changed and how to undo it.
 - **uk** — Наберіть слово не в тій розкладці й продовжуйте. Switcher3way перепише його та перемкне розкладку, показавши, що змінилось і як це скасувати.
 - **ru** — Наберите слово не в той раскладке и продолжайте. Switcher3way перепишет его и переключит раскладку, показав, что изменилось и как это отменить.
+- **bg** — Напишете дума с грешна подредба и продължете. Switcher3way я пренаписва и сменя подредбата, като показва какво се е променило и как да го отмените.
 
 ### 2. The tray flyout
 
@@ -547,6 +573,7 @@ The status header with the current layout, the quick toggles and the Pause subme
 - **en** — Everything from the notification area: current layout, master switch, Auto-fix, and pause for half an hour, an hour or until restart.
 - **uk** — Усе з області повідомлень: поточна розкладка, головний вимикач, автовиправлення та пауза на півгодини, годину чи до перезапуску.
 - **ru** — Всё из области уведомлений: текущая раскладка, главный выключатель, автоисправление и пауза на полчаса, час или до перезапуска.
+- **bg** — Всичко от областта за уведомления: текуща подредба, главен ключ, автоматична поправка и пауза за половин час, час или до рестартиране.
 
 ### 3. Welcome flow, step 2 — "Your layouts"
 
@@ -556,6 +583,7 @@ visible, and it is the clearest single answer to "how is this different from a t
 - **en** — Nothing to configure: Switcher3way reads every layout Windows has installed and checks each one against that language's dictionary.
 - **uk** — Нічого не треба налаштовувати: Switcher3way читає всі встановлені у Windows розкладки й перевіряє кожну словником її мови.
 - **ru** — Ничего не нужно настраивать: Switcher3way читает все установленные в Windows раскладки и проверяет каждую словарём её языка.
+- **bg** — Няма какво да се настройва: Switcher3way чете всички инсталирани в Windows подредби и проверява всяка с речника на нейния език.
 
 ### 4. Settings → General
 
@@ -564,6 +592,7 @@ The trigger picker open, showing Double Ctrl selected with Pause/Break and F9 be
 - **en** — Pick the trigger that suits your keyboard. Tap it to convert the last word or a selection; tap again to cycle layouts or undo.
 - **uk** — Виберіть тригер, який пасує вашій клавіатурі. Натисніть, щоб конвертувати останнє слово або виділення; ще раз — щоб перебрати розкладки чи скасувати.
 - **ru** — Выберите триггер под свою клавиатуру. Нажмите, чтобы преобразовать последнее слово или выделение; ещё раз — чтобы перебрать раскладки или отменить.
+- **bg** — Изберете тригера, който пасва на клавиатурата ви. Натиснете за последната дума или маркираното; още веднъж — за да минете през подредбите или да отмените.
 
 ### 5. Settings → Auto-fix
 
@@ -572,6 +601,7 @@ The preferred-language choice for words that are valid in both Ukrainian and Rus
 - **en** — Words that exist in both Ukrainian and Russian go to the language you prefer — and are corrected later if the rest of the phrase says otherwise.
 - **uk** — Слова, які існують і українською, і російською, конвертуються у задану вами розкладку — а згодом виправляються, якщо решта фрази іншою мовою.
 - **ru** — Слова, которые есть и в украинском, и в русском, конвертируются в выбранную вами раскладку — а позже исправляются, если далее фраза на другом языке.
+- **bg** — Думи, които съществуват и в украинския, и в руския, отиват в предпочитания от вас език — и се поправят по-късно, ако останалата част от фразата казва друго.
 
 ### 6. Settings → the exceptions list
 
@@ -580,6 +610,7 @@ The unified list with a password manager showing its "always off" badge.
 - **en** — Password fields are never touched. Password managers and terminals are excluded by default, and you can exclude any app or single word.
 - **uk** — Поля паролів не зачіпаються ніколи. Менеджери паролів і термінали виключені типово, і ви можете виключити будь-який застосунок чи окреме слово.
 - **ru** — Поля паролей не затрагиваются никогда. Менеджеры паролей и терминалы исключены по умолчанию, и вы можете исключить любое приложение или отдельное слово.
+- **bg** — Полетата за пароли никога не се докосват. Мениджърите на пароли и терминалите са изключени по подразбиране, а вие можете да изключите всяко приложение или отделна дума.
 
 ### Before you shoot
 

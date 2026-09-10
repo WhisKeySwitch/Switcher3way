@@ -1,127 +1,141 @@
 ﻿Field,ID,Type (Type),default,en-us,uk,ru,bg
-Description,2,Text,,"Typed in the wrong keyboard layout? Switcher3way spots it and fixes it. Type ghbdsn and it becomes
-привіт, the layout switches, and you carry on. English, Ukrainian and Russian — free, offline and open
-source.
+Description,2,Text,,"Typed in the wrong keyboard layout? Switcher3way spots it and fixes it. Type ghbdsn and it becomes привіт, the layout switches, and you carry on. English, Ukrainian, Russian and Bulgarian — free, offline and open source.
 
-You know the moment: half a sentence in and you realise the layout was wrong. Switcher3way takes that
-moment away.
+You know the moment: half a sentence in and you realise the layout was wrong. Switcher3way takes that moment away.
 
-It watches the word you are typing and, when the word is clearly in the wrong keyboard layout, retypes
-it correctly and switches the layout for you. Not a guess on every word — only when the word makes
-sense in another layout's language and nonsense in the current one. Short fragments and ambiguous
-scraps are left alone, because a wrong fix is worse than a missed one.
+It watches the word you are typing and, when the word is clearly in the wrong keyboard layout, retypes it correctly and switches the layout for you. Not a guess on every word — only when the word makes sense in another layout's language and nonsense in the current one. Short fragments and ambiguous scraps are left alone, because a wrong fix is worse than a missed one.
 
-Three languages, not two. Most layout fixers flip between two layouts. Switcher3way reads every layout
-Windows has installed and checks each candidate against that language's dictionary, so English,
-Ukrainian and Russian all work together.
+Four languages, not two. Most layout fixers flip between two layouts. Switcher3way reads every layout Windows has installed and checks each candidate against that language's dictionary, so English, Ukrainian, Russian and Bulgarian all work together.
 
-Words that exist in both Ukrainian and Russian — там, добре — go to whichever language you prefer, and
-if a later word makes the phrase clearly the other one, the app goes back and corrects itself.
+Words that exist in both Ukrainian and Russian — там, добре — go to whichever language you prefer, and if a later word makes the phrase clearly the other one, the app goes back and corrects itself.
+
+Names and jargon are handled too, even though no dictionary contains them. Type Kyiv with a Ukrainian layout active and you get Лншм — a shape no Ukrainian word could have, while Kyiv is an entirely ordinary English one. Switcher3way reads that difference and fixes it. Words that only look unusual are left alone: a name you typed on purpose, camelCase, ALL-CAPS, code identifiers and abbreviations without vowels all stay exactly as you typed them.
 
 FIX IT YOURSELF, TOO
 
-Tap the trigger key — a double tap of Ctrl by default, or Pause/Break, F9 and others — to convert the
-last word you typed. Select any text and tap it to convert the selection instead. Tap again with
-nothing typed in between to step through the other layouts, and once more to get your original text
-back. The trigger obeys you even where automatic fixing holds back.
+Tap the trigger key — a double tap of Ctrl by default, or Pause/Break, F9 and others — to convert the last word you typed. Select any text and tap it to convert the selection instead. Tap again with nothing typed in between to step through the other layouts, and once more to get your original text back. The trigger obeys you even where automatic fixing holds back.
 
-Every fix shows a small chip under the corrected word, with a reminder of the undo key, so a change is
-never silent.
+Every fix shows a small chip under the corrected word, with a reminder of the undo key, so a change is never silent.
 
 WHERE IT STAYS OUT OF THE WAY
 
-Password fields are excluded, including password boxes on web pages. Password managers and terminals
-are excluded by default, and you can exclude any other app yourself. Individual words can be added to
-a never-convert list — one click when a fix was wrong — or to an always-convert list.
+Password fields are excluded, including password boxes on web pages. Password managers and terminals are excluded by default, and you can exclude any other app yourself. Individual words can be added to a never-convert list — one click when a fix was wrong — or to an always-convert list.
 
-Pause it for half an hour, an hour, or until you restart. Turn automatic fixing off and keep the manual
-trigger. Let it remember a layout per application, so switching windows puts you back where you were.
+Pause it for half an hour, an hour, or until you restart. Turn automatic fixing off and keep the manual trigger. Let it remember a layout per application, so switching windows puts you back where you were.
 
 PRIVATE BY DESIGN
 
-Nothing you type is stored or transmitted. Keystrokes for the current word are held in memory and
-discarded the moment the word ends. This Store version makes no network connections at all. Word
-checking uses dictionaries built into the app. The whole source is public under the MIT licence.
+Nothing you type is stored or transmitted. Keystrokes for the current word are held in memory and discarded the moment the word ends. Correcting a long phrase briefly places the corrected text on the clipboard so it can be pasted in one go, and puts your previous clipboard contents straight back; shorter corrections are typed and never touch it. This Store version makes no network connections at all. Word checking uses dictionaries built into the app. The whole source is public under the MIT licence.
 
 BEFORE YOU START
 
-Add both keyboard layouts in Windows first — English and Ukrainian or Russian — or there is nothing for
-the app to switch between. Switcher3way lives in the notification area and has no main window; a short
-welcome flow appears the first time you run it.
+Add both keyboard layouts in Windows first — English and Ukrainian, Russian or Bulgarian — or there is nothing for the app to switch between. Switcher3way lives in the notification area and has no main window; a short welcome flow appears the first time you run it.
 
-A physical keyboard is required: the app cannot see input from the on-screen touch keyboard.
+Works wherever your keystrokes come from — a directly attached keyboard, Remote Desktop, a virtual machine, a remapped keyboard, or the on-screen keyboard.
 
-The interface is available in 16 languages.","Набрали не в тій розкладці? Switcher3way це помітить і виправить. Наберіть ghbdsn — і це стане привіт, розкладка перемкнеться, а ви просто продовжите друкувати. Англійська, українська та російська — безкоштовно, без інтернету, з відкритим кодом.
+The interface is fully translated into English, Ukrainian and Russian. Thirteen more languages, Bulgarian among them, are partly translated and fall back to English for anything not yet covered; the language picker says which is which.","Набрали не в тій розкладці? Switcher3way це помітить і виправить. Наберіть ghbdsn — і це стане привіт, розкладка перемкнеться, а ви просто продовжите писати. Англійська, українська, російська та болгарська — безкоштовно, без інтернету, з відкритим кодом.
 
 Знайомий момент: пів речення вже набрано, і аж тоді ви розумієте, що розкладка була не та. Switcher3way прибирає цей момент.
 
 Застосунок дивиться на слово, яке ви набираєте, і коли слово явно набране не в тій розкладці — перенабирає його правильно та перемикає розкладку. Це не вгадування на кожному слові: виправлення відбувається лише тоді, коли слово має сенс мовою іншої розкладки й не має сенсу поточною. Короткі уривки та неоднозначні залишки лишаються недоторканими, бо помилкове виправлення гірше за пропущене.
 
-Три мови, а не дві. Більшість подібних програм перемикається між двома розкладками. Switcher3way читає всі розкладки, встановлені у Windows, і перевіряє кожен варіант словником відповідної мови — тому англійська, українська та російська працюють разом.
+Чотири мови, а не дві. Більшість подібних програм перемикається між двома розкладками. Switcher3way читає всі розкладки, встановлені у Windows, і перевіряє кожен варіант словником відповідної мови — тому англійська, українська, російська та болгарська працюють разом.
 
 Слова, які існують і українською, і російською — там, добре — переходять у мову, яку ви обрали. А якщо наступне слово робить фразу однозначно іншою мовою, застосунок повертається й виправляє себе сам.
 
+Назви та професійний сленг теж виправляються, хоча їх немає в жодному словнику. Наберіть Kyiv з українською розкладкою — і отримаєте Лншм: форма, якої не може мати жодне українське слово, тоді як Kyiv — цілком звичайне англійське. Switcher3way бачить цю різницю й виправляє. А те, що лише виглядає незвично, лишається недоторканим: навмисно набрана назва, camelCase, ВЕЛИКІ ЛІТЕРИ, ідентифікатори з коду та скорочення без голосних зостаються такими, як ви їх набрали.
+
 ВИПРАВЛЯЙТЕ Й САМОСТІЙНО
 
-Натисніть клавішу-тригер — типово подвійний Ctrl, також доступні Pause/Break, F9 та інші — щоб конвертувати останнє набране слово. Виділіть будь-який текст, і тригер конвертує саме виділення.
-Натисніть ще раз, нічого не набираючи між натисканнями, щоб перейти до наступної розкладки, і ще раз — щоб повернути початковий текст. Тригер слухається вас навіть там, де автоматичне виправлення стримується.
+Натисніть клавішу-тригер — типово подвійний Ctrl, також доступні Pause/Break, F9 та інші — щоб конвертувати останнє набране слово. Виділіть будь-який текст, і тригер конвертує саме виділення. Натисніть ще раз, нічого не набираючи між натисканнями, щоб перейти до наступної розкладки, і ще раз — щоб повернути початковий текст. Тригер слухається вас навіть там, де автоматичне виправлення стримується.
 
 Кожне виправлення показує невелику підказку під словом із нагадуванням про клавішу скасування, тож зміна ніколи не буває непомітною.
 
 ДЕ ЗАСТОСУНОК НЕ ВТРУЧАЄТЬСЯ
 
-Поля паролів виключено, включно з полями паролів на вебсторінках. Менеджери паролів і термінали виключено типово, і ви можете виключити будь-який інший застосунок. Окремі слова можна додати до списку «ніколи не конвертувати» — одним клацанням, коли виправлення було зайвим — або до списку «конвертувати завжди».
+Поля паролів виключені, включно з полями паролів на вебсторінках. Менеджери паролів і термінали виключені типово, і ви можете виключити будь-який інший застосунок. Окремі слова можна додати до списку «ніколи не конвертувати» — одним клацанням, коли виправлення було зайвим — або до списку «конвертувати завжди».
 
 Призупиніть роботу на півгодини, годину або до перезапуску. Вимкніть автоматичне виправлення й залиште лише ручний тригер. Дозвольте запам'ятовувати розкладку для кожного застосунку окремо, щоб перехід між вікнами повертав вас туди, де ви були.
 
 ПРИВАТНІСТЬ ЗА ЗАМОВЧУВАННЯМ
 
-Ніщо з набраного не зберігається й не передається. Натискання клавіш для поточного слова тримаються лише в пам'яті та видаляються, щойно слово завершене. Ця версія зі Store не робить жодних мережевих з'єднань. Перевірка слів використовує словники, вбудовані в застосунок. Увесь вихідний код відкритий за ліцензією MIT.
+Ніщо з набраного не зберігається й не передається. Натискання клавіш для поточного слова тримаються лише в пам'яті та відкидаються, щойно слово завершилося. Виправлення довгої фрази на мить кладе виправлений текст у буфер обміну, щоб вставити його одним рухом, і одразу повертає ваш попередній вміст буфера; коротші виправлення набираються й буфера не торкаються. Ця версія зі Store не робить жодних мережевих з'єднань. Перевірка слів використовує словники, вбудовані в застосунок. Увесь вихідний код відкритий за ліцензією MIT.
 
 ПЕРЕД ПОЧАТКОМ
 
-Спершу додайте у Windows обидві розкладки — англійську та українську чи російську — інакше застосунку не буде між чим перемикатися. Switcher3way живе в області повідомлень і не має головного вікна; під час першого запуску з'явиться короткий вступний покроковий екран.
+Спершу додайте у Windows обидві розкладки — англійську та українську, російську чи болгарську — інакше застосунку не буде між чим перемикатися. Switcher3way живе в області повідомлень і не має головного вікна; під час першого запуску з'явиться короткий вступний покроковий екран.
 
-Потрібна фізична клавіатура: застосунок не бачить введення з екранної клавіатури.
+Працює незалежно від того, звідки надходять натискання клавіш — безпосередньо підключена клавіатура, віддалений робочий стіл, віртуальна машина, перепризначена клавіатура чи екранна клавіатура.
 
-Інтерфейс доступний 16 мовами.","Набрали не в той раскладке? Switcher3way это заметит и исправит. Наберите ghbdsn — и это превратится в привіт, раскладка переключится, а вы просто продолжите писать. Английский, украинский и русский — бесплатно, без интернета, с открытым исходным кодом.
+Інтерфейс повністю перекладено англійською, українською та російською. Ще тринадцять мов, серед них болгарська, перекладено частково — там, де перекладу ще немає, показується англійська; у виборі мови це позначено.","Набрали не в той раскладке? Switcher3way это заметит и исправит. Наберите ghbdsn — и это превратится в привіт, раскладка переключится, а вы просто продолжите писать. Английский, украинский, русский и болгарский — бесплатно, без интернета, с открытым исходным кодом.
 
-Знакомый момент: полфразы уже набрано, и только тогда вы понимаете, что раскладка была не та.
-Switcher3way избавляет от этого момента.
+Знакомый момент: полфразы уже набрано, и только тогда вы понимаете, что раскладка была не та. Switcher3way избавляет от этого момента.
 
-Программа смотрит на слово, которое вы набираете, и когда слово явно набрано не в той раскладке, перенабирает его правильно и переключает раскладку. Это не угадывание на каждом слове: исправление происходит только если слово осмысленно на языке другой раскладки и бессмысленно на текущем. Короткие обрывки и неоднозначные остатки остаются нетронутыми, потому что неверное исправление хуже пропущенного.
+Программа смотрит на слово, которое вы набираете, и когда слово явно набрано не в той раскладке — перенабирает его правильно и переключает раскладку. Это не угадывание на каждом слове: исправление происходит только если слово осмысленно на языке другой раскладки и бессмысленно на текущем. Короткие обрывки и неоднозначные остатки остаются нетронутыми, потому что неверное исправление хуже пропущенного.
 
-Три языка, а не два. Большинство подобных программ переключается между двумя раскладками.
-Switcher3way читает все раскладки, установленные в Windows, и проверяет каждый вариант словарём соответствующего языка — поэтому английский, украинский и русский работают вместе.
+Четыре языка, а не два. Большинство подобных программ переключается между двумя раскладками. Switcher3way читает все раскладки, установленные в Windows, и проверяет каждый вариант словарём соответствующего языка — поэтому английский, украинский, русский и болгарский работают вместе.
 
 Слова, которые существуют и в украинском, и в русском — там, добре — переходят в тот язык, который вы предпочли. А если следующее слово делает фразу однозначно другой, программа возвращается и исправляет себя сама.
 
+Названия и профессиональный сленг тоже исправляются, хотя их нет ни в одном словаре. Наберите Kyiv с украинской раскладкой — и получите Лншм: форма, которой не может быть ни у одного украинского слова, тогда как Kyiv — совершенно обычное английское. Switcher3way видит эту разницу и исправляет. А то, что лишь выглядит необычно, остаётся нетронутым: намеренно набранное название, camelCase, ЗАГЛАВНЫЕ, идентификаторы из кода и сокращения без гласных остаются такими, как вы их набрали.
+
 ИСПРАВЛЯЙТЕ И ВРУЧНУЮ
 
-Нажмите клавишу-триггер — по умолчанию двойной Ctrl, также доступны Pause/Break, F9 и другие — чтобы преобразовать последнее набранное слово. Выделите любой текст, и триггер преобразует именно выделение.
-Нажмите ещё раз, ничего не набирая между нажатиями, чтобы перейти к следующей раскладке, и ещё раз — чтобы вернуть исходный текст. Триггер слушается вас даже там, где автоматическое исправление воздерживается.
+Нажмите клавишу-триггер — по умолчанию двойной Ctrl, также доступны Pause/Break, F9 и другие — чтобы преобразовать последнее набранное слово. Выделите любой текст, и триггер преобразует именно выделение. Нажмите ещё раз, ничего не набирая между нажатиями, чтобы перейти к следующей раскладке, и ещё раз — чтобы вернуть исходный текст. Триггер слушается вас даже там, где автоматическое исправление воздерживается.
 
 Каждое исправление показывает небольшую подсказку под словом с напоминанием о клавише отмены, так что изменение никогда не остаётся незамеченным.
 
 ГДЕ ПРОГРАММА НЕ ВМЕШИВАЕТСЯ
 
-Поля паролей исключены, включая поля паролей на веб-страницах. Менеджеры паролей и терминалы исключены по умолчанию, и вы можете исключить любое другое приложение. Отдельные слова можно добавить в список
-«никогда не преобразовывать» — одним щелчком, когда исправление оказалось лишним — или в список «преобразовывать всегда».
+Поля паролей исключены, включая поля паролей на веб-страницах. Менеджеры паролей и терминалы исключены по умолчанию, и вы можете исключить любое другое приложение. Отдельные слова можно добавить в список «никогда не преобразовывать» — одним щелчком, когда исправление оказалось лишним — или в список «преобразовывать всегда».
 
 Приостановите работу на полчаса, час или до перезапуска. Отключите автоматическое исправление и оставьте только ручной триггер. Разрешите запоминать раскладку для каждого приложения отдельно, чтобы переход между окнами возвращал вас туда, где вы были.
 
 ПРИВАТНОСТЬ ПО УМОЛЧАНИЮ
 
-Ничего из набранного не сохраняется и не передаётся. Нажатия клавиш для текущего слова хранятся только в памяти и отбрасываются, как только слово закончилось. Эта версия из Store не устанавливает никаких сетевых соединений. Проверка слов использует словари, встроенные в программу. Весь исходный код открыт по лицензии MIT.
+Ничего из набранного не сохраняется и не передаётся. Нажатия клавиш для текущего слова хранятся только в памяти и отбрасываются, как только слово закончилось. Исправление длинной фразы на мгновение кладёт исправленный текст в буфер обмена, чтобы вставить его одним движением, и сразу возвращает ваше предыдущее содержимое буфера; более короткие исправления набираются и буфер не трогают. Эта версия из Store не устанавливает никаких сетевых соединений. Проверка слов использует словари, встроенные в программу. Весь исходный код открыт по лицензии MIT.
 
 ПЕРЕД НАЧАЛОМ
 
-Сначала добавьте в Windows обе раскладки — английскую и украинскую или русскую — иначе программе не между чем переключаться. Switcher3way живёт в области уведомлений и не имеет главного окна; при первом запуске появится короткий вступительный экран.
+Сначала добавьте в Windows обе раскладки — английскую и украинскую, русскую или болгарскую — иначе программе не между чем переключаться. Switcher3way живёт в области уведомлений и не имеет главного окна; при первом запуске появится короткий вступительный экран.
 
-Нужна физическая клавиатура: программа не видит ввод с экранной клавиатуры.
+Работает независимо от того, откуда приходят нажатия клавиш — напрямую подключённая клавиатура, удалённый рабочий стол, виртуальная машина, переназначенная клавиатура или экранная клавиатура.
 
-Интерфейс доступен на 16 языках.
-",
+Интерфейс полностью переведён на английский, украинский и русский. Ещё тринадцать языков, среди них болгарский, переведены частично — там, где перевода ещё нет, показывается английский; в выборе языка это отмечено.","Писали сте с грешна клавиатурна подредба? Switcher3way го забелязва и го поправя. Напишете pdeokf — и се получава заедно, подредбата се сменя, а вие продължавате нататък. Английски, украински, руски и български — безплатно, без интернет, с отворен код.
+
+Познат момент: половин изречение вече е написано и чак тогава осъзнавате, че подредбата е била грешна. Switcher3way премахва този момент.
+
+Приложението следи думата, която пишете, и когато тя явно е написана с грешна подредба, я пренаписва правилно и сменя подредбата вместо вас. Това не е налучкване при всяка дума: поправка има само когато думата има смисъл на езика на друга подредба и няма смисъл на текущия. Кратките откъси и двусмислените остатъци остават недокоснати, защото погрешната поправка е по-лоша от пропуснатата.
+
+Четири езика, а не два. Повечето подобни програми превключват между две подредби. Switcher3way чете всички подредби, инсталирани в Windows, и проверява всеки вариант с речника на съответния език — затова английският, украинският, руският и българският работят заедно.
+
+Думи, които съществуват и в украинския, и в руския — там, добре — отиват към езика, който сте предпочели. А ако следваща дума направи фразата еднозначно на другия език, приложението се връща и се поправя само.
+
+Имената и професионалният жаргон също се поправят, макар да ги няма в нито един речник. Напишете Linux с активна българска подредба — и получавате Всхкй: форма, каквато никоя българска дума не може да има, докато Linux е съвсем обикновена английска дума. Switcher3way вижда тази разлика и я поправя. А това, което само изглежда необичайно, остава недокоснато: нарочно написано име, camelCase, ГЛАВНИ БУКВИ, идентификатори от код и съкращения без гласни остават точно както сте ги написали.
+
+ПОПРАВЯЙТЕ И САМИ
+
+Натиснете клавиша-тригер — по подразбиране двойно Ctrl, също Pause/Break, F9 и други — за да преобразувате последната написана дума. Маркирайте текст и натиснете тригера, за да преобразувате маркираното. Натиснете отново, без да пишете между натисканията, за да минете през останалите подредби, и още веднъж — за да върнете първоначалния текст. Тригерът ви се подчинява дори там, където автоматичната поправка се въздържа.
+
+Всяка поправка показва малък надпис под поправената дума с напомняне за клавиша за отмяна, така че промяната никога не е незабележима.
+
+КЪДЕТО ПРИЛОЖЕНИЕТО НЕ СЕ НАМЕСВА
+
+Полетата за пароли са изключени, включително полетата за пароли в уеб страници. Мениджърите на пароли и терминалите са изключени по подразбиране, а вие можете да изключите всяко друго приложение. Отделни думи могат да се добавят към списък «никога да не се преобразуват» — с едно щракване, когато поправката е била излишна — или към списък «винаги да се преобразуват».
+
+Спрете работата за половин час, за час или до рестартиране. Изключете автоматичната поправка и оставете само ръчния тригер. Разрешете подредбата да се помни за всяко приложение поотделно, за да ви връща смяната на прозорци там, където сте били.
+
+ПОВЕРИТЕЛНОСТ ПО ЗАМИСЪЛ
+
+Нищо от написаното не се съхранява и не се изпраща. Натисканията на клавиши за текущата дума се пазят само в паметта и се изхвърлят веднага щом думата завърши. Поправката на дълга фраза за момент поставя поправения текст в клипборда, за да бъде вмъкнат наведнъж, и веднага връща предишното ви съдържание; по-кратките поправки се изписват и не докосват клипборда. Тази версия от Store не прави никакви мрежови връзки. Проверката на думите използва речници, вградени в приложението. Целият изходен код е публичен под лиценза MIT.
+
+ПРЕДИ ДА ЗАПОЧНЕТЕ
+
+Първо добавете в Windows и двете подредби — английската и българската, украинската или руската — иначе няма между какво да се превключва. Switcher3way живее в областта за уведомления и няма главен прозорец; при първото стартиране се появява кратък начален екран.
+
+Работи независимо откъде идват натисканията на клавиши — пряко свързана клавиатура, отдалечен работен плот, виртуална машина, преназначена клавиатура или екранната клавиатура.
+
+Интерфейсът е преведен изцяло на английски, украински и руски. Българският е сред тринадесетте езика с частичен превод: където превод още няма, се показва английски, а изборът на език го отбелязва."
 ReleaseNotes,3,Text,,"Version 0.6.0
 
 • Fixed: a spell checker that answers wrong is no longer believed. It goes through brief spells of rejecting real words, and the app was asking it twice about the same word — when the two answers disagreed, your conversion silently vanished. If you have ever typed a line, watched nothing happen and shrugged, this was often why.
@@ -132,18 +146,24 @@ ReleaseNotes,3,Text,,"Version 0.6.0
 • Виправлено: словнику, який відповідає хибно, більше не вірять беззастережно. Він час від часу ненадовго починає відкидати справжні слова, а застосунок запитував його про те саме слово двічі — і коли дві відповіді розходилися, ваша конвертація тихо зникала. Якщо ви колись набирали рядок, бачили, що нічого не сталося, і махали рукою — часто причина була саме ця.
 • Виправлено: шість причин, чому слова, набрані не в тій розкладці, лишалися незмінними; знайдені під час читання дванадцяти днів реальних журналів. Серед них: короткі слова перевірялися надто прискіпливо, беззмістовні токени на кшталт «10» чи «.» визначали мову речення, а «You're», «That's» і «Кто-то» пропускалися через апостроф або дефіс.
 • Нове: болгарська. Додайте болгарську клавіатуру у Windows — і вона працюватиме так само, як інші.
-• Російське слово, набране українською розкладкою, тепер перемикає розкладку, не перенабираючи ваш текст.","Версия 0.5.0
+• Російське слово, набране українською розкладкою, тепер перемикає розкладку, не перенабираючи ваш текст.","Версия 0.6.0
 
-• Новое: теперь конвертируются и слова, которых нет ни в одном словаре. Название или термин, набранные не в той раскладке, раньше так и оставались набором букв: «Kyiv», набранное с украинской раскладкой, выглядит как «Лншм», и ни один словарь не знает ни того, ни другого — поэтому ничего не происходило, и вы исправляли вручную.
-• Теперь, когда слова не знает ни один словарь, приложение смотрит на его форму. Слово, набранное не в той раскладке, невозможно произнести на языке, на котором оно появилось, и при этом ровно один из вариантов имеет совершенно обычную для своего языка форму. Преобразование происходит только тогда, когда такую форму даёт ровно один язык.
-• Все прежние предохранители сохраняются: намеренно набранные названия, camelCase, ЗАГЛАВНЫЕ, идентификаторы из кода и сокращения без гласных остаются как есть.",
-Title,4,Text,,Switcher3Way,Switcher3Way,Switcher3Way,
+• Исправлено: словарю, который отвечает неверно, больше не верят безоговорочно. Он время от времени ненадолго начинает отвергать настоящие слова, а приложение спрашивало его об одном и том же слове дважды — и когда два ответа расходились, ваша конвертация тихо исчезала. Если вы когда-нибудь набирали строку, видели, что ничего не произошло, и махали рукой — часто причина была именно эта.
+• Исправлено: шесть причин, по которым слова, набранные не в той раскладке, оставались нетронутыми; найдены при чтении двенадцати дней реальных журналов. Среди них: короткие слова проверялись слишком придирчиво, бессмысленные токены вроде «10» или «.» определяли язык предложения, а «You're», «That's» и «Кто-то» пропускались из-за апострофа или дефиса.
+• Новое: болгарский. Добавьте болгарскую клавиатуру в Windows — и она заработает так же, как остальные.
+• Русское слово, набранное на украинской раскладке, теперь переключает раскладку, не перенабирая ваш текст.","Версия 0.6.0
+
+• Поправено: на проверката на правописа вече не се вярва безусловно, когато отговаря погрешно. Тя изпада в кратки периоди, в които отхвърля истински думи, а приложението я питаше по два пъти за една и съща дума — и когато двата отговора се разминаваха, преобразуването тихо изчезваше. Ако някога сте написали цял ред, видели сте, че нищо не се случва, и сте махнали с ръка — често причината е била точно тази.
+• Поправено: шест причини думи, написани с грешната подредба, да остават непроменени; открити при четене на дванадесет дни реални дневници. Сред тях: кратките думи се преразглеждаха твърде придирчиво, безсмислени низове като «10» или «.» определяха езика на изречението, а «You're», «That's» и «Кто-то» се пропускаха заради апостроф или тире.
+• Ново: български. Добавете българската клавиатура в Windows и тя работи като останалите.
+• Руска дума, написана с украинската подредба, вече сменя подредбата, без да преписва текста ви."
+Title,4,Text,,Switcher3Way,Switcher3Way,Switcher3Way,Switcher3Way
 ShortTitle,5,Text,,,,,
 SortTitle,6,Text,,,,,
 VoiceTitle,7,Text,,,,,
 ShortDescription,8,Text,,,,,
-DevStudio,9,Text,,IronMade,IronMade,IronMade,
-CopyrightTrademarkInformation,12,Text,,"© 2026 IronMade. MIT License. A fork of RuSwitcher, © 2025 Rashns. Bundled Hunspell dictionaries: en/ru BSD, uk MPL 1.1. Full notices ship with the app.","© 2026 IronMade. Ліцензія MIT. Форк RuSwitcher, © 2025 Rashns. Вбудовані словники Hunspell: en/ru BSD, uk MPL 1.1. Повні тексти постачаються із застосунком.","© 2026 IronMade. Лицензия MIT. Форк RuSwitcher, © 2025 Rashns. Встроенные словари Hunspell: en/ru BSD, uk MPL 1.1. Полные тексты поставляются с программой.",
+DevStudio,9,Text,,IronMade,IronMade,IronMade,IronMade
+CopyrightTrademarkInformation,12,Text,,"© 2026 IronMade. MIT License. A fork of RuSwitcher, © 2025 Rashns. Bundled Hunspell dictionaries: en/ru BSD, uk/bg MPL 1.1. Full notices ship with the app.","© 2026 IronMade. Ліцензія MIT. Форк RuSwitcher, © 2025 Rashns. Вбудовані словники Hunspell: en/ru BSD, uk/bg MPL 1.1. Повні тексти постачаються із застосунком.","© 2026 IronMade. Лицензия MIT. Форк RuSwitcher, © 2025 Rashns. Встроенные словари Hunspell: en/ru BSD, uk/bg MPL 1.1. Полные тексты поставляются с программой.","© 2026 IronMade. Лиценз MIT. Форк на RuSwitcher, © 2025 Rashns. Вградени речници Hunspell: en/ru BSD, uk/bg MPL 1.1. Пълните текстове се доставят с приложението."
 AdditionalLicenseTerms,13,Text,,,,,
 DesktopScreenshot1,100,Relative path (or URL to file in Partner Center),,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566588/listingassets/3028089770564672566,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566590/listingassets/3050723826662830255,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566592/listingassets/3065377674610953135,
 DesktopScreenshot2,101,Relative path (or URL to file in Partner Center),,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566588/listingassets/3069030699445577600,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566590/listingassets/3005238284131224810,https://developer.microsoft.com/en-us/dashboard/apps/9MXFXL7GG3C5/submissions/1152921505701853573/listings/1152922700026566592/listingassets/3012339943934759037,
@@ -176,9 +196,9 @@ DesktopScreenshot28,127,Relative path (or URL to file in Partner Center),,,,,
 DesktopScreenshot29,128,Relative path (or URL to file in Partner Center),,,,,
 DesktopScreenshot30,129,Relative path (or URL to file in Partner Center),,,,,
 DesktopScreenshotCaption1,150,Text,,"Type a word in the wrong layout and keep going. Switcher3way rewrites it and switches the layout, showing what changed and how to undo it.","Наберіть слово не в тій розкладці й продовжуйте. Switcher3way перепише його та перемкне розкладку, показавши, що змінилось і як це скасувати.","Наберите слово не в той раскладке и продолжайте. Switcher3way перепишет его и переключит раскладку, показав, что изменилось и как это отменить.",
-DesktopScreenshotCaption2,151,Text,," Everything from the notification area: current layout, master switch, Auto-fix, and pause for half an hour, an hour or until restart",Нічого не треба налаштовувати: Switcher3way читає всі встановлені у Windows розкладки й перевіряє кожну словником її мови.,"Всё из области уведомлений: текущая раскладка, главный выключатель, автоисправление и пауза на полчаса, час или до перезапуска.",
+DesktopScreenshotCaption2,151,Text,,"Everything from the notification area: current layout, master switch, Auto-fix, and pause for half an hour, an hour or until restart",Нічого не треба налаштовувати: Switcher3way читає всі встановлені у Windows розкладки й перевіряє кожну словником її мови.,"Всё из области уведомлений: текущая раскладка, главный выключатель, автоисправление и пауза на полчаса, час или до перезапуска.",
 DesktopScreenshotCaption3,152,Text,,Pick the trigger that suits your keyboard. Tap it to convert the last word or a selection; tap again to cycle layouts or undo.,"Усе з області повідомлень: поточна розкладка, головний вимикач, автовиправлення та пауза на півгодини, годину чи до перезапуску.","Выберите триггер под свою клавиатуру. Нажмите, чтобы преобразовать последнее слово или выделение; ещё раз — чтобы перебрать раскладки или отменить.",
-DesktopScreenshotCaption4,153,Text,," Words that exist in both Ukrainian and Russian go to the language you prefer — and are corrected later if the rest of the phrase says otherwise.","Виберіть тригер, який пасує вашій клавіатурі. Натисніть, щоб конвертувати останнє слово або виділення; ще раз — щоб перебрати розкладки чи скасувати.","Слова, которые есть и в украинском, и в русском, конвертируются в выбранную вами раскладку — а позже исправляются, если далее фраза на другом языке.",
+DesktopScreenshotCaption4,153,Text,,Words that exist in both Ukrainian and Russian go to the language you prefer — and are corrected later if the rest of the phrase says otherwise.,"Виберіть тригер, який пасує вашій клавіатурі. Натисніть, щоб конвертувати останнє слово або виділення; ще раз — щоб перебрати розкладки чи скасувати.","Слова, которые есть и в украинском, и в русском, конвертируются в выбранную вами раскладку — а позже исправляются, если далее фраза на другом языке.",
 DesktopScreenshotCaption5,154,Text,,"Password fields are never touched. Password managers and terminals are excluded by default, and you can exclude any app or single word.","Слова, які існують і українською, і російською, конвертуються у задану вами розкладку — а згодом виправляються, якщо решта фрази іншою мовою.","Поля паролей не затрагиваются никогда. Менеджеры паролей и терминалы исключены по умолчанию, и вы можете исключить любое приложение или отдельное слово.",
 DesktopScreenshotCaption6,155,Text,,,"Поля паролів не зачіпаються ніколи. Менеджери паролів і термінали виключені типово, і ви можете виключити будь-який застосунок чи окреме слово.",,
 DesktopScreenshotCaption7,156,Text,,,,,
@@ -439,19 +459,19 @@ XboxFeaturedPromo1080x1080,610,Relative path (or URL to file in Partner Center),
 OptionalPromo358x358,611,Relative path (or URL to file in Partner Center),,,,,
 OptionalPromo1000x800,612,Relative path (or URL to file in Partner Center),,,,,
 OptionalPromo414x180,613,Relative path (or URL to file in Partner Center),,,,,
-Feature1,700,Text,,"Fixes words typed in the wrong keyboard layout automatically, as you finish each word","Автоматично виправляє слова, набрані не в тій розкладці, щойно слово завершено","Автоматически исправляет слова, набранные не в той раскладке, как только набор слова окончен",
-Feature2,701,Text,,"Three languages together — English, Ukrainian and Russian — not just a two-layout toggle","Три мови разом — англійська, українська та російська, а не просто перемикач двох розкладок","Три языка одновременно — английский, украинский и русский, а не просто переключатель двух раскладок",
-Feature3,702,Text,,Checks every layout Windows has installed against that language's dictionary,Перевіряє кожну встановлену у Windows розкладку словником відповідної мови,Проверяет каждую установленную в Windows раскладку словарём соответствующего языка,
-Feature4,703,Text,,"Words valid in both Ukrainian and Russian follow your preference, and are corrected later if the phrase proves otherwise","Слова, дійсні і українською, і російською, ідуть за вашим вибором, а згодом виправляються, якщо фраза виявилася іншою мовою","Слова, верные и в украинском, и в русском, следуют вашему выбору и исправляются позже, если фраза оказалась на другом языке",
-Feature5,704,Text,,Manual trigger — double Ctrl by default — converts the last word or the current selection,Ручний тригер — типово подвійний Ctrl — конвертує останнє слово або виділений текст,Ручной триггер — по умолчанию двойной Ctrl — преобразует последнее слово или выделенный текст,
-Feature6,705,Text,,"Tap the trigger again to step through the other layouts, once more to undo","Повторне натискання перебирає інші розкладки, ще одне — скасовує","Повторное нажатие перебирает другие раскладки, ещё одно — отменяет",
-Feature7,706,Text,,A chip under the corrected word shows what changed and how to undo it,"Поля паролів, менеджери паролів і термінали не зачіпаються; можна виключити будь-який застосунок","Подсказка под исправленным словом показывает, что изменилось и как это отменить",
-Feature8,707,Text,,"Password fields, password managers and terminals are left alone; you can exclude any ap",Списки «ніколи не конвертувати» та «конвертувати завжди» для окремих слів,"Поля паролей, менеджеры паролей и терминалы не исключены по умолчанию; можно исключить любое приложение",
-Feature9,708,Text,,Never-convert and always-convert lists for individual words,"Пауза на півгодини, годину або до перезапуску",Списки «никогда не преобразовывать» и «преобразовывать всегда» для частных случаев и имен собственных,
-Feature10,709,Text,,"Pause for half an hour, an hour, or until restart",Необов'язкове запам'ятовування розкладки для кожного застосунку,"Пауза на полчаса, час или до перезапуска",
-Feature11,710,Text,,Optional per-application layout memory,"Жодних мережевих з'єднань, жодної телеметрії, нічого не зберігається — відкритий код за ліцензією MIT",Необязательное запоминание раскладки для каждого приложения,
-Feature12,711,Text,,"No network connections, no telemetry, nothing stored — open source under the MIT licence",,"Никаких сетевых соединений, никакой телеметрии, ничего не сохраняется — открытый код по лицензии MIT",
-Feature13,712,Text,,,,,
+Feature1,700,Text,,"Fixes words typed in the wrong keyboard layout automatically, as you finish each word","Автоматично виправляє слова, набрані не в тій розкладці, щойно слово завершено","Автоматически исправляет слова, набранные не в той раскладке, как только слово закончено","Автоматично поправя думи, написани с грешната клавиатурна подредба, веднага щом думата завърши"
+Feature2,701,Text,,"Four languages together — English, Ukrainian, Russian and Bulgarian — not just a two-layout toggle","Чотири мови разом — англійська, українська, російська та болгарська, а не просто перемикач двох розкладок","Четыре языка вместе — английский, украинский, русский и болгарский, а не просто переключатель двух раскладок","Четири езика заедно — английски, украински, руски и български, а не просто превключвател между две подредби"
+Feature3,702,Text,,Checks every layout Windows has installed against that language's dictionary,"Назви та сленг, яких немає в словниках, виправляються за формою слова, а навмисні назви, camelCase, ВЕЛИКІ ЛІТЕРИ й скорочення без голосних лишаються незмінними",Проверяет каждую установленную в Windows раскладку словарём соответствующего языка,Проверява всяка инсталирана в Windows подредба с речника на съответния език
+Feature4,703,Text,,"Names and jargon no dictionary contains are fixed by their shape, while deliberate names, camelCase, ALL-CAPS and vowel-less abbreviations are left alone",Перевіряє кожну встановлену у Windows розкладку словником відповідної мови,"Названия и сленг, которых нет в словарях, исправляются по форме слова, а намеренные названия, camelCase, ЗАГЛАВНЫЕ и сокращения без гласных остаются нетронутыми","Имена и жаргон, каквито няма в речниците, се поправят по формата на думата, а нарочните имена, camelCase, ГЛАВНИ БУКВИ и съкращенията без гласни остават непроменени"
+Feature5,704,Text,,"Words valid in both Ukrainian and Russian follow your preference, and are corrected later if the phrase proves otherwise","Слова, дійсні і українською, і російською, ідуть за вашим вибором, а згодом виправляються, якщо фраза виявилася іншою","Слова, верные и в украинском, и в русском, следуют вашему выбору и исправляются позже, если фраза оказалась другой","Думи, валидни и в украинския, и в руския, следват вашия избор и се поправят по-късно, ако фразата се окаже друга"
+Feature6,705,Text,,Manual trigger — double Ctrl by default — converts the last word or the current selection,Ручний тригер — типово подвійний Ctrl — конвертує останнє слово або виділений текст,Ручной триггер — по умолчанию двойной Ctrl — преобразует последнее слово или выделенный текст,Ръчен тригер — по подразбиране двойно Ctrl — преобразува последната дума или маркирания текст
+Feature7,706,Text,,"Tap the trigger again to step through the other layouts, once more to undo","Повторне натискання перебирає інші розкладки, ще одне — скасовує","Повторное нажатие перебирает другие раскладки, ещё одно — отменяет","Повторно натискане минава през останалите подредби, още едно — отменя"
+Feature8,707,Text,,A chip under the corrected word shows what changed and how to undo it,"Підказка під виправленим словом показує, що змінилося, і як це скасувати","Подсказка под исправленным словом показывает, что изменилось и как это отменить",Надпис под поправената дума показва какво се е променило и как да се отмени
+Feature9,708,Text,,"Password fields, password managers and terminals are left alone; you can exclude any app","Поля паролів, менеджери паролів і термінали не зачіпаються; можна виключити будь-який застосунок","Поля паролей, менеджеры паролей и терминалы не затрагиваются; можно исключить любое приложение","Полетата за пароли, мениджърите на пароли и терминалите не се засягат; можете да изключите всяко приложение"
+Feature10,709,Text,,Never-convert and always-convert lists for individual words,Списки «ніколи не конвертувати» та «конвертувати завжди» для окремих слів,Списки «никогда не преобразовывать» и «преобразовывать всегда» для отдельных слов,Списъци «никога да не се преобразува» и «винаги да се преобразува» за отделни думи
+Feature11,710,Text,,"Pause for half an hour, an hour, or until restart","Пауза на півгодини, годину або до перезапуску","Пауза на полчаса, час или до перезапуска","Пауза за половин час, за час или до рестартиране"
+Feature12,711,Text,,Optional per-application layout memory,Необов'язкове запам'ятовування розкладки для кожного застосунку,Необязательное запоминание раскладки для каждого приложения,По желание — запомняне на подредбата за всяко приложение
+Feature13,712,Text,,"No network connections, no telemetry, nothing stored — open source under the MIT licence","Жодних мережевих з'єднань, жодної телеметрії, нічого не зберігається — відкритий код за ліцензією MIT","Никаких сетевых соединений, никакой телеметрии, ничего не сохраняется — открытый код по лицензии MIT","Никакви мрежови връзки, никаква телеметрия, нищо не се съхранява — отворен код под лиценза MIT"
 Feature14,713,Text,,,,,
 Feature15,714,Text,,,,,
 Feature16,715,Text,,,,,
@@ -481,13 +501,13 @@ RecommendedHardwareReq8,857,Text,,,,,
 RecommendedHardwareReq9,858,Text,,,,,
 RecommendedHardwareReq10,859,Text,,,,,
 RecommendedHardwareReq11,860,Text,,,,,
-SearchTerm1,900,Text,,keyboard layout switcher,виправлення розкладки клавіатури,переключатель раскладки,
-SearchTerm2,901,Text,,keyboard layout fixer,перемикання розкладок клавіатури,исправление раскладки клавиатуры,
-SearchTerm3,902,Text,,multilingual keyboard switch,багатомовне введення тексту,переключение раскладки автоматически,
-SearchTerm4,903,Text,,language layout autocorrect,безкоштовний перемикач розкладок,исправитель неправильной раскладки,
-SearchTerm5,904,Text,,,автоматичний перемикач клавіатури,смена раскладки клавиатуры,
-SearchTerm6,905,Text,,,,автоматическое исправление раскладки,
-SearchTerm7,906,Text,,,,переключатель языков клавиатуры,
+SearchTerm1,900,Text,,keyboard layout switcher,виправлення розкладки клавіатури,переключатель раскладки,смяна на подредбата
+SearchTerm2,901,Text,,keyboard layout fixer,перемикання розкладок клавіатури,исправление раскладки клавиатуры,поправяне на подредбата
+SearchTerm3,902,Text,,multilingual keyboard switch,багатомовне введення тексту,переключение раскладки автоматически,грешна клавиатурна подредба
+SearchTerm4,903,Text,,language layout autocorrect,безкоштовний перемикач розкладок,исправитель неправильной раскладки,автоматична смяна на езика
+SearchTerm5,904,Text,,,автоматичний перемикач клавіатури,смена раскладки клавиатуры,превключвател на подредби
+SearchTerm6,905,Text,,,,автоматическое исправление раскладки,кирилица
+SearchTerm7,906,Text,,,,переключатель языков клавиатуры,безплатен превключвател
 TrailerToPlayAtTopOfListing,999,Relative path (or URL to file in Partner Center),,,,,
 Trailer1,1000,Relative path (or URL to file in Partner Center),,,,,
 Trailer2,1001,Relative path (or URL to file in Partner Center),,,,,
