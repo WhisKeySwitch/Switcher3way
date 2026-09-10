@@ -20,6 +20,7 @@ internal static class HelpContent
         ["user-guide.md"] = "help:en",
         ["user-guide.uk.md"] = "help:uk",
         ["user-guide.ru.md"] = "help:ru",
+        ["user-guide.bg.md"] = "help:bg",
     };
 
     private static readonly Dictionary<string, string> Resources = new()
@@ -27,6 +28,9 @@ internal static class HelpContent
         ["en"] = "user-guide.md",
         ["uk"] = "user-guide.uk.md",
         ["ru"] = "user-guide.ru.md",
+        // Windows only: Bulgarian is a language this app converts and macOS does not, so the
+        // Bulgarian guide is written for Windows rather than translated from the macOS-first text.
+        ["bg"] = "user-guide.bg.md",
     };
 
     /// <summary>Full HTML page for the guide in the given language (falls back to English).</summary>

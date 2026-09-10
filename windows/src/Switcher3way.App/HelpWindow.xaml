@@ -27,6 +27,8 @@
                         CornerRadius="999" Padding="9,3" />
                 <Button x:Name="LangRu" Content="РУ" Tag="ru" Click="Lang_Click" FontSize="11"
                         CornerRadius="999" Padding="9,3" />
+                <Button x:Name="LangBg" Content="БГ" Tag="bg" Click="Lang_Click" FontSize="11"
+                        CornerRadius="999" Padding="9,3" />
             </StackPanel>
         </Grid>
 

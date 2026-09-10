@@ -8,7 +8,7 @@ namespace Switcher3way.App;
 
 /// <summary>
 /// Built-in help: the bundled user guide rendered offline in a WebView2, with a table of contents
-/// built from the guide's own section headings and EN/УК/РУ pills to switch language in place.
+/// built from the guide's own section headings and EN/УК/РУ/БГ pills to switch language in place.
 /// External links open in the default browser. If WebView2 is unavailable the window explains itself
 /// instead of showing an empty pane.
 /// </summary>
@@ -28,8 +28,8 @@ public sealed partial class HelpWindow : Window
         _ = LoadAsync();
     }
 
-    /// <summary>The guide exists in these three languages; anything else reads the English one.</summary>
-    private static string Normalize(string lang) => lang is "uk" or "ru" ? lang : "en";
+    /// <summary>The guide exists in these four languages; anything else reads the English one.</summary>
+    private static string Normalize(string lang) => lang is "uk" or "ru" or "bg" ? lang : "en";
 
     private void BuildToc() => SectionList.ItemsSource = HelpContent.Sections(_lang);
 
