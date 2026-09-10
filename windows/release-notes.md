@@ -35,10 +35,14 @@ deliberately left off with the number written down:
   once the sentence makes the language clear.
 - Two more, including one measured, found imperfect, and shipped **off** rather than shipped hopeful.
 
-## New — Bulgarian
+## New — Bulgarian, all the way through
 
 Bulgarian joins English, Ukrainian and Russian. Add the Bulgarian keyboard in Windows and it works the
 same way: type Bulgarian with the wrong layout active and the app puts it right.
+
+The interface is translated with it — all of it, not the menu only — and the built-in help has a
+Bulgarian guide written for Windows rather than translated from the Mac one. A Bulgarian keyboard also
+has a name now: it read `BG` in the tray next to "English" and "Ukrainian" spelled out.
 
 ## Also
 
@@ -61,14 +65,14 @@ same way: type Bulgarian with the wrong layout active and the app puts it right.
 
 ## Verify the download
 
-SHA-256 of `Switcher3way-0.6.0-win-x64.msi`:
+SHA-256 of `Switcher3way-0.6.1-win-x64.msi`:
 
 ```
-832842c185e1b5d0d9ed44d86367159aef6981ae321ee6e3e5b949edc5f2ec7c
+1263cd557b820292de40337db3f410324e2e1e1bec2a407835aff077a5b25a80
 ```
 
 ```powershell
-(Get-FileHash .\Switcher3way-0.6.0-win-x64.msi -Algorithm SHA256).Hash
+(Get-FileHash .\Switcher3way-0.6.1-win-x64.msi -Algorithm SHA256).Hash
 ```
 
 The in-app updater checks this same checksum before installing anything.
