@@ -9,9 +9,19 @@
 > dropped. The pattern to learn from: **verify in the flavour that ships.** All three passed testing
 > on an unpackaged build.
 >
-> The MSI channel is at **0.6.0**; the Store is at **0.5.0** until 0.6.0 clears certification.
-> 0.2.8 was a Store-only submission; the MSI channel skipped it and went 0.2.7 → 0.2.9 → 0.3.0 → 0.4.0
-> → 0.4.1 → 0.5.0 → 0.6.0.
+> The MSI channel is at **0.6.1**; the Store is at **0.5.0**. 0.2.8 was a Store-only submission; the
+> MSI channel skipped it and went 0.2.7 → 0.2.9 → 0.3.0 → 0.4.0 → 0.4.1 → 0.5.0 → 0.6.0 → 0.6.1.
+>
+> **0.6.1 exists because 0.6.0 shipped Bulgarian half-done.** It converts Bulgarian, and its interface
+> held 45 of 131 Bulgarian strings — so the Bulgarian Store listing written for it would have promised
+> an app the reader does not get. 0.6.1 finishes the interface, names a Bulgarian layout (it read `BG`
+> in the tray), and adds a Bulgarian user guide.
+>
+> It is a new number rather than a rebuilt 0.6.0 for a reason worth keeping: `windows-v0.6.0` is
+> already published with an MSI whose SHA-256 is in its release notes, and the in-app updater checks
+> that hash. A second binary under the same version would never be offered to anyone on 0.6.0 and
+> would fail the check if it were. Two different binaries with one version number is the same class of
+> mistake as a package named 0.3.1 identifying as 0.3.0.0 — see the `-Version` note below.
 >
 > **0.6.0 is the correctness release**, and the largest since the Store launch — most of it found by
 > reading twelve days of real logs rather than by testing ideas. A spell checker that answers wrong is
@@ -222,10 +232,10 @@ log says either `toast: registered` or `toast: registration failed`.
 > listings by hand in the browser is how the Store came to be missing a product feature, holding a
 > bullet truncated mid-word, and describing 0.5.0 in Russian while describing 0.6.0 in English.
 >
-> **0.6.0 adds a fourth Store listing, in Bulgarian**, so the language the release adds is also a
+> **0.6.1 is the first Store submission with a fourth listing, in Bulgarian**, so the language the release adds is also a
 > language the listing is written in. It is a new listing rather than an edit, and it needs its own
 > description, features, search terms and copyright line — all in [`store-listing.md`](store-listing.md).
-> The Bulgarian interface was completed alongside it — all 131 strings, verified with
+> The Bulgarian interface was completed for it — all 131 strings, verified with
 > `python windows/tools/check-localization.py --require en,uk,ru,bg` — so `<Resources>` now declares
 > `bg` too. **The Bulgarian listing has no screenshots yet**, and the
 > Store requires at least one per listing: images are uploaded per language and the CSV can only point

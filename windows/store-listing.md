@@ -1,8 +1,7 @@
 # Microsoft Store listing copy
 
 Ready to paste into Partner Center → **Store listings**. One listing per language: English (en),
-Ukrainian (uk), Russian (ru), Bulgarian (bg) — the four languages the app converts between since
-0.6.0.
+Ukrainian (uk), Russian (ru), Bulgarian (bg) — the four languages the app converts between.
 
 These are the same four `Package.appxmanifest` declares under `<Resources>`, and they are the same
 four the *interface* is fully translated into — Bulgarian was finished after the listing was written,
