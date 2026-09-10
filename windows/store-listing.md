@@ -4,11 +4,14 @@ Ready to paste into Partner Center → **Store listings**. One listing per langu
 Ukrainian (uk), Russian (ru), Bulgarian (bg) — the four languages the app converts between since
 0.6.0.
 
-That is no longer the same set as `Package.appxmanifest`'s `<Resources>`, which stays at en/uk/ru, and
-the difference is deliberate: `<Resources>` declares the languages the *interface* is fully translated
-into, and Bulgarian is one of the thirteen that are only partly translated. A listing may be written in
-any language regardless. The Bulgarian description says so outright rather than letting a
-Bulgarian-language listing imply a Bulgarian-language app.
+These are the same four `Package.appxmanifest` declares under `<Resources>`, and they are the same
+four the *interface* is fully translated into — Bulgarian was finished after the listing was written,
+so a Bulgarian-language listing no longer promises an app the reader will not get. The other twelve
+languages in `Loc.cs` are partial and fall back to English. That is measured, not assumed:
+
+```powershell
+python windows/tools/check-localization.py --require en,uk,ru,bg
+```
 
 ## What the form actually asks for
 
@@ -116,9 +119,9 @@ welcome flow appears the first time you run it.
 Works wherever your keystrokes come from — a directly attached keyboard, Remote Desktop, a virtual
 machine, a remapped keyboard, or the on-screen keyboard.
 
-The interface is fully translated into English, Ukrainian and Russian. Thirteen more languages,
-Bulgarian among them, are partly translated and fall back to English for anything not yet covered; the
-language picker says which is which.
+The interface is fully translated into English, Ukrainian, Russian and Bulgarian. Twelve more
+languages are partly translated and fall back to English for anything not yet covered; the language
+picker says which is which.
 
 ### Product features
 
@@ -219,9 +222,9 @@ Kyiv — цілком звичайне англійське. Switcher3way бач
 Працює незалежно від того, звідки надходять натискання клавіш — безпосередньо підключена клавіатура,
 віддалений робочий стіл, віртуальна машина, перепризначена клавіатура чи екранна клавіатура.
 
-Інтерфейс повністю перекладено англійською, українською та російською. Ще тринадцять мов, серед них
-болгарська, перекладено частково — там, де перекладу ще немає, показується англійська; у виборі мови
-це позначено.
+Інтерфейс повністю перекладено англійською, українською, російською та болгарською. Ще дванадцять
+мов перекладено частково — там, де перекладу ще немає, показується англійська; у виборі мови це
+позначено.
 
 ### Можливості
 
@@ -325,9 +328,9 @@ Store не устанавливает никаких сетевых соедин
 Работает независимо от того, откуда приходят нажатия клавиш — напрямую подключённая клавиатура,
 удалённый рабочий стол, виртуальная машина, переназначенная клавиатура или экранная клавиатура.
 
-Интерфейс полностью переведён на английский, украинский и русский. Ещё тринадцать языков, среди них
-болгарский, переведены частично — там, где перевода ещё нет, показывается английский; в выборе языка
-это отмечено.
+Интерфейс полностью переведён на английский, украинский, русский и болгарский. Ещё двенадцать языков
+переведены частично — там, где перевода ещё нет, показывается английский; в выборе языка это
+отмечено.
 
 ### Возможности
 
@@ -430,8 +433,8 @@ Linux с активна българска подредба — и получа�
 Работи независимо откъде идват натисканията на клавиши — пряко свързана клавиатура, отдалечен работен
 плот, виртуална машина, преназначена клавиатура или екранната клавиатура.
 
-Интерфейсът е преведен изцяло на английски, украински и руски. Българският е сред тринадесетте езика
-с частичен превод: където превод още няма, се показва английски, а изборът на език го отбелязва.
+Интерфейсът е преведен изцяло на английски, украински, руски и български. Още дванадесет езика са
+преведени частично: където превод още няма, се показва английски, а изборът на език го отбелязва.
 
 ### Възможности
 
@@ -501,6 +504,11 @@ at all cannot be a Bulgarian word while Linux is an ordinary English one.
 **No "physical keyboard required" claim.** It was true until 0.2.7: the hook ignored all injected input,
 which made the app inert on a tablet using the on-screen keyboard — and failed Store certification twice.
 Our own synthesized keys are now tagged, so everything else counts as real typing.
+
+**"Sixteen languages" was never a count of anything.** The first draft called the interface
+"available in 16 languages" because `Loc.cs` held 16 language blocks — twelve of which held a third
+of the strings, so most of Settings and all of onboarding came out in English. `check-localization.py`
+counts the strings, and `--require` turns the sentence in the copy into something a build can fail on.
 
 **Every claim needs checking against the code, not memory.** Three were wrong. Two in the first
 draft, and one that survived a year: the Ukrainian and Russian descriptions still said a physical
