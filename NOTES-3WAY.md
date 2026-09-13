@@ -108,8 +108,30 @@ The 5-second ⌥ *undo* after an auto-switch retypes the original text correctly
 layout-toggle-back can be wrong in pure 3-way (it was built around a pair). Proper fix: record the
 pre-switch layout ID in the conversion state and restore it on undo.
 
-## Full notarized distribution (optional)
+## Notarized distribution
 
-`create_dmg.sh` already supports Developer-ID signing + `notarytool` + stapling. With an Apple
-Developer account, set the signing identity / keychain profile it expects and it produces a DMG
-that installs with zero Gatekeeper friction on any Mac.
+`create_dmg.sh` signs with Developer ID, notarizes the **app bundle** and staples it, then signs,
+notarizes and staples the **DMG** — both, deliberately: a bundle dragged out of an unstapled image
+falls back to an online Gatekeeper check and fails offline, and an unsigned container makes some
+Macs distrust the app extracted from it.
+
+Setup is one-time and lives in `signing/README.md`: a Developer ID Application certificate, a
+`notarytool` keychain profile, and `signing/developer-id.conf` filled in. Nothing is hardcoded —
+the script used to carry the *upstream* project's Developer ID, which would have failed
+notarization under this account.
+
+```bash
+bash create_dmg.sh                    # signed + notarized + stapled, ready to ship
+SKIP_NOTARIZE=1 bash create_dmg.sh    # local test image; will NOT pass Gatekeeper elsewhere
+```
+
+**Migrating from the self-signed identity.** The switch changes the app's designated requirement,
+which drops Accessibility and Input Monitoring. That path is already handled:
+`AppDelegate.runPermissionWizard` notices "granted before, gone now", runs `tccutil reset` to clear
+the stale entries (which would otherwise show as ticked but do nothing), and opens the onboarding
+checklist with a reset notice. Users re-grant twice, once.
+
+The updater needs no such rescue as long as `signing/developer-id.conf` is filled in **before** the
+last self-signed release is cut — see "Why the Team ID is stamped into the bundle" in
+`signing/README.md`. If a self-signed build ships without `RSReleaseTeamID`, it can never
+auto-update to a Developer ID build and those installs must re-download by hand.

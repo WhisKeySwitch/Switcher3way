@@ -7,9 +7,48 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VERSION=$(/usr/bin/python3 -c "import json;print(json.load(open('version.json'))['version'])")
 BUILD=$(/usr/bin/python3 -c "import json;print(json.load(open('version.json')).get('build','1'))")
 DMG_NAME="${APP_NAME}-${VERSION}.dmg"
-# Keychain profile used for Apple notarization. Override with NOTARIZE_PROFILE=<name>.
-# Skip notarization entirely with SKIP_NOTARIZE=1.
-NOTARIZE_PROFILE="${NOTARIZE_PROFILE:-notarytool-studio}"
+# Apple signing identity + notarization profile come from signing/developer-id.conf
+# (environment wins over the file). Nothing about the identity is hardcoded here: this
+# script used to carry the UPSTREAM project's Developer ID, which would have signed the
+# fork's releases as someone else — or, far likelier, failed at the notarization step.
+# SKIP_NOTARIZE=1 skips Developer ID signing, notarization and stapling, producing the
+# unnotarized image this project shipped before it had an Apple account. Two legitimate
+# uses: local test images, and the one-time BRIDGE release — which must be signed with the
+# legacy self-signed identity so existing installs accept it, and therefore cannot be
+# notarized. Everything after the bridge goes out notarized.
+DEV_ID_CONF="$SCRIPT_DIR/signing/developer-id.conf"
+if [ -f "$DEV_ID_CONF" ]; then
+    _env_dev_id="$DEVELOPER_ID_APP"; _env_prof="$NOTARIZE_PROFILE"
+    # shellcheck disable=SC1090
+    source "$DEV_ID_CONF"
+    if [ -n "$_env_dev_id" ]; then DEVELOPER_ID_APP="$_env_dev_id"; fi
+    if [ -n "$_env_prof" ]; then NOTARIZE_PROFILE="$_env_prof"; fi
+fi
+NOTARIZE_PROFILE="${NOTARIZE_PROFILE:-switcher3way-notary}"
+
+# Every image this script produces is a candidate for shipping, so require the Team ID
+# here rather than only on notarized builds. The BRIDGE release is the trap: it is built
+# with SKIP_NOTARIZE=1 and signed with the legacy identity, yet it is the single build
+# that MUST carry RSReleaseTeamID — it is what lets existing installs accept a Developer
+# ID successor at all. A bridge shipped without it strands every install permanently.
+# Set ALLOW_NO_TEAM_ID=1 for a throwaway local image.
+if [ -z "$TEAM_ID" ] && [ -n "$DEVELOPER_ID_APP" ]; then
+    TEAM_ID=$(printf '%s' "$DEVELOPER_ID_APP" | sed -n 's/.*(\([A-Z0-9]\{10\}\))$/\1/p')
+fi
+if [ -z "$TEAM_ID" ] && [ "${ALLOW_NO_TEAM_ID:-0}" != "1" ]; then
+    echo "ERROR: TEAM_ID is empty — this image could never accept a Developer ID update."
+    echo "       Set it in $DEV_ID_CONF (developer.apple.com/account → Membership details)."
+    echo "       (Or ALLOW_NO_TEAM_ID=1 for a throwaway local image.)"
+    exit 1
+fi
+export TEAM_ID
+
+# Fail before the 10-minute build rather than at the signing step at the end.
+if [ "${SKIP_NOTARIZE:-0}" != "1" ] && [ -z "$DEVELOPER_ID_APP" ]; then
+    echo "ERROR: DEVELOPER_ID_APP is not set — fill in $DEV_ID_CONF."
+    echo "       (Or run with SKIP_NOTARIZE=1 for a test image or the bridge release.)"
+    exit 1
+fi
 DMG_TEMP="${APP_NAME}-temp.dmg"
 VOL_NAME="${APP_NAME}"
 BACKGROUND="dmg_background.png"
@@ -21,8 +60,15 @@ echo "=== Creating styled DMG ==="
 # 0. ВСЕГДА пересобираем приложение из исходников. Без этого шага DMG берёт имя
 #    из version.json, а payload — из случайно лежащего рядом Switcher3way.app.
 #    Именно так в релиз 2.1.0 попал бандл 2.0.3: имя было 2.1.0, а внутри 2.0.3.
+#    REQUIRE_DEVELOPER_ID makes build_app.sh refuse to sign a release with the legacy
+#    self-signed identity or ad-hoc — both notarize-fail, and finding that out here costs
+#    a full rebuild.
 echo "→ Rebuilding app from source (build_app.sh)..."
-"$SCRIPT_DIR/build_app.sh"
+if [ "${SKIP_NOTARIZE:-0}" = "1" ]; then
+    "$SCRIPT_DIR/build_app.sh"
+else
+    REQUIRE_DEVELOPER_ID=1 "$SCRIPT_DIR/build_app.sh"
+fi
 
 # 0a. Жёсткая проверка: версия в собранном бандле обязана совпадать с version.json,
 #     иначе отказываемся паковать DMG.
@@ -152,10 +198,9 @@ rm -f "$DMG_TEMP"
 # 9a. Подписываем САМ .dmg Developer ID. Без этого образ нотаризуется и стейплится, но
 #     `spctl -t install` даёт "no usable signature" — у скачанного образа нет подписи
 #     контейнера, и на части Mac это приводит к недоверию к вынутому из него .app.
-SIGN_ID="Developer ID Application: Rashid Nasibulin (9GEWCZ59HK)"
 if [ "${SKIP_NOTARIZE:-0}" != "1" ]; then
     echo "→ Code signing the DMG (Developer ID + secure timestamp)..."
-    codesign --force --timestamp --sign "$SIGN_ID" "$DMG_NAME"
+    codesign --force --timestamp --sign "$DEVELOPER_ID_APP" "$DMG_NAME"
     codesign --verify --verbose=2 "$DMG_NAME"
 fi
 
