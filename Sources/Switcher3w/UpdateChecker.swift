@@ -35,17 +35,28 @@ enum UpdateError: LocalizedError {
     }
 }
 
-/// Checks the fork's OWN releases for new versions and drives the
+/// Checks the project's OWN releases for new versions and drives the
 /// notify → one-click-install flow. The upstream updater was deleted at fork time;
 /// this one can never offer a stock rashn/RuSwitcher build because its only source
-/// is the main repo's own releases (WhisKeySwitch/Switcher3way — consolidated from
-/// the separate switcher3way-releases repo in August 2026).
+/// is the project's own releases.
+///
+/// Release hosting has moved twice. It was the separate `switcher3way-releases` repo,
+/// was consolidated onto the main repo in August 2026, and moves back to
+/// `switcher3way-releases` now that the source repo goes private: the GitHub releases
+/// API returns 404 to unauthenticated clients for a private repo, and background check
+/// failures are silent by design, so a private main repo would strand every installed
+/// copy with no way to tell it where to look.
+///
+/// Each move needs a bridge release published to BOTH the old and the new host, because
+/// installed copies only learn the new address by updating. This one rides the same
+/// bridge as the Developer ID migration (see `signing/README.md`).
 @MainActor
 final class UpdateChecker {
     static let shared = UpdateChecker()
 
-    /// The project's own releases — the only update source.
-    nonisolated private static let api = URL(string: "https://api.github.com/repos/WhisKeySwitch/Switcher3way/releases/latest")!
+    /// The project's own releases — the only update source. This repo must stay PUBLIC:
+    /// it is the one address every installed copy already knows.
+    nonisolated private static let api = URL(string: "https://api.github.com/repos/WhisKeySwitch/switcher3way-releases/releases/latest")!
     private static let checkInterval: TimeInterval = 24 * 60 * 60
 
     private var isChecking = false { didSet { onStateChange?() } }

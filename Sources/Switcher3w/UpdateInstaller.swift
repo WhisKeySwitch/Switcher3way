@@ -87,15 +87,64 @@ enum UpdateInstaller {
 
     // MARK: - Code signature
 
-    /// The new bundle must have a valid signature whose leaf certificate is byte-identical
-    /// to the running app's. Ad-hoc builds have no certificate → they can neither ship nor
-    /// accept updates (development builds are excluded by design).
+    /// The new bundle must be signed by us. Two ways to be us, tried in that order:
+    ///
+    /// 1. **Developer ID, Apple-anchored, our team** — the shipping case. Checked with a
+    ///    code requirement (`anchor apple generic` + leaf OU), NOT by comparing certificate
+    ///    bytes: a Developer ID certificate expires and is re-issued with a different leaf,
+    ///    and a byte comparison would silently break every installed copy's updater on the
+    ///    day that happens. The team identifier survives re-issue; the Apple anchor is what
+    ///    makes it unforgeable (a self-signed certificate can put any string in its OU, and
+    ///    `SecStaticCodeCheckValidity` alone would accept it).
+    ///
+    /// 2. **Byte-identical leaf certificate** — the legacy path, for the self-signed identity
+    ///    the fork shipped with before it had an Apple Developer account. Kept so that a
+    ///    self-signed build can still update to another self-signed build.
+    ///
+    /// The combination is what carries existing installs across the migration: a self-signed
+    /// build fails (2) against a Developer ID successor but passes (1), because the team it
+    /// should trust is stamped into its own signed Info.plist as `RSReleaseTeamID`.
+    ///
+    /// Ad-hoc builds have no certificate at all → they can neither ship nor accept updates.
     private static func verifySignatureMatchesRunningApp(_ bundle: URL) throws {
+        if let team = releaseTeamIdentifier, signedByDeveloperID(bundle, team: team) {
+            rslog("update: signature OK — Developer ID team \(team)")
+            return
+        }
         guard let newCert = validLeafCertificate(at: bundle) else { throw UpdateError.signatureInvalid }
         guard let ourCert = validLeafCertificate(at: URL(fileURLWithPath: Bundle.main.bundlePath)) else {
             throw UpdateError.signatureInvalid
         }
-        guard newCert == ourCert else { throw UpdateError.signatureMismatch }
+        guard newCert == ourCert else {
+            rslog("update: signature rejected — not our Developer ID team and leaf differs")
+            throw UpdateError.signatureMismatch
+        }
+        rslog("update: signature OK — identical leaf certificate (legacy identity)")
+    }
+
+    /// The Developer ID team whose builds this copy accepts, stamped at build time by
+    /// `build_app.sh` from `signing/developer-id.conf`. Inside our own signed bundle, so
+    /// it cannot be edited without invalidating the running app's signature. `nil` when
+    /// the app was built without a configured team (development builds).
+    private static var releaseTeamIdentifier: String? {
+        guard let team = Bundle.main.object(forInfoDictionaryKey: "RSReleaseTeamID") as? String,
+              !team.isEmpty else { return nil }
+        return team
+    }
+
+    /// Does the bundle carry a valid Developer ID signature issued to `team` by Apple?
+    private static func signedByDeveloperID(_ bundle: URL, team: String) -> Bool {
+        // Reject anything that could break out of the requirement string. Team IDs are
+        // 10 alphanumerics; nothing else has any business reaching SecRequirement.
+        guard team.count == 10, team.allSatisfy({ $0.isLetter || $0.isNumber }) else { return false }
+        let text = "anchor apple generic and certificate leaf[subject.OU] = \"\(team)\""
+        var requirement: SecRequirement?
+        guard SecRequirementCreateWithString(text as CFString, [], &requirement) == errSecSuccess,
+              let requirement else { return false }
+        var staticCode: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(bundle as CFURL, [], &staticCode) == errSecSuccess,
+              let code = staticCode else { return false }
+        return SecStaticCodeCheckValidity(code, [], requirement) == errSecSuccess
     }
 
     /// Validates the static code at `url` and returns its leaf certificate DER bytes.
