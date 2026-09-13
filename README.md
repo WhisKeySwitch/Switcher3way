@@ -12,7 +12,7 @@
   <a href="https://github.com/WhisKeySwitch/Switcher3way/releases/latest"><img src="https://img.shields.io/github/v/release/WhisKeySwitch/Switcher3way?label=latest&color=blue" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/macOS-13%2B-black?logo=apple&logoColor=white" alt="macOS 13+">
   <a href="https://apps.microsoft.com/detail/9MXFXL7GG3C5"><img src="https://img.shields.io/badge/Windows-Microsoft%20Store-0078D4?logo=windows&logoColor=white" alt="Windows — Microsoft Store"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-proprietary-lightgrey" alt="Proprietary licence"></a>
 </p>
 
 <p align="center">
@@ -87,4 +87,6 @@ The Windows app is C# / WinUI 3 under [`windows/`](windows/); the layout-detecti
 
 ## Credits & license
 
-Forked from [rashn/RuSwitcher](https://github.com/rashn/RuSwitcher) (MIT) — a two-layout RU/EN switcher — and generalized to N-way with a reworked UI. MIT License; see [LICENSE](LICENSE).
+Forked from [rashn/RuSwitcher](https://github.com/rashn/RuSwitcher) (MIT) — a two-layout RU/EN switcher — and generalized to N-way with a reworked UI. The MIT licence permits this; rashn's copyright notice is retained in [LICENSE](LICENSE) as it requires.
+
+Switcher3way itself is **proprietary software**, licensed and not sold: a 14-day trial, then $10/year or $30 for a perpetual licence. See [LICENSE](LICENSE) for the terms and for the notices of every third-party component it includes.
