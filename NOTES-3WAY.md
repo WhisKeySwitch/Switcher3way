@@ -125,6 +125,18 @@ bash create_dmg.sh                    # signed + notarized + stapled, ready to s
 SKIP_NOTARIZE=1 bash create_dmg.sh    # local test image; will NOT pass Gatekeeper elsewhere
 ```
 
+**Where a notarized release may be published.** Until the last self-signed installs have
+crossed over, a Developer ID release goes to `switcher3way-releases` ONLY, never to the main
+repo. Copies still at 1.5.2 or earlier poll the main repo and carry no `RSReleaseTeamID`, so
+they fall back to comparing certificate bytes — and a Developer ID signature can never match a
+self-signed one. If the main repo's `latest` becomes a notarized build, every one of those
+installs fails its update silently and forever, with no way to reach it.
+
+So the main repo's `latest` stays pinned at the bridge (1.6.1). A straggler updates to the
+bridge, and the bridge points it at `switcher3way-releases`, where the real latest lives. Only
+once those installs are gone does publishing to both stop mattering — and by then the main repo
+is private anyway.
+
 **Migrating from the self-signed identity.** The switch changes the app's designated requirement,
 which drops Accessibility and Input Monitoring. That path is already handled:
 `AppDelegate.runPermissionWizard` notices "granted before, gone now", runs `tccutil reset` to clear
