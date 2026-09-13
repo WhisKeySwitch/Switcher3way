@@ -1,45 +1,196 @@
-MIT License
+Switcher3way — End User License Agreement
+=========================================
 
-Copyright (c) 2026 IronMade
+Copyright (c) 2026 IronMade. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Switcher3way is proprietary software. It is licensed, not sold.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+IMPORTANT — READ BEFORE USING. By installing or using Switcher3way you agree to
+this Agreement. If you do not agree, do not install or use it.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+--------------------------------------------------------------------------------
+1. LICENCE GRANTED
+--------------------------------------------------------------------------------
+
+Subject to this Agreement, IronMade grants you a personal, non-exclusive,
+non-transferable, revocable licence to install and use Switcher3way:
+
+  (a) TRIAL — for fourteen (14) days from first launch, at no charge, with the
+      full feature set, for the purpose of deciding whether to buy a licence.
+
+  (b) ANNUAL — on any number of computers you personally use, for the period
+      covered by your payment, renewing only if you choose to renew.
+
+  (c) PERPETUAL ("lifetime") — on any number of computers you personally use,
+      indefinitely, for the version line current at the time of purchase and
+      every update IronMade makes available to perpetual licensees.
+
+A licence is issued to a person or to one organisation. Where issued to an
+organisation, it covers use by one named individual within it; additional
+individuals require additional licences.
+
+--------------------------------------------------------------------------------
+2. WHAT YOU MAY NOT DO
+--------------------------------------------------------------------------------
+
+You may not:
+
+  (a) sell, rent, lease, sublicense, lend or otherwise distribute Switcher3way
+      or your licence key or licence file to anyone else;
+  (b) circumvent, disable or tamper with the trial period, the licence check,
+      or any part of the software that enforces this Agreement, nor distribute
+      the means to do so;
+  (c) remove or alter any copyright, trademark or licence notice;
+  (d) reverse engineer, decompile or disassemble Switcher3way, EXCEPT to the
+      precise extent that such activity cannot lawfully be restricted — in the
+      European Union this includes the rights reserved to you by Articles 5 and
+      6 of Directive 2009/24/EC, and comparable provisions elsewhere. Nothing in
+      this Agreement purports to limit a right the law does not allow to be
+      limited.
+
+Clause (d) does not apply to the third-party components listed in the notices
+below, which remain governed by their own licences.
+
+--------------------------------------------------------------------------------
+3. OWNERSHIP
+--------------------------------------------------------------------------------
+
+Switcher3way is protected by copyright. IronMade retains all right, title and
+interest in it, except for the third-party components identified below, which
+remain the property of their respective authors. You own the licence, not the
+software.
+
+--------------------------------------------------------------------------------
+4. YOUR TEXT STAYS YOURS
+--------------------------------------------------------------------------------
+
+Switcher3way reads keystrokes and rewrites text locally, on your computer, in
+order to do its job. It transmits no keystrokes, no text and no personal data to
+IronMade or to anyone else. Its only network activity is checking for updates,
+which you can switch off. Licence validation is performed offline.
+
+--------------------------------------------------------------------------------
+5. TERM AND TERMINATION
+--------------------------------------------------------------------------------
+
+This Agreement runs until terminated. It terminates automatically if you breach
+Section 2. On termination you must stop using Switcher3way and remove it. A
+trial that expires, or an annual licence that lapses, ends the licence granted
+in Section 1 but does not by itself terminate this Agreement.
+
+--------------------------------------------------------------------------------
+6. NO WARRANTY
+--------------------------------------------------------------------------------
+
+SWITCHER3WAY IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+Switcher3way edits text as you type. It can misjudge a word and change something
+you meant to keep. Do not rely on it where such a change would be costly, and
+keep your own copies of anything that matters.
+
+--------------------------------------------------------------------------------
+7. LIMITATION OF LIABILITY
+--------------------------------------------------------------------------------
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL IRONMADE BE LIABLE FOR
+ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
+ARISING FROM OR IN CONNECTION WITH SWITCHER3WAY OR ITS USE. IRONMADE'S TOTAL
+LIABILITY SHALL NOT EXCEED THE AMOUNT YOU PAID FOR YOUR LICENCE IN THE TWELVE
+MONTHS PRECEDING THE CLAIM.
+
+Nothing here excludes liability that cannot lawfully be excluded, including
+liability for death or personal injury caused by negligence, for fraud, or any
+statutory consumer right you have that cannot be waived.
+
+--------------------------------------------------------------------------------
+8. GOVERNING LAW
+--------------------------------------------------------------------------------
+
+This Agreement is governed by the laws of Ukraine, without regard to its
+conflict-of-laws rules. If you are a consumer, this does not deprive you of the
+protection of the mandatory law of your country of residence.
+
+--------------------------------------------------------------------------------
+9. CONTACT
+--------------------------------------------------------------------------------
+
+IronMade — support@ironmade.site
 
 
 ================================================================================
 THIRD-PARTY NOTICES
 ================================================================================
 
-This product includes software from the projects below. The MIT permission
-notice reproduced above applies equally to the MIT-licensed portions listed
-here, and their copyright notices are retained as required.
+Switcher3way's own source is proprietary (Section 3). It incorporates the
+components below, which remain under their own licences. Those licences are
+unaffected by this Agreement and, where they conflict with it, they prevail for
+the components they cover.
 
-RuSwitcher (https://github.com/rashn/RuSwitcher)
-Copyright (c) 2025 Rashns
-Licensed under the MIT License.
-Portions of the layout-detection logic derive from this project.
+--------------------------------------------------------------------------------
+RuSwitcher — MIT
+--------------------------------------------------------------------------------
 
-Bundled spelling dictionaries — each ships with its own license text beside its
-data files, and remains under its own terms:
+Switcher3way is a fork of RuSwitcher (https://github.com/rashn/RuSwitcher).
+Portions of the layout-detection logic derive from it.
+
+  Copyright (c) 2025 Rashns
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+The MIT licence permits this proprietary derivative work; the notice above is
+retained as that licence requires.
+
+--------------------------------------------------------------------------------
+Bundled spelling dictionaries (Windows build)
+--------------------------------------------------------------------------------
+
+Each ships with its own licence text beside its data files and remains under its
+own terms. See windows/src/Switcher3way.Dictionaries/DICTIONARIES.md.
+
   * en_US — SCOWL via wooorm/dictionaries — MIT AND BSD
   * ru    — Lebedev/Klukvin via wooorm/dictionaries — BSD-3-Clause
-  * uk    — LibreOffice uk_UA — MPL 1.1 (retained under MPL; included as data)
-See windows/src/Switcher3way.Dictionaries/DICTIONARIES.md for details.
+  * uk    — LibreOffice uk_UA — Mozilla Public License 1.1
+  * bg, sr — see DICTIONARIES.md for provenance and terms
 
-WeCantSpell.Hunspell — MPL 2.0.
-Microsoft Windows App SDK / WebView2 — Microsoft Software License Terms.
+The macOS build uses the spelling dictionaries provided by macOS itself and
+bundles none of its own.
+
+--------------------------------------------------------------------------------
+WeCantSpell.Hunspell — Mozilla Public License 2.0 (Windows build)
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Microsoft Windows App SDK / WebView2 — Microsoft Software License Terms
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+WRITTEN OFFER — SOURCE FOR MPL-COVERED COMPONENTS
+--------------------------------------------------------------------------------
+
+The Mozilla Public License is a file-level copyleft: it permits distribution
+inside proprietary software, but requires the Source Code Form of the covered
+files to remain available. The MPL-covered components above (the uk_UA
+dictionary under MPL 1.1, WeCantSpell.Hunspell under MPL 2.0) are used
+UNMODIFIED, and their source is available from their upstream projects.
+
+If you would like the exact Source Code Form of any MPL-covered component as
+shipped in a Switcher3way release, write to the contact address in Section 9 and
+it will be provided at no charge.
