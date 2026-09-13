@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/WhisKeySwitch/Switcher3way/releases/latest"><img src="https://img.shields.io/github/v/release/WhisKeySwitch/Switcher3way?label=latest&color=blue" alt="Latest release"></a>
+  <a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest"><img src="https://img.shields.io/github/v/release/WhisKeySwitch/switcher3way-releases?label=latest&color=blue" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/macOS-13%2B-black?logo=apple&logoColor=white" alt="macOS 13+">
   <a href="https://apps.microsoft.com/detail/9MXFXL7GG3C5"><img src="https://img.shields.io/badge/Windows-Microsoft%20Store-0078D4?logo=windows&logoColor=white" alt="Windows — Microsoft Store"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-proprietary-lightgrey" alt="Proprietary licence"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-free%20to%20use-brightgreen" alt="Free to use"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/WhisKeySwitch/Switcher3way/releases/latest"><b>⬇&nbsp; Download for macOS</b></a>
+  <a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest"><b>⬇&nbsp; Download for macOS</b></a>
   &nbsp;·&nbsp;
   <a href="https://apps.microsoft.com/detail/9MXFXL7GG3C5"><b>⬇&nbsp; Get it for Windows</b></a>
 </p>
@@ -37,7 +37,7 @@ Typed `ghbdtn` when you meant `привет` — or `ghbdsn` when you meant `п�
 
 ## Install — macOS
 
-**Download the DMG** from the [latest release](https://github.com/WhisKeySwitch/Switcher3way/releases/latest), open it, and drag **Switcher3way.app** into **Applications**.
+**Download the DMG** from the [latest release](https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest), open it, and drag **Switcher3way.app** into **Applications**.
 
 The app is unnotarized (no Apple Developer account), so the **first** launch is blocked by Gatekeeper if you double-click it — instead **right-click the app → Open**, then confirm. macOS remembers the choice, so later launches are normal.
 
@@ -89,4 +89,4 @@ The Windows app is C# / WinUI 3 under [`windows/`](windows/); the layout-detecti
 
 Forked from [rashn/RuSwitcher](https://github.com/rashn/RuSwitcher) (MIT) — a two-layout RU/EN switcher — and generalized to N-way with a reworked UI. The MIT licence permits this; rashn's copyright notice is retained in [LICENSE](LICENSE) as it requires.
 
-Switcher3way itself is **proprietary software**, licensed and not sold: a 14-day trial, then $10/year or $30 for a perpetual licence. See [LICENSE](LICENSE) for the terms and for the notices of every third-party component it includes.
+Switcher3way itself is **free to use**, under the terms in [LICENSE](LICENSE), which also carries the notices of every third-party component it includes.

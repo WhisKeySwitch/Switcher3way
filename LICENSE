@@ -3,7 +3,8 @@ Switcher3way — End User License Agreement
 
 Copyright (c) 2026 IronMade. All rights reserved.
 
-Switcher3way is proprietary software. It is licensed, not sold.
+Switcher3way is proprietary software, provided free of charge. It is licensed,
+not sold.
 
 IMPORTANT — READ BEFORE USING. By installing or using Switcher3way you agree to
 this Agreement. If you do not agree, do not install or use it.
@@ -13,21 +14,14 @@ this Agreement. If you do not agree, do not install or use it.
 --------------------------------------------------------------------------------
 
 Subject to this Agreement, IronMade grants you a personal, non-exclusive,
-non-transferable, revocable licence to install and use Switcher3way:
+non-transferable, revocable licence to install and use Switcher3way, at no
+charge, on any number of computers you personally use, for as long as this
+Agreement remains in force. The same applies to use within an organisation.
 
-  (a) TRIAL — for fourteen (14) days from first launch, at no charge, with the
-      full feature set, for the purpose of deciding whether to buy a licence.
-
-  (b) ANNUAL — on any number of computers you personally use, for the period
-      covered by your payment, renewing only if you choose to renew.
-
-  (c) PERPETUAL ("lifetime") — on any number of computers you personally use,
-      indefinitely, for the version line current at the time of purchase and
-      every update IronMade makes available to perpetual licensees.
-
-A licence is issued to a person or to one organisation. Where issued to an
-organisation, it covers use by one named individual within it; additional
-individuals require additional licences.
+Switcher3way is free today. IronMade may charge for future versions; if that
+happens, this licence still covers the version you already have, and a paid
+version would come with its own terms. Nothing here obliges you to pay for
+anything, now or later.
 
 --------------------------------------------------------------------------------
 2. WHAT YOU MAY NOT DO
@@ -37,18 +31,15 @@ You may not:
 
   (a) sell, rent, lease, sublicense, lend or otherwise distribute Switcher3way
       or your licence key or licence file to anyone else;
-  (b) circumvent, disable or tamper with the trial period, the licence check,
-      or any part of the software that enforces this Agreement, nor distribute
-      the means to do so;
-  (c) remove or alter any copyright, trademark or licence notice;
-  (d) reverse engineer, decompile or disassemble Switcher3way, EXCEPT to the
+  (b) remove or alter any copyright, trademark or licence notice;
+  (c) reverse engineer, decompile or disassemble Switcher3way, EXCEPT to the
       precise extent that such activity cannot lawfully be restricted — in the
       European Union this includes the rights reserved to you by Articles 5 and
       6 of Directive 2009/24/EC, and comparable provisions elsewhere. Nothing in
       this Agreement purports to limit a right the law does not allow to be
       limited.
 
-Clause (d) does not apply to the third-party components listed in the notices
+Clause (c) does not apply to the third-party components listed in the notices
 below, which remain governed by their own licences.
 
 --------------------------------------------------------------------------------
@@ -74,9 +65,8 @@ which you can switch off. Licence validation is performed offline.
 --------------------------------------------------------------------------------
 
 This Agreement runs until terminated. It terminates automatically if you breach
-Section 2. On termination you must stop using Switcher3way and remove it. A
-trial that expires, or an annual licence that lapses, ends the licence granted
-in Section 1 but does not by itself terminate this Agreement.
+Section 2. On termination you must stop using Switcher3way and remove it. You
+may stop using it at any time, for any reason.
 
 --------------------------------------------------------------------------------
 6. NO WARRANTY
@@ -97,8 +87,7 @@ keep your own copies of anything that matters.
 TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL IRONMADE BE LIABLE FOR
 ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 ARISING FROM OR IN CONNECTION WITH SWITCHER3WAY OR ITS USE. IRONMADE'S TOTAL
-LIABILITY SHALL NOT EXCEED THE AMOUNT YOU PAID FOR YOUR LICENCE IN THE TWELVE
-MONTHS PRECEDING THE CLAIM.
+LIABILITY SHALL NOT EXCEED THE AMOUNT YOU PAID FOR SWITCHER3WAY, IF ANY.
 
 Nothing here excludes liability that cannot lawfully be excluded, including
 liability for death or personal injury caused by negligence, for fraud, or any
