@@ -4,7 +4,35 @@ set -e
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PRODUCT_NAME="Switcher3w"   # SwiftPM build product / module name (can't start with a digit)
 APP_NAME="Switcher3way"     # user-facing app + bundle name
-APP_BUNDLE="$PROJECT_DIR/$APP_NAME.app"
+
+# Two flavours from one source (see openspec/changes/ship-an-app-store-variant):
+#
+#   bash build_app.sh              direct     unsandboxed, Developer ID, self-updating
+#   bash build_app.sh --appstore   App Store  sandboxed, updater compiled out
+#
+# Both produce a bundle called Switcher3way.app — the user-facing name is the same product —
+# but in different directories and under different bundle identifiers, so both can be installed
+# at once (one in /Applications, one in ~/Applications). That side-by-side install is not a
+# convenience: the two flavours have DIFFERENT password-field protection, and comparing them is
+# the only way to see it.
+FLAVOUR="direct"
+if [ "${1:-}" = "--appstore" ] || [ "${SWITCHER_APPSTORE:-0}" = "1" ]; then
+    FLAVOUR="appstore"
+fi
+
+if [ "$FLAVOUR" = "appstore" ]; then
+    export SWITCHER_APPSTORE=1          # read by Package.swift → -DSWITCHER_APPSTORE
+    APP_BUNDLE="$PROJECT_DIR/dist/appstore/$APP_NAME.app"
+    BUNDLE_ID="com.switcher3way.appstore"
+    ENTITLEMENTS="$PROJECT_DIR/signing/appstore.entitlements"
+else
+    unset SWITCHER_APPSTORE
+    APP_BUNDLE="$PROJECT_DIR/$APP_NAME.app"
+    # Unchanged on purpose: this identifier holds the Accessibility and Input Monitoring grants
+    # on every machine the app is already installed on. Changing it would drop them silently.
+    BUNDLE_ID="com.switcher3way.app"
+    ENTITLEMENTS=""
+fi
 # The products directory moves between toolchains (.build/apple/… on older SwiftPM,
 # .build/out/… on the swiftbuild system), so ask the toolchain instead of hardcoding:
 # a wrong guess here silently packages whatever stale binary the old path still holds.
@@ -23,7 +51,7 @@ if [ -z "$SHORT_VERSION" ]; then
     exit 1
 fi
 
-echo "=== Building $APP_NAME v$SHORT_VERSION (build $BUILD_VERSION) ==="
+echo "=== Building $APP_NAME v$SHORT_VERSION (build $BUILD_VERSION) — $FLAVOUR flavour ==="
 
 # 1. Собираем release — universal (arm64 + x86_64), чтобы работало и на Intel-маках
 echo "→ swift build -c release --arch arm64 --arch x86_64 (universal)..."
@@ -33,6 +61,7 @@ swift build -c release --arch arm64 --arch x86_64
 # 2. Создаём .app bundle
 echo "→ Creating app bundle..."
 rm -rf "$APP_BUNDLE"
+mkdir -p "$(dirname "$APP_BUNDLE")"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
@@ -54,6 +83,9 @@ cp "$PROJECT_DIR/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :RSDevTag $DEV_TAG" "$APP_BUNDLE/Contents/Info.plist" 2>/dev/null \
   || /usr/libexec/PlistBuddy -c "Add :RSDevTag string $DEV_TAG" "$APP_BUNDLE/Contents/Info.plist"
 echo "→ Stamped Info.plist: CFBundleShortVersionString=$SHORT_VERSION$DEV_TAG CFBundleVersion=$BUILD_VERSION"
+
+/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$APP_BUNDLE/Contents/Info.plist"
+echo "→ Bundle identifier: $BUNDLE_ID"
 
 # 4a. Stamp the Developer ID Team ID the updater will accept in a successor build.
 #     Read from signing/developer-id.conf (sourced in step 7 below — do it early here so
@@ -149,8 +181,14 @@ if [ "$HAVE_DEV_ID" = "1" ]; then
     # No --deep: Apple deprecated it for Developer ID, and this bundle has nothing
     # nested to sign anyway (one binary + resources). --options runtime is mandatory
     # for notarization; --timestamp is what keeps the signature valid past cert expiry.
-    codesign --force --options runtime --timestamp --sign "$DEVELOPER_ID_APP" "$APP_BUNDLE"
-    SIGNED_AS="'$DEVELOPER_ID_APP' (Developer ID, hardened runtime — notarizable)"
+    if [ -n "$ENTITLEMENTS" ]; then
+        codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" \
+                 --sign "$DEVELOPER_ID_APP" "$APP_BUNDLE"
+        SIGNED_AS="'$DEVELOPER_ID_APP' + $(basename "$ENTITLEMENTS") (sandboxed)"
+    else
+        codesign --force --options runtime --timestamp --sign "$DEVELOPER_ID_APP" "$APP_BUNDLE"
+        SIGNED_AS="'$DEVELOPER_ID_APP' (Developer ID, hardened runtime — notarizable)"
+    fi
 elif [ "${REQUIRE_DEVELOPER_ID:-0}" = "1" ]; then
     echo "ERROR: REQUIRE_DEVELOPER_ID=1 but no usable Developer ID Application identity."
     if [ -z "$DEVELOPER_ID_APP" ]; then

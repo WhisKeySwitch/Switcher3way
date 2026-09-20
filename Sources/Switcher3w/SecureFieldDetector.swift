@@ -8,28 +8,69 @@ import Carbon
 /// looked and found nothing" and "the guard is broken". The equivalent Windows guard reported
 /// `false` for every field on earth for four releases because nobody could tell those two apart
 /// from the log (see `windows/src/Switcher3way.App/SecureField.cs`).
+/// One signal's answer. Three states rather than two, because "could not run" and "ran and found
+/// nothing" have the same consequence and are completely different facts. Reporting the first as
+/// the second is exactly how a guard that never fires becomes indistinguishable from a guard that
+/// correctly finds nothing — the failure this file's header already records from the Windows port.
+///
+/// In the sandboxed App Store flavour signals 1 and 2 are permanently `.unavailable`: the sandbox
+/// forbids inspecting another application's Accessibility elements, so those checks never run.
+enum SignalState: String {
+    case yes
+    case no
+    case unavailable
+
+    init(_ flag: Bool) { self = flag ? .yes : .no }
+
+    /// Only an outright `yes` suppresses conversion. `unavailable` is not a positive — the guard
+    /// stays fail-open, so a signal that cannot run can never block the user from typing.
+    var isPositive: Bool { self == .yes }
+}
+
 struct SecureFieldVerdict {
-    /// Any signal fired → treat as a password field.
-    let isPassword: Bool
     /// Signal 1: the focused element's AX subrole is `AXSecureTextField`.
-    let subroleSecure: Bool
+    let subroleSecure: SignalState
     /// Signal 2: a text-entry element whose label/placeholder/help says "password".
-    let labelledPassword: Bool
+    let labelledPassword: SignalState
     /// Signal 3: the process-global secure-input flag (the app's original, only check).
-    let secureInput: Bool
+    let secureInput: SignalState
+    /// Signal 4: the frontmost application is one that exists to hold credentials. Coarse — it
+    /// suppresses the whole application rather than one field — but it needs no element query, so
+    /// it is the only password signal that still works when the sandbox forbids inspection.
+    let credentialApp: SignalState
     /// What had focus, for the log — role/subrole and the label we matched against.
     let focusDescription: String
 
-    /// One line naming the verdict and every signal, for the debug log and `diagpw`.
-    var describe: String {
-        "password=\(isPassword)  (subrole=\(subroleSecure) labelled=\(labelledPassword) " +
-        "secureInput=\(secureInput))  focus[\(focusDescription)]"
+    /// Any signal fired → treat as a password field.
+    var isPassword: Bool {
+        subroleSecure.isPositive || labelledPassword.isPositive
+            || secureInput.isPositive || credentialApp.isPositive
     }
 
+    /// One line naming the verdict and every signal, for the debug log and `diagpw`.
+    var describe: String {
+        "password=\(isPassword)  (subrole=\(subroleSecure.rawValue) " +
+        "labelled=\(labelledPassword.rawValue) secureInput=\(secureInput.rawValue) " +
+        "credentialApp=\(credentialApp.rawValue))  focus[\(focusDescription)]"
+    }
+
+    /// No element to inspect — the signals exist in this build, they simply had nothing to answer
+    /// about. Distinct from `.elementInspectionUnavailable`, where they cannot run at all.
+    @MainActor
     static func none(_ why: String) -> SecureFieldVerdict {
-        SecureFieldVerdict(isPassword: IsSecureEventInputEnabled(), subroleSecure: false,
-                           labelledPassword: false, secureInput: IsSecureEventInputEnabled(),
+        SecureFieldVerdict(subroleSecure: .no, labelledPassword: .no,
+                           secureInput: SignalState(IsSecureEventInputEnabled()),
+                           credentialApp: SecureFieldDetector.frontmostIsCredentialApp(),
                            focusDescription: why)
+    }
+
+    /// This build cannot inspect Accessibility elements at all. The verdict rests on what is left.
+    @MainActor
+    static func elementInspectionUnavailable() -> SecureFieldVerdict {
+        SecureFieldVerdict(subroleSecure: .unavailable, labelledPassword: .unavailable,
+                           secureInput: SignalState(IsSecureEventInputEnabled()),
+                           credentialApp: SecureFieldDetector.frontmostIsCredentialApp(),
+                           focusDescription: "element inspection unavailable (sandboxed build)")
     }
 }
 
@@ -71,6 +112,11 @@ enum SecureFieldDetector {
     /// moved. This is the entry point for the conversion paths — call it once per word and pass the
     /// result down, rather than re-querying per consumer.
     static func verdict() -> SecureFieldVerdict {
+#if SWITCHER_APPSTORE
+        // The sandbox refuses the element query (kAXErrorCannotComplete), so do not pretend to
+        // ask: an answer of "no" here would be a lie about a check that never happened.
+        return .elementInspectionUnavailable()
+#else
         guard let (element, axApp) = focusedElement() else {
             invalidate()
             return .none("no focused element")
@@ -79,11 +125,12 @@ enum SecureFieldDetector {
            CFEqual(key, element), Date().timeIntervalSince(cachedAt) < cacheTTL {
             // Signal 3 is free and can change without focus moving (a terminal toggling secure
             // entry), so it is re-read rather than cached.
-            let secure = IsSecureEventInputEnabled()
-            return SecureFieldVerdict(isPassword: cached.subroleSecure || cached.labelledPassword || secure,
-                                      subroleSecure: cached.subroleSecure,
+            // Signals 3 and 4 are free and can change without focus moving, so they are re-read
+            // rather than cached.
+            return SecureFieldVerdict(subroleSecure: cached.subroleSecure,
                                       labelledPassword: cached.labelledPassword,
-                                      secureInput: secure,
+                                      secureInput: SignalState(IsSecureEventInputEnabled()),
+                                      credentialApp: frontmostIsCredentialApp(),
                                       focusDescription: cached.focusDescription)
         }
         let fresh = evaluate(element: element, axApp: axApp)
@@ -91,6 +138,7 @@ enum SecureFieldDetector {
         cachedVerdict = fresh
         cachedAt = Date()
         return fresh
+#endif
     }
 
     /// Convenience for the call sites that only need the answer.
@@ -98,8 +146,12 @@ enum SecureFieldDetector {
 
     /// A fresh, uncached verdict — for `diagpw` and for anything that must not see a stale answer.
     static func describe() -> SecureFieldVerdict {
+#if SWITCHER_APPSTORE
+        return .elementInspectionUnavailable()
+#else
         guard let (element, axApp) = focusedElement() else { return .none("no focused element") }
         return evaluate(element: element, axApp: axApp)
+#endif
     }
 
     /// Drop the cached verdict. Called when focus context changes (app switch, buffer reset), so a
@@ -110,7 +162,14 @@ enum SecureFieldDetector {
         cachedAt = .distantPast
     }
 
-    // MARK: - The three signals
+    /// Signal 4. Reuses the non-removable password-manager list that already hard-gates automatic
+    /// conversion, so the two cannot drift apart.
+    static func frontmostIsCredentialApp() -> SignalState {
+        guard let id = NSWorkspace.shared.frontmostApplication?.bundleIdentifier else { return .no }
+        return SignalState(AutoSwitchPolicy.protectedApps.contains(id))
+    }
+
+    // MARK: - The signals
 
     private static func evaluate(element: AXUIElement, axApp: AXUIElement) -> SecureFieldVerdict {
         let secure = IsSecureEventInputEnabled()
@@ -133,10 +192,10 @@ enum SecureFieldDetector {
 
         let focus = "role=\(role.isEmpty ? "?" : role) subrole=\(subrole.isEmpty ? "-" : subrole)" +
                     (matchedLabel.isEmpty ? "" : " matched='\(matchedLabel)'")
-        return SecureFieldVerdict(isPassword: subroleSecure || labelled || secure,
-                                  subroleSecure: subroleSecure,
-                                  labelledPassword: labelled,
-                                  secureInput: secure,
+        return SecureFieldVerdict(subroleSecure: SignalState(subroleSecure),
+                                  labelledPassword: SignalState(labelled),
+                                  secureInput: SignalState(secure),
+                                  credentialApp: frontmostIsCredentialApp(),
                                   focusDescription: focus)
     }
 

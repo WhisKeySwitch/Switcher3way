@@ -60,8 +60,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
 
         // Software updates: menu state follows the checker; first background check ~15 s
         // after launch, then daily (gated on the setting inside startSchedule).
+#if !SWITCHER_APPSTORE
         UpdateChecker.shared.onStateChange = { [weak self] in self?.rebuildMenu() }
         UpdateChecker.shared.startSchedule()
+#endif
     }
 
     private func setupSettingsCallbacks() {
@@ -883,8 +885,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         helpItem.target = self
         menu.addItem(helpItem)
 
+#if !SWITCHER_APPSTORE
         // Updates: the fork's own updater (source = this repo's own releases).
         // Disabled with a busy title while a check or install is in progress.
+        // Absent from the App Store flavour, which is updated by the store itself.
         let checker = UpdateChecker.shared
         let updatesTitle = checker.isInstalling ? L10n.menuInstallingUpdate
                          : checker.isBusy ? L10n.menuCheckingUpdates
@@ -894,6 +898,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
                                      keyEquivalent: "")
         updatesItem.target = self
         menu.addItem(updatesItem)
+#endif
 
         // "Support Development", "Star on GitHub" removed in the Switcher3way fork.
         menu.addItem(NSMenuItem.separator())
@@ -1093,9 +1098,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         helpController.show()
     }
 
+#if !SWITCHER_APPSTORE
     @objc private func checkForUpdatesTapped() {
         UpdateChecker.shared.checkManually()
     }
+#endif
 
     func applicationWillTerminate(_ notification: Notification) {
         // Don't lose the clipboard in the 2-second window of deferred restore

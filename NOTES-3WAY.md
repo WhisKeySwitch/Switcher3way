@@ -108,6 +108,31 @@ The 5-second ⌥ *undo* after an auto-switch retypes the original text correctly
 layout-toggle-back can be wrong in pure 3-way (it was built around a pair). Proper fix: record the
 pre-switch layout ID in the conversion state and restore it on undo.
 
+## Two build flavours
+
+One source, two outputs (see `openspec/changes/ship-an-app-store-variant`):
+
+```bash
+bash build_app.sh              # direct: unsandboxed, Developer ID, self-updating → ./Switcher3way.app
+bash build_app.sh --appstore   # App Store: sandboxed, no updater → ./dist/appstore/Switcher3way.app
+```
+
+They differ in three ways and nothing else: the App Store flavour compiles with
+`SWITCHER_APPSTORE` (set by `Package.swift` from the environment), signs with
+`signing/appstore.entitlements`, and uses the bundle identifier `com.switcher3way.appstore`. The
+direct flavour keeps `com.switcher3way.app`, because that identifier holds the Accessibility and
+Input Monitoring grants on every machine the app is already installed on.
+
+Both bundles are called `Switcher3way.app` — same product — so install one in `/Applications` and
+the other in `~/Applications` to run them side by side. Do compare them: **their password-field
+protection is not the same.** The sandbox forbids inspecting another application's Accessibility
+elements, so in the App Store flavour the subrole and label signals report `unavailable` and the
+verdict rests on the secure-input flag and the password-manager list. `diagpw` prints all four
+signals in both flavours and names which ones could not run.
+
+`Switcher3wCore` is compiled identically in both — verified by comparing the object file — so
+detection can never differ between them.
+
 ## Notarized distribution
 
 `create_dmg.sh` signs with Developer ID, notarizes the **app bundle** and staples it, then signs,

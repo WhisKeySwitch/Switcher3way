@@ -1,3 +1,5 @@
+// Compiled out of the App Store flavour alongside UpdateChecker — see that file.
+#if !SWITCHER_APPSTORE
 import AppKit
 import CryptoKit
 import Security
@@ -206,3 +208,5 @@ enum UpdateInstaller {
         return stdout
     }
 }
+
+#endif  // !SWITCHER_APPSTORE
