@@ -3,7 +3,7 @@
 - [x] 1.1 Add a `SWITCHER_APPSTORE` Swift compilation condition to `Package.swift`, and verify `swift build -c release` still succeeds with and without it
 - [x] 1.2 Add a sandbox entitlements file (`signing/appstore.entitlements`) declaring `com.apple.security.app-sandbox`, and verify `codesign -d --entitlements -` reports the key on a build signed with it
 - [x] 1.3 Teach `build_app.sh` an App Store flavour that sets the compilation condition, the sandbox entitlements and a distinct bundle identifier, and verify both flavours build from a clean tree and produce bundles with different `CFBundleIdentifier`
-- [ ] 1.4 Verify both variants install and run simultaneously on one Mac, each holding its own permission grants
+- [x] 1.4 Verify both variants install and run simultaneously on one Mac, each holding its own permission grants
 - [x] 1.5 Verify `Switcher3wCore` is compiled identically in both flavours — no `SWITCHER_APPSTORE` occurrences anywhere under `Sources/Switcher3wCore`
 
 ## 2. Password guard: three-state signals
@@ -11,17 +11,24 @@
 - [x] 2.1 Extend the secure-field verdict so each signal reports positive, negative or unavailable, and verify the existing unsandboxed diagnostic still names every signal with unchanged verdicts
 - [x] 2.2 Report the element-based signals as unavailable under `SWITCHER_APPSTORE`, and verify `diagpw` in the sandboxed flavour prints them as unavailable rather than negative
 - [x] 2.3 Confirm the fail-open behaviour is unchanged in both flavours: every query failure still resolves to "not a password field", verified by the existing failure scenarios
-- [ ] 2.4 Verify a focused password field in a browser is still reported as a password field in the sandboxed flavour, via the secure-input signal
+- [x] 2.4 Verify a focused password field in a browser is still reported as a password field in the sandboxed flavour, via the secure-input signal
 - [ ] 2.5 Extend application-level suppression so a frontmost password manager suppresses conversion, feedback and the manual trigger when element inspection is unavailable, and verify with a password manager in the foreground
 
 ## 3. What else the sandbox affects
 
-- [ ] 3.1 Verify conversion end to end in the sandboxed flavour: type a wrong-layout word, invoke the trigger, confirm the text is replaced and the layout switches
-- [ ] 3.2 Verify conversion feedback falls back to the window anchor when no caret position resolves, and that it appears rather than being suppressed
+- [x] 3.1 Verify conversion end to end in the sandboxed flavour: type a wrong-layout word, invoke the trigger, confirm the text is replaced and the layout switches
+- [x] 3.2 Replace the AX-based window anchor with one built from `CGWindowListCopyWindowInfo` bounds, which works under the sandbox, and verify the chip appears in the sandboxed build in an app that is not on the denied list
 - [ ] 3.3 Verify notifications work in the sandboxed flavour, including the learn-from-undo offer and the "couldn't rewrite here" error
 - [ ] 3.4 Verify launch-at-login works in the sandboxed flavour and that the onboarding switch reflects its real state
 - [ ] 3.5 Verify the in-app help window renders in the sandboxed flavour and that external links still open in the browser
 - [ ] 3.6 Verify the debug log is written inside the container and that the diagnostic command-line modes work from the sandboxed bundle
+
+## 3b. macOS 27 regressions found while verifying (affect the DIRECT build too)
+
+- [x] 3b.1 The Accessibility "Open Settings" button did nothing — no dialog, nothing logged by tccd — because `AXIsProcessTrustedWithOptions(prompt:)` no longer raises its dialog on macOS 27. Confirmed beyond this app: Clipy and Shottr behave identically on the same machine. Fixed by opening the Privacy pane directly, in both flavours; verified the button now opens System Settings
+- [ ] 3b.2 Onboarding copy and `docs/user-guide*.md` send users to "Privacy & Security → Accessibility". macOS 27 renamed and merged that pane into **Device Control and Data Access** (one list covering keyboard monitoring, screen recording and app control). Update the copy in all three languages and verify against the macOS 27 UI
+- [ ] 3b.3 After granting Accessibility to an already-running app, conversion did not start until the app was restarted, even though `onAllGranted` is meant to call `startMonitoring`. Establish which it is — the poll timer stopping when the onboarding window closes, or macOS caching the authorization per process — and make the app either recover on its own or tell the user to restart it
+- [ ] 3b.4 Ship 3b.1–3b.3 to the direct channel as their own release rather than behind the App Store change; they are live defects for every user upgrading to macOS 27
 
 ## 4. Remove the updater from the App Store flavour
 

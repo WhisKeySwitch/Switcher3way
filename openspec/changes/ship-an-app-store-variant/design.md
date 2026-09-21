@@ -32,6 +32,14 @@ Three sandbox facts shape everything below, each measured on macOS 27.0 with the
 
 **The password guard reports three states per signal, not two.** `SecureFieldDetector` currently answers positive/negative per signal. Under the sandbox the element-based signals cannot run at all, and reporting "negative" for a check that never executed is exactly the failure this project has already been bitten by — a guard that works and a guard that never ran leaving identical evidence. The verdict type gains `unavailable`, the diagnostic prints it, and the fail-open behaviour is unchanged.
 
+**The conversion chip needs a new anchor, not the existing fallback.** An earlier draft of this
+document said the chip would "fall back to its existing window anchor" under the sandbox. That was
+wrong: the window anchor is itself resolved through `AXUIElementCreateApplication` and
+`kAXFocusedWindowAttribute`, so it fails for exactly the same reason caret resolution does, and the
+sandboxed build has no position to draw at. `CGWindowListCopyWindowInfo` returns window bounds and
+was measured working under the sandbox, so it replaces the AX path as the fallback. Found by
+verifying rather than reasoning — the chip simply never appeared.
+
 **Application-level suppression compensates for element-level loss.** `NSWorkspace.frontmostApplication` survives the sandbox, so `AutoSwitchPolicy`'s denied-application list and its always-off password managers keep working. That is the fallback, and it is weaker: it protects whole applications rather than individual fields. The spec requires disclosing this rather than presenting the variants as equivalent.
 
 **StoreKit 2**, with one auto-renewable subscription carrying an introductory free trial and one non-consumable unlock. Entitlement is read from the platform's current entitlements rather than cached locally, so reinstalls and second Macs resolve themselves. StoreKit 1 is rejected: it would mean manual receipt validation, which is more code and more ways to lock out a paying user.

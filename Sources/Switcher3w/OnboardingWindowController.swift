@@ -256,6 +256,22 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         // System dialog: prompt=true adds the app to the Accessibility list automatically.
         let options = ["AXTrustedCheckOptionPrompt" as CFString: true as CFBoolean] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(options)
+
+        // ...except that dialog no longer appears on macOS 27 — observed here with this app both
+        // sandboxed and not, and reported for other apps (Clipy, Shottr) on the same machine, so
+        // it is the system that changed rather than anything about this build. The button sat
+        // there doing nothing at all: no dialog, and nothing logged by tccd. Meanwhile the Input
+        // Monitoring request beside it still works, which is what made it look app-specific.
+        //
+        // A control that silently does nothing is worse than no control, so open the pane as well
+        // and let the user add the app by hand. Harmless where the prompt does still appear.
+        //
+        // System Settings will not navigate to the anchor if it is already running — a macOS
+        // quirk we cannot fix from here — but bringing it to the front still beats a dead button.
+        if let url = URL(string: "x-apple.systempreferences:"
+                                 + "com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     @objc private func openInputMonitoringSettings() {
