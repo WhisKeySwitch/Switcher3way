@@ -1,7 +1,7 @@
-# Switcher3way
+# Switcher3Way
 
 <p align="center">
-  <img src="icon.png" width="128" alt="Switcher3way icon">
+  <img src="icon.png" width="128" alt="Switcher3Way icon">
 </p>
 
 <p align="center">
@@ -21,7 +21,7 @@
   <a href="https://apps.microsoft.com/detail/9MXFXL7GG3C5"><b>⬇&nbsp; Get it for Windows</b></a>
 </p>
 
-Typed `ghbdtn` when you meant `привет` — or `ghbdsn` when you meant `привіт`? Switcher3way notices words typed in the wrong layout and converts them, either **automatically as you type** or when you tap the **trigger key**. Unlike two-layout switchers, detection is **N-way**: the typed keystrokes are rendered through *every* installed layout, each candidate is validated against its own language's dictionary, and the app switches only when there's a single unambiguous winner. Precision-first: words valid in more than one language (e.g. `там` in both Ukrainian and Russian) are left alone.
+Typed `ghbdtn` when you meant `привет` — or `ghbdsn` when you meant `привіт`? Switcher3Way notices words typed in the wrong layout and converts them, either **automatically as you type** or when you tap the **trigger key**. Unlike two-layout switchers, detection is **N-way**: the typed keystrokes are rendered through *every* installed layout, each candidate is validated against its own language's dictionary, and the app switches only when there's a single unambiguous winner. Precision-first: words valid in more than one language (e.g. `там` in both Ukrainian and Russian) are left alone.
 
 ## Features
 
@@ -49,7 +49,7 @@ On first launch the onboarding checklist asks for two macOS permissions — **Ac
 
 There is also a [direct-download MSI](https://github.com/WhisKeySwitch/Switcher3way/releases/tag/windows-v0.3.0) for anyone who can't use the Store. It needs the [Windows App Runtime 1.6](https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe) installed once and isn't code-signed (SmartScreen will warn — **More info → Run anyway**), but it updates itself and tracks the same version as the Store build.
 
-Windows needs no permission dialog. Switcher3way runs in the notification area and has no main window; Windows 11 hides new tray icons, so expand the notification area with the **^** chevron if you don't see the flag. Add a second keyboard layout first (**Settings → Time & language → Language & region**) — with only one layout there is nothing to convert between, and the app will tell you so.
+Windows needs no permission dialog. Switcher3Way runs in the notification area and has no main window; Windows 11 hides new tray icons, so expand the notification area with the **^** chevron if you don't see the flag. Add a second keyboard layout first (**Settings → Time & language → Language & region**) — with only one layout there is nothing to convert between, and the app will tell you so.
 
 ## Build it yourself
 
@@ -57,7 +57,7 @@ Windows needs no permission dialog. Switcher3way runs in the notification area a
 
 ```bash
 git clone https://github.com/WhisKeySwitch/Switcher3way.git
-cd Switcher3way
+cd Switcher3Way
 bash build_app.sh                    # SwiftPM release (universal), signed
 cp -R Switcher3way.app /Applications/
 open /Applications/Switcher3way.app
@@ -69,7 +69,7 @@ By default `build_app.sh` signs **ad-hoc**, which means macOS resets the Accessi
 
 ```powershell
 git clone https://github.com/WhisKeySwitch/Switcher3way.git
-cd Switcher3way
+cd Switcher3Way
 pwsh windows/build-msi.ps1           # direct-download installer
 pwsh windows/build-msix.ps1          # Microsoft Store package
 dotnet test windows/tests/Switcher3way.Core.Tests   # the decision core's suite
@@ -89,4 +89,4 @@ The Windows app is C# / WinUI 3 under [`windows/`](windows/); the layout-detecti
 
 Forked from [rashn/RuSwitcher](https://github.com/rashn/RuSwitcher) (MIT) — a two-layout RU/EN switcher — and generalized to N-way with a reworked UI. The MIT licence permits this; rashn's copyright notice is retained in [LICENSE](LICENSE) as it requires.
 
-Switcher3way itself is **free to use**, under the terms in [LICENSE](LICENSE), which also carries the notices of every third-party component it includes.
+Switcher3Way itself is **free to use**, under the terms in [LICENSE](LICENSE), which also carries the notices of every third-party component it includes.

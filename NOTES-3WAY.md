@@ -157,6 +157,13 @@ they fall back to comparing certificate bytes — and a Developer ID signature c
 self-signed one. If the main repo's `latest` becomes a notarized build, every one of those
 installs fails its update silently and forever, with no way to reach it.
 
+**The pin expires on 31 December 2026.** Decided 22 September 2026: leave the main repo's
+`latest` at 1.6.1 until the end of the year, then stop. After that date, either publish releases
+to both repos again or archive the pin deliberately — an install that has not been launched in
+three months is not coming back, and a pinned channel nobody remembers is how a repo ends up
+serving a year-old build as its newest. Whoever reads this after that date: the decision has
+expired, make a new one.
+
 So the main repo's `latest` stays pinned at the bridge (1.6.1). A straggler updates to the
 bridge, and the bridge points it at `switcher3way-releases`, where the real latest lives. Only
 once those installs are gone does publishing to both stop mattering — and by then the main repo

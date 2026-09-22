@@ -242,3 +242,31 @@ echo "=== Done! ==="
 echo "DMG: $(pwd)/$DMG_NAME ($(du -h "$DMG_NAME" | cut -f1))"
 echo "SHA256: $DMG_SHA"
 echo "→ version.json updated with this hash."
+
+# 12. The hash above was written AFTER any release commit, so the copy in git still holds the
+#     PREVIOUS release's hash unless it is committed now. version.json is the updater's checksum
+#     source and ships as a release asset: tagging before committing it publishes a manifest that
+#     fails its own integrity check, which reaches users as a download that will not install and
+#     looks exactly like corruption. 1.6.3 was tagged that way and only caught by comparing the
+#     committed hash against the artifact by hand.
+if git -C "$SCRIPT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+    COMMITTED_SHA=$(git -C "$SCRIPT_DIR" show HEAD:version.json 2>/dev/null \
+                    | /usr/bin/python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha256",""))' 2>/dev/null || true)
+    if [ "$COMMITTED_SHA" != "$DMG_SHA" ]; then
+        echo ""
+        echo "############################################################################"
+        echo "#  NOT READY TO TAG                                                        #"
+        echo "############################################################################"
+        echo "version.json in git does not match the DMG just built."
+        echo "    committed: ${COMMITTED_SHA:-<none>}"
+        echo "    built:     $DMG_SHA"
+        echo ""
+        echo "Commit version.json BEFORE tagging, or the release manifest will not match"
+        echo "its own DMG and every client's checksum gate will reject the update:"
+        echo ""
+        echo "    git add version.json && git commit -m 'release: <version> checksum'"
+        echo ""
+        exit 1
+    fi
+    echo "→ Committed version.json matches this DMG — safe to tag."
+fi
