@@ -23,7 +23,7 @@ fi
 if [ "$FLAVOUR" = "appstore" ]; then
     export SWITCHER_APPSTORE=1          # read by Package.swift → -DSWITCHER_APPSTORE
     APP_BUNDLE="$PROJECT_DIR/dist/appstore/$APP_NAME.app"
-    BUNDLE_ID="com.switcher3way.appstore"
+    BUNDLE_ID="site.ironmade.switcher3way"
     ENTITLEMENTS="$PROJECT_DIR/signing/appstore.entitlements"
 else
     unset SWITCHER_APPSTORE
@@ -141,6 +141,21 @@ echo "→ Generating in-app help from docs/..."
 # 6. Создаём PkgInfo
 echo -n "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 
+# 6a. App Store flavour: embed the provisioning profile. It must be in place BEFORE signing,
+#     because the signature covers it. Without it the app has no App Store context: StoreKit
+#     loads no products, so nothing about purchasing can be tested at all — and the failure is
+#     an empty product list, which looks exactly like products not yet approved.
+if [ "$FLAVOUR" = "appstore" ]; then
+    PROFILE_PATH="$PROJECT_DIR/${PROVISION_PROFILE:-}"
+    if [ -n "${PROVISION_PROFILE:-}" ] && [ -f "$PROFILE_PATH" ]; then
+        cp "$PROFILE_PATH" "$APP_BUNDLE/Contents/embedded.provisionprofile"
+        echo "→ Embedded provisioning profile: $(basename "$PROFILE_PATH")"
+    else
+        echo "→ WARNING: no provisioning profile at ${PROFILE_PATH:-<unset>}."
+        echo "  StoreKit will load no products in this build and purchases cannot be tested."
+    fi
+fi
+
 # 7. Sign. Three identities in descending order of preference; every one of them is
 #    STABLE, which is the whole point — macOS ties Accessibility / Input Monitoring
 #    grants to the designated requirement, so a changing identity drops the grants.
@@ -176,7 +191,20 @@ if [ -n "$DEVELOPER_ID_APP" ] && security find-identity -p codesigning -v 2>/dev
     HAVE_DEV_ID=1
 fi
 
-if [ "$HAVE_DEV_ID" = "1" ]; then
+if [ "$FLAVOUR" = "appstore" ]; then
+    # The Mac App Store rejects a Developer ID signature outright. Different certificate,
+    # different purpose: Developer ID vouches for software distributed outside the store.
+    if ! security find-identity -p codesigning -v 2>/dev/null | grep -qF "${APPLE_DISTRIBUTION:-<unset>}"; then
+        echo "ERROR: App Store flavour needs '${APPLE_DISTRIBUTION:-<unset>}' in the keychain."
+        echo "       Set APPLE_DISTRIBUTION in $DEV_ID_CONF and check:"
+        echo "         security find-identity -p codesigning -v"
+        exit 1
+    fi
+    echo "→ Code signing with '$APPLE_DISTRIBUTION' (sandboxed, App Store)..."
+    codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" \
+             --sign "$APPLE_DISTRIBUTION" "$APP_BUNDLE"
+    SIGNED_AS="'$APPLE_DISTRIBUTION' + $(basename "$ENTITLEMENTS") (App Store)"
+elif [ "$HAVE_DEV_ID" = "1" ]; then
     echo "→ Code signing with '$DEVELOPER_ID_APP' (hardened runtime + timestamp)..."
     # No --deep: Apple deprecated it for Developer ID, and this bundle has nothing
     # nested to sign anyway (one binary + resources). --options runtime is mandatory
