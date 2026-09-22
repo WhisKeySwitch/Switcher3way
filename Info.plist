@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Switcher3way</string>
+	<string>Switcher3Way</string>
 	<key>CFBundleExecutable</key>
 	<string>Switcher3way</string>
 	<key>CFBundleIconFile</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Switcher3way</string>
+	<string>Switcher3Way</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
