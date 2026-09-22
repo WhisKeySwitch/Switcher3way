@@ -167,6 +167,11 @@ enum L10n {
     static var menuSound: String { s("menu.sound") }
     static var menuFlag: String { s("menu.flag") }
     static var menuPause: String { s("menu.pause") }
+    static func purchaseTrialDaysLeft(_ days: Int) -> String {
+        String(format: s(days == 1 ? "purchase.trial.oneDay" : "purchase.trial.daysLeft"), days)
+    }
+    static var purchaseExpired: String { s("purchase.expired") }
+    static var purchaseRestore: String { s("purchase.restore") }
     static var menuResume: String { s("menu.resume") }
     static var menuPause30m: String { s("menu.pause.30m") }
     static var menuPause1h: String { s("menu.pause.1h") }
@@ -350,6 +355,10 @@ enum L10n {
             "menu.sound": "Layout sound",
             "menu.flag": "Flag at cursor",
             "menu.pause": "Pause Switcher3Way",
+            "purchase.trial.daysLeft": "Trial — %d days left",
+            "purchase.trial.oneDay": "Trial — last day",
+            "purchase.expired": "Trial over — conversion is off",
+            "purchase.restore": "Restore Purchases",
             "menu.resume": "Resume",
             "menu.pause.30m": "For 30 minutes",
             "menu.pause.1h": "For 1 hour",
