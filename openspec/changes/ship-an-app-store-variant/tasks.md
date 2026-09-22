@@ -18,10 +18,10 @@
 
 - [x] 3.1 Verify conversion end to end in the sandboxed flavour: type a wrong-layout word, invoke the trigger, confirm the text is replaced and the layout switches
 - [x] 3.2 Replace the AX-based window anchor with one built from `CGWindowListCopyWindowInfo` bounds, which works under the sandbox, and verify the chip appears in the sandboxed build in an app that is not on the denied list
-- [ ] 3.3 Verify notifications work in the sandboxed flavour, including the learn-from-undo offer and the "couldn't rewrite here" error
-- [ ] 3.4 Verify launch-at-login works in the sandboxed flavour and that the onboarding switch reflects its real state
-- [ ] 3.5 Verify the in-app help window renders in the sandboxed flavour and that external links still open in the browser
-- [ ] 3.6 Verify the debug log is written inside the container and that the diagnostic command-line modes work from the sandboxed bundle
+- [x] 3.3 Verify notifications work in the sandboxed flavour, including the learn-from-undo offer and the "couldn't rewrite here" error
+- [x] 3.4 Verify launch-at-login works in the sandboxed flavour and that the onboarding switch reflects its real state
+- [x] 3.5 Verify the in-app help window renders in the sandboxed flavour and that external links still open in the browser
+- [x] 3.6 Verify the debug log is written inside the container and that the diagnostic command-line modes work from the sandboxed bundle
 
 ## 3b. macOS 27 regressions found while verifying (affect the DIRECT build too)
 
@@ -29,6 +29,8 @@
 - [ ] 3b.2 Onboarding copy and `docs/user-guide*.md` send users to "Privacy & Security → Accessibility". macOS 27 renamed and merged that pane into **Device Control and Data Access** (one list covering keyboard monitoring, screen recording and app control). Update the copy in all three languages and verify against the macOS 27 UI
 - [ ] 3b.3 After granting Accessibility to an already-running app, conversion did not start until the app was restarted, even though `onAllGranted` is meant to call `startMonitoring`. Establish which it is — the poll timer stopping when the onboarding window closes, or macOS caching the authorization per process — and make the app either recover on its own or tell the user to restart it
 - [ ] 3b.4 Ship 3b.1–3b.3 to the direct channel as their own release rather than behind the App Store change; they are live defects for every user upgrading to macOS 27
+
+- [ ] 3.7 The debug log moves into the container (`NSHomeDirectory()` is redirected), where CLAUDE.md's `tail -f ~/Library/Logs/Switcher3w/switcher3way.log` no longer finds it and Finder hides it from users. This project depends on that log for field reports — "every auto decision is logged, including the decision to do nothing". Give the App Store variant a way to reach its own log (a Reveal in Finder button, or a copy-path action) and correct the documented path per flavour
 
 ## 4. Remove the updater from the App Store flavour
 
