@@ -172,6 +172,15 @@ fi
 #    REQUIRE_DEVELOPER_ID=1 turns (b) and (c) into hard failures. create_dmg.sh sets it,
 #    because a release DMG signed with anything else fails notarization halfway through
 #    the build instead of here.
+# Strip extended attributes before signing — quarantine flags and anything else the bundle picked
+# up while being assembled. Must happen BEFORE signing, since the signature covers the bundle as
+# it stands.
+#
+# This does NOT clear com.apple.provenance, which macOS re-applies to every file as it is written
+# and which therefore appears as AppleDouble "._" entries in the package. That is normal and
+# present in Xcode-built packages too; do not go chasing it.
+xattr -cr "$APP_BUNDLE" 2>/dev/null || true
+
 DEV_ID_CONF="$PROJECT_DIR/signing/developer-id.conf"
 if [ -f "$DEV_ID_CONF" ]; then
     # Environment wins over the file: `DEVELOPER_ID_APP=… bash build_app.sh` overrides.

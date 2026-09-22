@@ -49,15 +49,31 @@ fi
 
 # Self-check before packaging: the store rejects both of these, and finding out from a failed
 # upload costs a round trip through Apple rather than a second here.
-AUTHORITY=$(codesign -dv --verbose=2 "$APP_BUNDLE" 2>&1 | grep "^Authority=" | head -1 | cut -d= -f2-)
+# Capture each command's output in full before inspecting it. Piping straight into `grep -q`
+# closes the pipe as soon as it matches, and codesign reports the failed write as
+# "write: Permission denied" — an alarming message on a run that succeeded, which is exactly how
+# people learn to stop reading build output.
+SIG_INFO=$(codesign -dv --verbose=2 "$APP_BUNDLE" 2>&1 || true)
+AUTHORITY=$(printf '%s\n' "$SIG_INFO" | grep "^Authority=" | head -1 | cut -d= -f2-)
 case "$AUTHORITY" in
     "Apple Distribution"*) ;;
     *) echo "ERROR: app is signed by '$AUTHORITY', not Apple Distribution. The store will reject it."; exit 1 ;;
 esac
-if ! codesign -d --entitlements - "$APP_BUNDLE" 2>/dev/null | grep -q "app-sandbox"; then
-    echo "ERROR: app is not sandboxed. The Mac App Store requires the sandbox."
-    exit 1
-fi
+
+# Matched with `case`, not a pipe into `grep -q`: grep exits on its first match and the shell
+# reports the builtin's write to the closed pipe as "write: Permission denied" — a permission
+# error printed by a run that succeeded.
+ENTS=$(codesign -d --entitlements - "$APP_BUNDLE" 2>/dev/null || true)
+case "$ENTS" in
+    *app-sandbox*) ;;
+    *) echo "ERROR: app is not sandboxed. The Mac App Store requires the sandbox."; exit 1 ;;
+esac
+case "$ENTS" in
+    *application-identifier*) ;;
+    *) echo "ERROR: no application-identifier entitlement — it must match the provisioning profile."
+       echo "       Upload is rejected for a profile/entitlement mismatch without it."
+       exit 1 ;;
+esac
 echo "→ Signed by: $AUTHORITY, sandboxed, profile embedded"
 
 rm -f "$PKG_OUT"
@@ -66,7 +82,12 @@ productbuild --component "$APP_BUNDLE" /Applications \
              --sign "$INSTALLER_DISTRIBUTION" "$PKG_OUT"
 
 echo "→ Verifying the package signature..."
-pkgutil --check-signature "$PKG_OUT" | head -4
+PKG_SIG=$(pkgutil --check-signature "$PKG_OUT" 2>&1 || true)
+echo "$PKG_SIG" | sed -n '1,6p'
+case "$PKG_SIG" in
+    *"3rd Party Mac Developer Installer"*) ;;
+    *) echo "ERROR: the package is not signed by the installer certificate."; exit 1 ;;
+esac
 
 echo ""
 echo "=== Done! ==="
