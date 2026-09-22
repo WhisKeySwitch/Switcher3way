@@ -55,6 +55,7 @@
 - [ ] 6.3 Update the README so a visitor can tell which variant each channel provides and how they differ, including that the direct channel is free and stays free
 - [x] 6.4 Remove the stale right-click → **Open** instruction for notarized direct releases, and verify the direct install path documented matches what a notarized DMG actually does
 - [x] 6.5 Record the two-flavour build commands in `NOTES-3WAY.md` alongside the existing direct-channel instructions
+- [ ] 6.6 **At store launch, not before:** remove the three README links to `switcher3way-releases` (badge, download button, install section) and point macOS users at the App Store instead. Removing them earlier leaves no way for anyone new to get the app at all, since the listing does not exist yet. The URL stays hardcoded in the app for updates only, and the releases repo must stay public and keep receiving releases — installed copies update from it and were promised free updates indefinitely. This is obscurity, not protection: the URL is recoverable from the app's network traffic, and the repo is indexed and listed on the org page. It works because people who buy in the App Store do not go hunting on GitHub, not because the build is hard to find
 
 ## 7. Submission
 
