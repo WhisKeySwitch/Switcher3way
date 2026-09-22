@@ -182,7 +182,35 @@ final class CaretIndicator {
     /// rather than dropping the feedback entirely.
     private func focusedWindowAnchor() -> NSRect? {
         guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
-        let axApp = AXUIElementCreateApplication(app.processIdentifier)
+        if let viaAX = focusedWindowAnchorViaAX(pid: app.processIdentifier) { return viaAX }
+        // Every AX route is refused under the App Sandbox, including this one — which is why the
+        // chip did not appear at all in the sandboxed build, in Telegram and in a plain text
+        // editor alike. CGWindowList needs no Accessibility access and was measured working
+        // sandboxed, so it is the anchor of last resort rather than giving up on the feedback.
+        return focusedWindowAnchorViaWindowList(pid: app.processIdentifier)
+    }
+
+    /// Window bounds without Accessibility. Picks the frontmost on-screen window belonging to the
+    /// given process at the normal window layer, ignoring panels and menu overlays.
+    private func focusedWindowAnchorViaWindowList(pid: pid_t) -> NSRect? {
+        guard let raw = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements],
+                                                   kCGNullWindowID) as? [[String: Any]],
+              let primary = NSScreen.screens.first else { return nil }
+        for info in raw {
+            guard (info[kCGWindowOwnerPID as String] as? pid_t) == pid,
+                  (info[kCGWindowLayer as String] as? Int) == 0,
+                  let boundsDict = info[kCGWindowBounds as String] as? [String: Any],
+                  let rect = CGRect(dictionaryRepresentation: boundsDict as CFDictionary),
+                  rect.width > 1, rect.height > 1 else { continue }
+            // CGWindowList is top-left origin like AX; AppKit is bottom-left.
+            let y = primary.frame.height - rect.origin.y - rect.height
+            return NSRect(x: rect.origin.x + 24, y: y + 24, width: 1, height: 18)
+        }
+        return nil
+    }
+
+    private func focusedWindowAnchorViaAX(pid: pid_t) -> NSRect? {
+        let axApp = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(axApp, 0.25)
         var windowRaw: AnyObject?
         guard AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &windowRaw) == .success,

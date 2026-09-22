@@ -78,8 +78,14 @@ macOS requires two permissions before any layout switcher can work:
 | **Input Monitoring** | To see your keystrokes and the trigger key |
 
 On first launch a **setup checklist** window opens. For each permission, click **Open
-Settings**, flip the switch for Switcher3way in System Settings → Privacy & Security, and come
-back — the checklist detects the grant by itself within a couple of seconds. After Input
+Settings**, flip the switch for Switcher3way, and come back — the checklist detects the grant by
+itself within a couple of seconds.
+
+The list is in System Settings → **Privacy & Security**. On macOS 26 and earlier, Accessibility
+and Input Monitoring are separate entries there; **macOS 27 renamed and merged them** into a
+single list called **Device Control and Data Access** (the name may appear translated in your
+language). If Switcher3way is not already listed, add it with the **+** button at the bottom of
+the list — on macOS 27 the app cannot raise that dialog for you. After Input
 Monitoring is granted, the app restarts itself once (macOS requires it). The same window offers
 a **Launch at login** switch.
 
