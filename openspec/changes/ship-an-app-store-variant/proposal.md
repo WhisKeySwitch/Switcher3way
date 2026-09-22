@@ -10,7 +10,7 @@ The App Store was believed to be closed to this app because the sandbox forbids 
 - **The password-field guard becomes variant-dependent.** `AXUIElement` inspection of other applications does not work under the sandbox (`err=-25204` sandboxed against `err=0 ELEMENT` unsandboxed, same binary, same focused element, same instant). The Store variant's guard is built from `IsSecureEventInputEnabled()` plus the frontmost-application exception list, both of which were measured to survive.
 - **The Store variant ships without the updater.** Apple forbids App Store apps from updating themselves; `UpdateChecker` and `UpdateInstaller` compile out behind the same flag.
 - **Purchase via StoreKit**: a free download with a two-week introductory trial on an auto-renewable subscription, plus a non-consumable lifetime unlock.
-- **The direct channel survives, separately**, for gifts, promotional copies and beta testing. It keeps the full Accessibility-based guard, the Developer ID signature, the notarized DMG and the existing updater. **BREAKING** for the direct channel if a gift licence gate is adopted: existing free installs would need grandfathering.
+- **The direct channel survives, unchanged and free.** It keeps the full Accessibility-based guard, the Developer ID signature, the notarized DMG and the existing updater, and every installed copy keeps receiving free updates indefinitely. No licence gate is added to it — see `design.md` for why one could not be built honestly anyway.
 - **Distinct bundle identifiers** for the two variants, so both can be installed at once and compared — necessary precisely because their password guards differ.
 
 ## Capabilities

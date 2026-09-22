@@ -42,6 +42,21 @@ verifying rather than reasoning — the chip simply never appeared.
 
 **Application-level suppression compensates for element-level loss.** `NSWorkspace.frontmostApplication` survives the sandbox, so `AutoSwitchPolicy`'s denied-application list and its always-off password managers keep working. That is the fallback, and it is weaker: it protects whole applications rather than individual fields. The spec requires disclosing this rather than presenting the variants as equivalent.
 
+**The direct channel stays free, for everyone, indefinitely.** Every installed copy keeps
+receiving free updates — decided outright, not inferred. The consequence is larger than the
+promise: the updater fetches its DMG from a public GitHub release, so the build that serves
+existing users is the same build anyone can download fresh. Nothing distinguishes an existing
+install from a new one at download time, and the signals that might approximate it — a first-run
+marker, existing settings, an existing permission grant — are all local state a new user can
+produce and an honest user can lose by reinstalling. A gate built on them would lock out the
+people it was meant to protect and stop nobody else.
+
+So there is no licence gate on the direct channel, and the App Store version cannot sell on
+exclusivity: the same software is free a click away. What it sells is discovery, a one-click
+install with no Gatekeeper story, purchases and refunds handled by Apple, and updates that arrive
+without this project's own updater. That is a real proposition, but it is a different one from
+"pay to use this", and the pricing and listing should be written knowing it.
+
 **StoreKit 2**, with one auto-renewable subscription carrying an introductory free trial and one non-consumable unlock. Entitlement is read from the platform's current entitlements rather than cached locally, so reinstalls and second Macs resolve themselves. StoreKit 1 is rejected: it would mean manual receipt validation, which is more code and more ways to lock out a paying user.
 
 **The updater is compiled out, not disabled.** `#if !SWITCHER_APPSTORE` around `UpdateChecker`, `UpdateInstaller`, their menu items and their settings row. A runtime flag would leave the code, the network calls and the preference present in the shipped binary, which is both a review risk and a thing a future edit could re-enable by accident.
@@ -54,7 +69,7 @@ verifying rather than reasoning — the chip simply never appeared.
 - **The sandboxed guard misses a credential that the direct build would have caught** → The measured gap is narrow: browsers set the secure-input flag for real password inputs. What remains exposed is non-standard JS-masked fields and revealed "show password" boxes. Mitigated by the application-level list and by disclosure; not eliminated. This is the trade-off being accepted, and it should be stated in the listing rather than buried.
 - **The two variants drift** → Detection lives in `Switcher3wCore`, which neither flavour conditionalises. The risk is in the shell: policy, feedback and packaging. Mitigated by building both flavours in the release check.
 - **Something else in the shell breaks under the sandbox and is not noticed** → Notifications, launch-at-login and in-app help have not been exercised in a sandboxed build. Tasks include verifying each, in the flavour that ships.
-- **A free direct download undercuts paid Store sales** → Real, and unresolved. See Open Questions; it does not change this design.
+- **A free direct download undercuts paid Store sales** → Accepted deliberately, not mitigated. The direct channel stays free so existing users keep their updates (see Decisions), which means anyone willing to find the releases page pays nothing. The Store version competes on discovery and convenience instead. If that proves too thin to sell against, the answer is to reconsider whether to charge at all — not to quietly break the promise to existing users.
 
 ## Migration Plan
 
@@ -66,6 +81,5 @@ Rollback after release is removal from sale, which does not affect installed cop
 
 ## Open Questions
 
-- Whether the direct channel gets a gift licence gate, or whether Apple's promotional codes cover friends, family and promotional copies instead. This changes no spec and no task here; it becomes its own change if a gate is wanted.
 - The final trial length and the two prices. The specs deliberately say "time-limited" rather than naming a number.
 - Whether a revealed "show password" field keeps the secure-input flag set. The 40-sample measurement did not distinguish this, and it sizes the residual gap. Worth measuring before the listing text is written, but it does not change the architecture.

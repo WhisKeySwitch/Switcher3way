@@ -52,7 +52,7 @@
 
 - [ ] 6.1 State in the App Store listing and the user guide which password protection that variant does and does not provide, and verify the wording does not describe the two variants as equivalent
 - [ ] 6.2 Complete the privacy labels truthfully — no data collected, nothing leaves the machine — and verify against what the app actually sends
-- [ ] 6.3 Update the README so a visitor can tell which variant each channel provides and how they differ
+- [ ] 6.3 Update the README so a visitor can tell which variant each channel provides and how they differ, including that the direct channel is free and stays free
 - [x] 6.4 Remove the stale right-click → **Open** instruction for notarized direct releases, and verify the direct install path documented matches what a notarized DMG actually does
 - [x] 6.5 Record the two-flavour build commands in `NOTES-3WAY.md` alongside the existing direct-channel instructions
 
