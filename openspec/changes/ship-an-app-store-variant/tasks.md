@@ -48,6 +48,17 @@
 - [ ] 5.5 Verify an indeterminate entitlement (no network at launch) leaves the app working for that session, logs the reason, and re-checks rather than locking the user out
 - [ ] 5.6 Verify the trial grants the full feature set on first launch with no sign-in prompt
 
+## 5b. Signing and packaging for the store (missing from the original plan)
+
+The App Store flavour is currently signed with Developer ID, which the Mac App Store rejects.
+Nothing below existed in the first version of this change.
+
+- [ ] 5b.1 Create the two distribution certificates — **Apple Distribution** (signs the app) and **Mac Installer Distribution** (signs the installer package) — and back up both private keys beside the Developer ID one
+- [ ] 5b.2 Create a **Mac App Store provisioning profile** for `site.ironmade.switcher3way`, and have `build_app.sh --appstore` embed it as `Contents/embedded.provisionprofile`; verify it is present in the built bundle
+- [ ] 5b.3 Sign the App Store flavour with Apple Distribution plus `signing/appstore.entitlements`, not Developer ID; verify `codesign -dv` shows the distribution authority and the sandbox entitlement
+- [ ] 5b.4 Add a packaging step that produces a signed `.pkg` (`productbuild --component … /Applications --sign "3rd Party Mac Developer Installer: …"`), and verify the package installs cleanly on a test Mac
+- [ ] 5b.5 Upload with Transporter (or `xcrun altool --upload-package`) and confirm the build appears in App Store Connect; expect the first upload to surface entitlement and Info.plist validation errors that never appear locally
+
 ## 6. Documentation and disclosure
 
 - [ ] 6.1 State in the App Store listing and the user guide which password protection that variant does and does not provide, and verify the wording does not describe the two variants as equivalent
@@ -60,5 +71,8 @@
 ## 7. Submission
 
 - [ ] 7.1 Re-verify tasks 2.4, 3.1, 4.3 and 5.3 on a build produced by the App Store flavour of the build script — not a locally modified copy — and record the evidence
-- [ ] 7.2 Submit for review, and on rejection record the stated reason in this change before altering anything
-- [ ] 7.3 After approval, verify a purchase and a restore against the live listing on a Mac that has never run the app
+- [ ] 7.2 Write App Review notes explaining, in plain terms, why the app monitors keystrokes and what it does with them — nothing leaves the machine. This is the single most likely question and answering it up front is cheaper than a rejection round-trip
+- [ ] 7.3 Publish a privacy policy at a stable URL and enter it in App Store Connect — required, and a missing one blocks submission rather than review
+- [ ] 7.4 Prepare listing assets: at least one macOS screenshot at an accepted size, description, keywords, support URL, age rating, and a screenshot plus review note for EACH in-app purchase (products are reviewed separately from the app)
+- [ ] 7.5 Submit for review, and on rejection record the stated reason in this change before altering anything
+- [ ] 7.6 After approval, verify a purchase and a restore against the live listing on a Mac that has never run the app
