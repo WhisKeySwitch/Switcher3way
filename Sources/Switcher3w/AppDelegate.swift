@@ -63,6 +63,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
 #if !SWITCHER_APPSTORE
         UpdateChecker.shared.onStateChange = { [weak self] in self?.rebuildMenu() }
         UpdateChecker.shared.startSchedule()
+#else
+        Purchases.shared.onChange = { [weak self] in self?.rebuildMenu(); self?.updateStatusIcon() }
+        Purchases.shared.start()
 #endif
     }
 
@@ -261,6 +264,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             onAltTap: { [weak self] in
                 guard let self else { return }
                 guard SettingsManager.shared.effectivelyEnabled else { return }
+#if SWITCHER_APPSTORE
+                guard Purchases.shared.entitlement.allowsConversion else {
+                    rslog("trigger: suppressed — trial over, nothing purchased")
+                    return
+                }
+#endif
                 // Manual control invalidates the phrase memory (its conversions/undos
                 // aren't tracked, so later corrections would erase the wrong segment).
                 self.resetPhrase()
@@ -329,6 +338,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             onAltReconvert: { [weak self] in
                 guard let self else { return }
                 guard SettingsManager.shared.effectivelyEnabled else { return }
+#if SWITCHER_APPSTORE
+                guard Purchases.shared.entitlement.allowsConversion else {
+                    rslog("trigger: suppressed — trial over, nothing purchased")
+                    return
+                }
+#endif
                 self.resetPhrase()   // manual control — see onAltTap
                 guard !SecureFieldDetector.isFocusedPassword else {
                     rslog("trigger: suppressed — password field")
@@ -441,6 +456,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     private func handleAutoConvert() {
         rslog("auto: fired")
         guard SettingsManager.shared.effectivelyEnabled else { rslog("auto: bail master-off"); return }
+#if SWITCHER_APPSTORE
+        guard Purchases.shared.entitlement.allowsConversion else {
+            rslog("auto: bail — trial over, nothing purchased")
+            return
+        }
+#endif
         guard SettingsManager.shared.autoConvert else { rslog("auto: bail flag-off"); return }
         // Contexts where words go unevaluated make the phrase memory incomplete —
         // reset it so a later correction can't be computed over a gap.
@@ -844,6 +865,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             menu.addItem(remoteDesktopItem)
         }
 
+#if SWITCHER_APPSTORE
+        menu.addItem(NSMenuItem.separator())
+        switch Purchases.shared.entitlement {
+        case .trial(let daysRemaining):
+            let item = NSMenuItem(title: L10n.purchaseTrialDaysLeft(daysRemaining), action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+            addPurchaseItems(to: menu)
+        case .expired:
+            let item = NSMenuItem(title: L10n.purchaseExpired, action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+            addPurchaseItems(to: menu)
+        case .purchased, .unknown:
+            break
+        }
+#endif
+
         menu.addItem(NSMenuItem.separator())
 
         // Pause with durations instead of the "Enable" checkbox (W4): a disabled
@@ -1097,6 +1136,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     @objc private func openHelp() {
         helpController.show()
     }
+
+#if SWITCHER_APPSTORE
+    /// One row per product, priced in the customer's own currency by StoreKit, plus restore.
+    /// Buying opens Apple's own sheet — there is no payment UI of ours to get wrong.
+    private func addPurchaseItems(to menu: NSMenu) {
+        for product in Purchases.shared.products {
+            let item = NSMenuItem(title: "\(product.displayName) — \(product.displayPrice)",
+                                  action: #selector(purchaseTapped(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = product.id
+            menu.addItem(item)
+        }
+        let restore = NSMenuItem(title: L10n.purchaseRestore, action: #selector(restoreTapped),
+                                 keyEquivalent: "")
+        restore.target = self
+        menu.addItem(restore)
+    }
+
+    @objc private func purchaseTapped(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String,
+              let product = Purchases.shared.product(for: id) else { return }
+        Task { _ = await Purchases.shared.purchase(product) }
+    }
+
+    @objc private func restoreTapped() {
+        Task { await Purchases.shared.restore() }
+    }
+#endif
 
 #if !SWITCHER_APPSTORE
     @objc private func checkForUpdatesTapped() {
