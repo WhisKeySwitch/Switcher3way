@@ -35,6 +35,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     private let settingsController = SettingsWindowController()
     private let onboardingController = OnboardingWindowController()
     private let helpController = HelpWindowController()
+#if SWITCHER_APPSTORE
+    private let purchaseWindow = PurchaseWindowController()
+#endif
     private let perAppLayoutManager = PerAppLayoutManager()
     private var iconRefreshTimer: Timer?
     private var pauseTimer: Timer?         // auto-resume when the timed pause expires (W4)
@@ -64,7 +67,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         UpdateChecker.shared.onStateChange = { [weak self] in self?.rebuildMenu() }
         UpdateChecker.shared.startSchedule()
 #else
-        Purchases.shared.onChange = { [weak self] in self?.rebuildMenu(); self?.updateStatusIcon() }
+        Purchases.shared.onChange = { [weak self] in
+            self?.rebuildMenu()
+            self?.updateStatusIcon()
+            self?.purchaseWindow.refreshContents()
+        }
         Purchases.shared.start()
 #endif
     }
@@ -1140,28 +1147,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
 #if SWITCHER_APPSTORE
     /// One row per product, priced in the customer's own currency by StoreKit, plus restore.
     /// Buying opens Apple's own sheet — there is no payment UI of ours to get wrong.
+    /// One entry that opens the purchase window. Buying cannot happen from the menu itself: the
+    /// sheet needs a window to attach to, and this app has none until the window opens.
     private func addPurchaseItems(to menu: NSMenu) {
-        for product in Purchases.shared.products {
-            let item = NSMenuItem(title: "\(product.displayName) — \(product.displayPrice)",
-                                  action: #selector(purchaseTapped(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = product.id
-            menu.addItem(item)
-        }
-        let restore = NSMenuItem(title: L10n.purchaseRestore, action: #selector(restoreTapped),
-                                 keyEquivalent: "")
-        restore.target = self
-        menu.addItem(restore)
+        let item = NSMenuItem(title: L10n.purchaseMenuItem, action: #selector(showPurchaseWindow),
+                              keyEquivalent: "")
+        item.target = self
+        menu.addItem(item)
     }
 
-    @objc private func purchaseTapped(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String,
-              let product = Purchases.shared.product(for: id) else { return }
-        Task { _ = await Purchases.shared.purchase(product) }
-    }
-
-    @objc private func restoreTapped() {
-        Task { await Purchases.shared.restore() }
+    @objc private func showPurchaseWindow() {
+        purchaseWindow.show()
     }
 #endif
 

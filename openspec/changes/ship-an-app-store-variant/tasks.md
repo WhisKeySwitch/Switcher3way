@@ -41,12 +41,12 @@
 
 ## 5. Purchase
 
-- [ ] 5.1 Create the App Store Connect record, register the bundle identifier, and define the auto-renewable subscription with an introductory free trial plus the non-consumable unlock; verify the products load in a sandbox StoreKit session
+- [x] 5.1 Create the App Store Connect record, register the bundle identifier, and define the auto-renewable subscription with an introductory free trial plus the non-consumable unlock; verify the products load in a sandbox StoreKit session
 - [ ] 5.2 Implement entitlement resolution from the platform's current entitlements, and verify an active subscription, an active unlock and no purchase each resolve correctly
 - [ ] 5.3 Implement the purchase and restore flows, and verify restore re-establishes entitlement after deleting and reinstalling the app
 - [ ] 5.4 Implement the unpaid state: stop automatic conversion, show an unambiguous status-item state, offer the purchase options — and verify the reason is discoverable from the interface, not only the log
 - [ ] 5.5 Verify an indeterminate entitlement (no network at launch) leaves the app working for that session, logs the reason, and re-checks rather than locking the user out
-- [ ] 5.6 Verify the trial grants the full feature set on first launch with no sign-in prompt
+- [x] 5.6 Verify the trial grants the full feature set on first launch with no sign-in prompt
 
 ## 5b. Signing and packaging for the store (missing from the original plan)
 

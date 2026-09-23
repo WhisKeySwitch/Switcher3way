@@ -1,4 +1,5 @@
 #if SWITCHER_APPSTORE
+import AppKit
 import Foundation
 import Security
 import StoreKit
@@ -33,7 +34,9 @@ enum Entitlement: Equatable {
 final class Purchases {
     static let shared = Purchases()
 
-    static let yearlyID = "site.ironmade.switcher3way.yearly"
+    /// The auto-renewable subscription. The original `…switcher3way.yearly` was created as a
+    /// non-consumable by mistake and deleted; product IDs cannot be reused, hence `.sub.yearly`.
+    static let yearlyID = "site.ironmade.switcher3way.sub.yearly"
     static let lifetimeID = "site.ironmade.switcher3way.lifetime"
 
     /// The trial runs in the app rather than as a StoreKit introductory offer. An offer would
@@ -122,29 +125,63 @@ final class Purchases {
 
     enum PurchaseOutcome { case bought, cancelled, pending, failed(String) }
 
-    func purchase(_ product: Product) async -> PurchaseOutcome {
+    /// The last purchase attempt, kept where `diagstore` can read it. A failed purchase otherwise
+    /// leaves no trace a user or a developer can see: the sheet closes and the app looks unchanged,
+    /// which is indistinguishable from the purchase never having been attempted. That ambiguity
+    /// cost a full debugging cycle on a product ID that no longer existed.
+    private static let lastOutcomeKey = "com.switcher3w.lastPurchaseOutcome"
+
+    static var lastOutcomeDescription: String? {
+        UserDefaults.standard.string(forKey: lastOutcomeKey)
+    }
+
+    private func record(_ outcome: String, product: Product) {
+        let stamp = ISO8601DateFormatter().string(from: Date())
+        UserDefaults.standard.set("\(stamp)  \(product.id)  \(outcome)", forKey: Self.lastOutcomeKey)
+        rslog("purchases: \(product.id) → \(outcome)")
+    }
+
+    /// `confirmIn` is the window the sheet attaches to. Required here rather than optional: an
+    /// LSUIElement app has no key window, and without one the call never returns at all.
+    func purchase(_ product: Product, confirmIn window: NSWindow) async -> PurchaseOutcome {
+        // Recorded BEFORE StoreKit is called, so that "never reached the purchase call" and
+        // "called it and it never came back" leave different evidence. They look identical from
+        // the outside: the menu closes and nothing else happens.
+        record("attempting…", product: product)
         do {
-            switch try await product.purchase() {
+            // macOS 15.2 added an explicit window parameter. Before that StoreKit uses the key
+            // window, so the caller must have made one key — which show() does.
+            let result: Product.PurchaseResult
+            if #available(macOS 15.2, *) {
+                result = try await product.purchase(confirmIn: window)
+            } else {
+                result = try await product.purchase()
+            }
+            switch result {
             case .success(let verification):
                 if case .verified(let transaction) = verification {
                     await transaction.finish()
                     await refresh()
+                    record("bought", product: product)
                     return .bought
                 }
                 // Signed by something that is not Apple. Do not grant anything.
-                rslog("purchases: unverified transaction refused")
+                record("refused — could not be verified", product: product)
                 return .failed("could not be verified")
             case .userCancelled:
+                record("cancelled by user", product: product)
                 return .cancelled
             case .pending:
                 // Ask to Buy, or payment needing approval. The entitlement arrives later through
                 // Transaction.updates; nothing to do but wait.
+                record("pending — awaiting approval", product: product)
                 return .pending
             @unknown default:
+                record("unrecognised result", product: product)
                 return .failed("unrecognised result")
             }
         } catch {
-            rslog("purchases: purchase failed — \(error.localizedDescription)")
+            record("failed — \(error.localizedDescription)", product: product)
             return .failed(error.localizedDescription)
         }
     }

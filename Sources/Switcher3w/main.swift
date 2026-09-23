@@ -22,6 +22,47 @@ if CommandLine.arguments.dropFirst().contains("diagpw") {
     exit(0)
 }
 
+// `Switcher3Way diagstore` — App Store build only. Prints the entitlement and whatever products
+// StoreKit will actually hand over, then exits. The equivalent of diagpw for purchases: an empty
+// product list and a product list that failed to load look identical from the outside, and the
+// app's own log lives inside the sandbox container where it cannot easily be read.
+#if SWITCHER_APPSTORE
+if CommandLine.arguments.dropFirst().contains("diagstore") {
+    print("Switcher3Way — purchase diagnostic\n")
+    let done = DispatchSemaphore(value: 0)
+    Task { @MainActor in
+        await Purchases.shared.refresh()
+        await Purchases.shared.loadProducts()
+        print("entitlement: \(Purchases.shared.entitlement)")
+        print("last buy:    \(Purchases.lastOutcomeDescription ?? "no purchase attempted")")
+        let products = Purchases.shared.products
+        if products.isEmpty {
+            print("products:    NONE LOADED")
+            print("""
+
+                  Nothing loaded. Usually one of:
+                    - the app is not signed with a Mac App Store provisioning profile
+                    - the products are not yet in a reviewable state in App Store Connect
+                    - no sandbox account is signed in (System Settings > App Store)
+                    - no network
+                  """)
+        } else {
+            print("products:")
+            for p in products {
+                print("  \(p.id)  \(p.displayName)  \(p.displayPrice)  [\(p.type)]")
+            }
+        }
+        done.signal()
+    }
+    // The StoreKit calls above are async and the main actor must keep running for them to
+    // proceed, so pump the run loop rather than blocking it.
+    while done.wait(timeout: .now() + 0.05) == .timedOut {
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+    }
+    exit(0)
+}
+#endif
+
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
