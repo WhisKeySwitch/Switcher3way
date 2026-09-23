@@ -72,7 +72,7 @@ Nothing below existed in the first version of this change.
 
 - [ ] 7.1 Re-verify tasks 2.4, 3.1, 4.3 and 5.3 on a build produced by the App Store flavour of the build script — not a locally modified copy — and record the evidence
 - [ ] 7.2 Write App Review notes explaining, in plain terms, why the app monitors keystrokes and what it does with them — nothing leaves the machine. This is the single most likely question and answering it up front is cheaper than a rejection round-trip
-- [ ] 7.3 Publish a privacy policy at a stable URL and enter it in App Store Connect — required, and a missing one blocks submission rather than review
+- [x] 7.3 Publish a privacy policy at a stable URL and enter it in App Store Connect — required, and a missing one blocks submission rather than review. Live at https://s3w-privacy.ironmade.site (Cloudflare Pages); still to be entered in App Store Connect
 - [ ] 7.4 Prepare listing assets: at least one macOS screenshot at an accepted size, description, keywords, support URL, age rating, and a screenshot plus review note for EACH in-app purchase (products are reviewed separately from the app)
 - [ ] 7.5 Submit for review, and on rejection record the stated reason in this change before altering anything
 - [ ] 7.6 After approval, verify a purchase and a restore against the live listing on a Mac that has never run the app
