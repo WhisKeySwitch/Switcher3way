@@ -32,6 +32,8 @@
 
 - [ ] 3.7 The debug log moves into the container (`NSHomeDirectory()` is redirected), where CLAUDE.md's `tail -f ~/Library/Logs/Switcher3w/switcher3way.log` no longer finds it and Finder hides it from users. This project depends on that log for field reports — "every auto decision is logged, including the decision to do nothing". Give the App Store variant a way to reach its own log (a Reveal in Finder button, or a copy-path action) and correct the documented path per flavour
 
+- [ ] 3b.5 The conversion chip lands on top of the text in Mail. Not a fallback problem and not new: the log shows `shown via caret`, and Mail's AX caret rect comes back at the start of the line (x=24) rather than at the insertion point, so the chip is drawn faithfully at a position Mail reported wrongly. Affects the direct build as shipped. Decide whether to detect an implausible caret rect (one at the text area's left edge while the typed word is elsewhere) and fall back, or to accept it
+
 ## 4. Remove the updater from the App Store flavour
 
 - [x] 4.1 Compile out `UpdateChecker` and `UpdateInstaller` under `SWITCHER_APPSTORE`, and verify the built binary imports no update code (no release-API string in the binary)
