@@ -411,14 +411,23 @@ final class KeyboardMonitor: @unchecked Sendable {
                 if accepted.contains(keyCode) && flags.intersection(otherMods).isEmpty {
                     triggerArmed = true
                     triggerPressTime = Date()
+                    rslog("trig: armed (key=\(keyCode))")
                 } else {
                     triggerArmed = false  // wrong side / combo
+                    rslog("trig: not armed — key=\(keyCode) accepted=\(accepted.sorted()) " +
+                          "otherMods=\(flags.intersection(otherMods).rawValue)")
                 }
             } else {
                 // release: solo tap of the right key, fast and with no keys in between
-                if triggerArmed, accepted.contains(keyCode), let t = triggerPressTime,
-                   Date().timeIntervalSince(t) < tapWindow {
-                    registerTap()
+                if triggerArmed, accepted.contains(keyCode), let t = triggerPressTime {
+                    let held = Date().timeIntervalSince(t)
+                    if held < tapWindow {
+                        registerTap()
+                    } else {
+                        rslog("trig: tap too slow (\(String(format: "%.2f", held))s > \(tapWindow)s)")
+                    }
+                } else if !triggerArmed {
+                    rslog("trig: release with nothing armed (key=\(keyCode))")
                 }
                 triggerArmed = false
                 triggerPressTime = nil
@@ -454,6 +463,11 @@ final class KeyboardMonitor: @unchecked Sendable {
                 lastTapTime = nil
                 fireConversion()
             } else {
+                if let last = lastTapTime {
+                    rslog("trig: second tap too late (\(String(format: "%.2f", Date().timeIntervalSince(last)))s) — restarting")
+                } else {
+                    rslog("trig: first tap, waiting for the second")
+                }
                 lastTapTime = Date()  // wait for the second tap
             }
         } else {

@@ -81,6 +81,7 @@ enum L10n {
     // MARK: - Conversion feedback chip
     static var settingsConversionChip: String { s("settings.conversionChip") }
     static func chipUndoHint(_ trigger: String) -> String { String(format: s("chip.undoHint"), trigger) }
+    static var triggerNothingBuffered: String { s("trigger.nothingBuffered") }
 
     /// The trigger keys offered in Settings, in order, as (settings key, display title). Key names
     /// are deliberately NOT localized — they are standard Apple notations. Single source for the
@@ -359,6 +360,7 @@ enum L10n {
             "menu.sound": "Layout sound",
             "menu.flag": "Flag at cursor",
             "menu.pause": "Pause Switcher3Way",
+            "trigger.nothingBuffered": "Nothing to convert — retype the word",
             "purchase.trial.daysLeft": "Trial — %d days left",
             "purchase.trial.oneDay": "Trial — last day",
             "purchase.expired": "Trial over — conversion is off",

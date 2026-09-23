@@ -115,6 +115,32 @@ final class CaretIndicator {
         present(at: rect)
     }
 
+    /// A plain message at the cursor — for when the trigger has nothing to act on.
+    ///
+    /// Without this the trigger fires, finds an empty buffer, and returns in silence, which is
+    /// indistinguishable from the app being broken. It is the documented behaviour ("the trigger
+    /// always answers") and it was never implemented for the commonest case of all: the buffer
+    /// having been cleared by a click before the user reached for the trigger.
+    func notice(_ message: String) {
+        guard SettingsManager.shared.conversionChip else { return }
+        guard feedbackAllowed() else {
+            rslog("chip: notice suppressed — \(feedbackRefusal())")
+            return
+        }
+        guard let rect = axCaretRectAppKit() ?? focusedWindowAnchor() ?? screenAnchor() else {
+            rslog("chip: notice has no anchor (front=\(frontmostDescription()))")
+            return
+        }
+        label.attributedStringValue = NSAttributedString(
+            string: message,
+            attributes: [.font: NSFont.systemFont(ofSize: 12),
+                         .foregroundColor: NSColor.secondaryLabelColor])
+        lastFlag = ""
+        sizeToFit()
+        present(at: rect)
+        rslog("chip: notice shown — \(message)")
+    }
+
     /// Any user input/click → hide (issue #10: "hide on typing").
     func userTyped() { if visible { hide() } }
 

@@ -340,6 +340,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
                     // silent no-op that reads exactly like the app being broken.
                     rslog("trigger: nothing could be applied")
                     ConversionNotifier.reportRewriteFailure()
+                } else {
+                    // Nothing buffered at all. The usual cause is a mouse click, which clears the
+                    // buffer on purpose so a retype cannot erase text at a cursor that has since
+                    // moved — but from the user's side the trigger simply did nothing, five times
+                    // in a row, with no way to tell that from a broken app.
+                    rslog("trigger: nothing buffered — click or focus change cleared it")
+                    self.caretIndicator?.notice(L10n.triggerNothingBuffered)
                 }
             },
             onAltReconvert: { [weak self] in
