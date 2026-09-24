@@ -59,7 +59,7 @@ Nothing below existed in the first version of this change.
 - [x] 5b.2 Create a **Mac App Store provisioning profile** for `site.ironmade.switcher3way`, and have `build_app.sh --appstore` embed it as `Contents/embedded.provisionprofile`; verify it is present in the built bundle
 - [x] 5b.3 Sign the App Store flavour with Apple Distribution plus `signing/appstore.entitlements`, not Developer ID; verify `codesign -dv` shows the distribution authority and the sandbox entitlement
 - [x] 5b.4 Add a packaging step that produces a signed `.pkg` (`productbuild --component … /Applications --sign "3rd Party Mac Developer Installer: …"`), and verify the package installs cleanly on a test Mac
-- [ ] 5b.5 Upload with Transporter (or `xcrun altool --upload-package`) and confirm the build appears in App Store Connect; expect the first upload to surface entitlement and Info.plist validation errors that never appear locally
+- [x] 5b.5 Upload with Transporter (or `xcrun altool --upload-package`) and confirm the build appears in App Store Connect. The first upload was rejected with "Missing asset catalog (90546)" — exactly the class of error this task predicted, invisible locally. Fixed by compiling Assets.xcassets into Assets.car; delivered on the second attempt
 
 ## 6. Documentation and disclosure
 
