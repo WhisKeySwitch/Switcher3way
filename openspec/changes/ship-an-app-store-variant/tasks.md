@@ -44,9 +44,9 @@
 ## 5. Purchase
 
 - [x] 5.1 Create the App Store Connect record, register the bundle identifier, and define the auto-renewable subscription with an introductory free trial plus the non-consumable unlock; verify the products load in a sandbox StoreKit session
-- [ ] 5.2 Implement entitlement resolution from the platform's current entitlements, and verify an active subscription, an active unlock and no purchase each resolve correctly
-- [ ] 5.3 Implement the purchase and restore flows, and verify restore re-establishes entitlement after deleting and reinstalling the app
-- [ ] 5.4 Implement the unpaid state: stop automatic conversion, show an unambiguous status-item state, offer the purchase options — and verify the reason is discoverable from the interface, not only the log
+- [x] 5.2 Implement entitlement resolution from the platform's current entitlements, and verify an active subscription, an active unlock and no purchase each resolve correctly. All three verified in the sandbox: subscription → purchased; lifetime non-consumable → purchased; no purchase → trial, and → expired once the trial is exhausted
+- [x] 5.3 Implement the purchase and restore flows, and verify restore re-establishes entitlement after deleting and reinstalling the app. Verified by deleting the container entirely — no settings, no trial clock — and relaunching: entitlement resolved to purchased from StoreKit without Restore being needed, because it is account-based rather than cached. Restore remains for the cases where that lookup has not happened yet
+- [x] 5.4 Implement the unpaid state: stop automatic conversion, show an unambiguous status-item state, offer the purchase options — and verify the reason is discoverable from the interface, not only the log. Verified by forcing the trial to zero: conversion stops and the menu says so in red (it was grey first time round, and unreadable — which in an app whose working state is invisible is the same as saying nothing)
 - [ ] 5.5 Verify an indeterminate entitlement (no network at launch) leaves the app working for that session, logs the reason, and re-checks rather than locking the user out
 - [x] 5.6 Verify the trial grants the full feature set on first launch with no sign-in prompt
 
