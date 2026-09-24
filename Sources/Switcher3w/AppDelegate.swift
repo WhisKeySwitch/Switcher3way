@@ -888,8 +888,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             menu.addItem(item)
             addPurchaseItems(to: menu)
         case .expired:
-            let item = NSMenuItem(title: L10n.purchaseExpired, action: nil, keyEquivalent: "")
-            item.isEnabled = false
+            // Red, not the default disabled grey. This line is the only thing telling the user why
+            // the app has stopped doing its job, and a greyed-out sentence reads as decoration —
+            // which leaves an expired licence indistinguishable from the app being broken.
+            let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+            item.attributedTitle = NSAttributedString(
+                string: L10n.purchaseExpired,
+                attributes: [.foregroundColor: NSColor.systemRed,
+                             .font: NSFont.menuFont(ofSize: 0)])
             menu.addItem(item)
             addPurchaseItems(to: menu)
         case .purchased, .unknown:
