@@ -43,6 +43,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     private var pauseTimer: Timer?         // auto-resume when the timed pause expires (W4)
     private var lastPermissionsOK: Bool?   // to rebuild the menu when permissions state changes
     private var monitoringActive = false
+    /// Watches for a permission grant that arrives while no onboarding window is open.
+    ///
+    /// The checklist polls, but it stops the moment its window closes — and the window itself
+    /// says closing loses nothing. So a user who closes it, grants Accessibility in System
+    /// Settings and comes back finds an app that never noticed and never starts working, with a
+    /// relaunch as the only cure nobody tells them about. This runs only while monitoring is off,
+    /// and stops itself the moment it starts.
+    private var permissionWatchTimer: Timer?
     private var caretIndicator: CaretIndicator?   // issue #10: caret flag (beta, OFF by default)
     private var secureFieldFocusObserver: NSObjectProtocol?   // invalidates the password-guard cache
 
@@ -229,6 +237,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             return
         }
 
+        // Something is missing. Keep watching for it to appear, regardless of whether the user
+        // leaves the checklist window open.
+        startWatchingForPermissions()
+
         // Permissions were granted before but are now reset (update): clean the TCC entries
         // and show the checklist with a reset note.
         if SettingsManager.shared.permissionsWereGranted {
@@ -265,6 +277,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     }
 
     // MARK: - Start Monitoring
+
+    /// Poll for both grants while monitoring is off. Two cheap calls every two seconds, running
+    /// only in the state where the app is doing nothing anyway, and cancelled as soon as it works.
+    private func startWatchingForPermissions() {
+        guard permissionWatchTimer == nil, !monitoringActive else { return }
+        rslog("permissions: watching for a grant (checklist may be closed)")
+        permissionWatchTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, !self.monitoringActive else { return }
+                guard AXIsProcessTrusted(), CGPreflightListenEventAccess() else { return }
+                rslog("permissions: granted while running — starting without a relaunch")
+                SettingsManager.shared.permissionsWereGranted = true
+                self.startMonitoring()
+                self.rebuildMenu()
+                self.updateStatusIcon()
+            }
+        }
+    }
+
+    private func stopWatchingForPermissions() {
+        guard permissionWatchTimer != nil else { return }
+        permissionWatchTimer?.invalidate()
+        permissionWatchTimer = nil
+        rslog("permissions: watcher stopped — monitoring is running")
+    }
 
     private func startMonitoring() {
         if !keyboardMonitor.start(
@@ -403,6 +440,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         }
 
         monitoringActive = true
+        stopWatchingForPermissions()
         keyboardMonitor.onWordBoundary = { [weak self] in
             self?.handleAutoConvert()
         }
