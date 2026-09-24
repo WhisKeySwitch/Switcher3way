@@ -81,6 +81,7 @@ enum L10n {
     // MARK: - Conversion feedback chip
     static var settingsConversionChip: String { s("settings.conversionChip") }
     static func chipUndoHint(_ trigger: String) -> String { String(format: s("chip.undoHint"), trigger) }
+    static var triggerNothingBuffered: String { s("trigger.nothingBuffered") }
 
     /// The trigger keys offered in Settings, in order, as (settings key, display title). Key names
     /// are deliberately NOT localized — they are standard Apple notations. Single source for the
@@ -167,6 +168,15 @@ enum L10n {
     static var menuSound: String { s("menu.sound") }
     static var menuFlag: String { s("menu.flag") }
     static var menuPause: String { s("menu.pause") }
+    static func purchaseTrialDaysLeft(_ days: Int) -> String {
+        String(format: s(days == 1 ? "purchase.trial.oneDay" : "purchase.trial.daysLeft"), days)
+    }
+    static var purchaseExpired: String { s("purchase.expired") }
+    static var purchaseRestore: String { s("purchase.restore") }
+    static var purchaseMenuItem: String { s("purchase.menuItem") }
+    static var purchaseWindowTitle: String { s("purchase.window.title") }
+    static var purchaseWindowHeading: String { s("purchase.window.heading") }
+    static var purchaseThanks: String { s("purchase.thanks") }
     static var menuResume: String { s("menu.resume") }
     static var menuPause30m: String { s("menu.pause.30m") }
     static var menuPause1h: String { s("menu.pause.1h") }
@@ -350,6 +360,15 @@ enum L10n {
             "menu.sound": "Layout sound",
             "menu.flag": "Flag at cursor",
             "menu.pause": "Pause Switcher3Way",
+            "trigger.nothingBuffered": "Nothing to convert — retype the word",
+            "purchase.trial.daysLeft": "Trial — %d days left",
+            "purchase.trial.oneDay": "Trial — last day",
+            "purchase.expired": "Trial over — conversion is off",
+            "purchase.restore": "Restore Purchases",
+            "purchase.menuItem": "Unlock Switcher3Way…",
+            "purchase.window.title": "Switcher3Way",
+            "purchase.window.heading": "Keep fixing your layout",
+            "purchase.thanks": "Thank you — Switcher3Way is unlocked on this Mac.",
             "menu.resume": "Resume",
             "menu.pause.30m": "For 30 minutes",
             "menu.pause.1h": "For 1 hour",

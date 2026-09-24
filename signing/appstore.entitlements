@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Required for the Mac App Store. Measured consequences are recorded in
+	     openspec/changes/ship-an-app-store-variant: keystroke monitoring, CGEventPost,
+	     layout switching, frontmost-app identity and pasteboard reads all survive;
+	     inspecting another application's Accessibility elements does not. -->
+	<!-- Must match the provisioning profile, which declares
+	     KRLH2MYRS7.site.ironmade.switcher3way. Xcode writes these two automatically for store
+	     builds; a script-driven build has to supply them, and without them the upload is
+	     rejected for a profile/entitlement mismatch. They also establish the keychain access
+	     group the trial clock writes to. -->
+	<key>com.apple.application-identifier</key>
+	<string>KRLH2MYRS7.site.ironmade.switcher3way</string>
+	<key>com.apple.developer.team-identifier</key>
+	<string>KRLH2MYRS7</string>
+
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+
+	<!-- StoreKit. The updater is compiled out of this flavour, so this is the only
+	     network use left in it. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+
+	<!-- The exceptions list lets the user pick an application to exclude
+	     (ExceptionsPane.swift:250, NSOpenPanel). Without this the picker returns nothing
+	     and the feature silently does nothing. -->
+	<key>com.apple.security.files.user-selected.read-only</key>
+	<true/>
+</dict>
+</plist>

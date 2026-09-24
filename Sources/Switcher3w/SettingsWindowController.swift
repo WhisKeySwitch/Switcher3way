@@ -155,9 +155,13 @@ final class SettingsWindowController {
         systemBox.addRow(FormUI.row(title: L10n.settingsPerAppLayout,
                                     control: FormUI.makeSwitch(isOn: settings.perAppLayout,
                                                                target: self, action: #selector(perAppLayoutChanged))))
+#if !SWITCHER_APPSTORE
+        // No automatic-update preference in the App Store flavour: there is nothing it could
+        // control, and offering a dead switch is worse than offering none.
         systemBox.addRow(FormUI.row(title: L10n.settingsCheckUpdates,
                                     control: FormUI.makeSwitch(isOn: settings.checkForUpdates,
                                                                target: self, action: #selector(checkUpdatesChanged))))
+#endif
         let langPopup = NSPopUpButton()
         populateLanguagePopup(langPopup)
         langPopup.target = self
@@ -373,10 +377,12 @@ final class SettingsWindowController {
         onAutoSwitchChanged?(enabled)
     }
 
+#if !SWITCHER_APPSTORE
     @objc private func checkUpdatesChanged(_ sender: NSSwitch) {
         SettingsManager.shared.checkForUpdates = sender.state == .on
         UpdateChecker.shared.startSchedule()   // apply immediately: starts or stops the daily timer
     }
+#endif
 
     @objc private func launchAtLoginChanged(_ sender: NSSwitch) {
         SettingsManager.shared.launchAtLogin = sender.state == .on

@@ -72,16 +72,73 @@ final class CaretIndicator {
     /// converted form, and the configured trigger as an undo hint. Before this, a successful fix
     /// produced no feedback at all — the text simply changed under the user.
     func conversionApplied(original: String, converted: String) {
-        guard SettingsManager.shared.conversionChip else { return }
-        guard !original.isEmpty, !converted.isEmpty else { return }
-        guard feedbackAllowed() else { return }
+        // Every refusal is logged. A chip that does not appear is this app's hardest defect to
+        // report: the conversion still happened, so from outside it looks like the feature was
+        // never on. Four silent guards used to make that indistinguishable from a broken build.
+        guard SettingsManager.shared.conversionChip else {
+            rslog("chip: off — conversionChip setting")
+            return
+        }
+        guard !original.isEmpty, !converted.isEmpty else {
+            rslog("chip: skipped — empty text (orig=\(original.count) conv=\(converted.count))")
+            return
+        }
+        guard feedbackAllowed() else {
+            rslog("chip: suppressed — \(feedbackRefusal())")
+            return
+        }
         // Unlike the flag badge, the chip falls back to the window when no caret can be resolved:
         // knowing what was rewritten matters more than the exact position.
-        guard let rect = axCaretRectAppKit() ?? focusedWindowAnchor() else { return }
+        // Last resort: the screen itself. An anchor that is merely imprecise is far better than
+        // no chip at all — without this the app silently swallows its own feedback in whichever
+        // application fails to report a window, and the user sees a conversion happen with no
+        // confirmation, which is indistinguishable from the feature being off.
+        // Which anchor answered matters more than where it landed: the caret is the correct one,
+        // and a fallback being used at all is the actual defect when the app does expose a caret.
+        let rect: NSRect
+        let source: String
+        if let caret = axCaretRectAppKit() {
+            rect = caret; source = "caret"
+        } else if let window = focusedWindowAnchor() {
+            rect = window; source = "window-fallback"
+        } else if let screen = screenAnchor() {
+            rect = screen; source = "screen-fallback"
+        } else {
+            rslog("chip: no anchor at all (front=\(frontmostDescription()))")
+            return
+        }
+        rslog("chip: shown via \(source) at \(Int(rect.origin.x)),\(Int(rect.origin.y)) " +
+              "front=\(frontmostDescription())")
         label.attributedStringValue = chipText(original: original, converted: converted)
         lastFlag = ""   // the label no longer holds a flag; force a refresh on the next layout change
         sizeToFit()
         present(at: rect)
+    }
+
+    /// A plain message at the cursor — for when the trigger has nothing to act on.
+    ///
+    /// Without this the trigger fires, finds an empty buffer, and returns in silence, which is
+    /// indistinguishable from the app being broken. It is the documented behaviour ("the trigger
+    /// always answers") and it was never implemented for the commonest case of all: the buffer
+    /// having been cleared by a click before the user reached for the trigger.
+    func notice(_ message: String) {
+        guard SettingsManager.shared.conversionChip else { return }
+        guard feedbackAllowed() else {
+            rslog("chip: notice suppressed — \(feedbackRefusal())")
+            return
+        }
+        guard let rect = axCaretRectAppKit() ?? focusedWindowAnchor() ?? screenAnchor() else {
+            rslog("chip: notice has no anchor (front=\(frontmostDescription()))")
+            return
+        }
+        label.attributedStringValue = NSAttributedString(
+            string: message,
+            attributes: [.font: NSFont.systemFont(ofSize: 12),
+                         .foregroundColor: NSColor.secondaryLabelColor])
+        lastFlag = ""
+        sizeToFit()
+        present(at: rect)
+        rslog("chip: notice shown — \(message)")
     }
 
     /// Any user input/click → hide (issue #10: "hide on typing").
@@ -187,7 +244,9 @@ final class CaretIndicator {
         // chip did not appear at all in the sandboxed build, in Telegram and in a plain text
         // editor alike. CGWindowList needs no Accessibility access and was measured working
         // sandboxed, so it is the anchor of last resort rather than giving up on the feedback.
-        return focusedWindowAnchorViaWindowList(pid: app.processIdentifier)
+        if let viaList = focusedWindowAnchorViaWindowList(pid: app.processIdentifier) { return viaList }
+        rslog("chip: no window bounds for \(frontmostDescription()) — falling back to the screen")
+        return nil
     }
 
     /// Window bounds without Accessibility. Picks the frontmost on-screen window belonging to the
@@ -236,6 +295,30 @@ final class CaretIndicator {
     /// The suppression rules the feedback surfaces share. Stricter than the flag badge's used to
     /// be: the chip carries the text that was typed, so it must never appear anywhere conversion
     /// itself would be refused.
+    /// Last resort, for when neither a caret nor a window can be found. Exists so the chip always
+    /// has somewhere to appear rather than silently swallowing its own feedback.
+    private func screenAnchor() -> NSRect? {
+        let screen = NSScreen.main ?? NSScreen.screens.first
+        guard let frame = screen?.visibleFrame else { return nil }
+        return NSRect(x: frame.minX + 24, y: frame.minY + 24, width: 1, height: 18)
+    }
+
+    private func frontmostDescription() -> String {
+        let app = NSWorkspace.shared.frontmostApplication
+        return "\(app?.bundleIdentifier ?? "?") pid=\(app?.processIdentifier ?? -1)"
+    }
+
+    /// Which rule refused, for the log. Mirrors `feedbackAllowed()` in order.
+    private func feedbackRefusal() -> String {
+        if !AXIsProcessTrusted() { return "no accessibility trust" }
+        if SecureFieldDetector.isFocusedPassword { return "password field" }
+        if AutoSwitchPolicy.shouldDeferToRemoteClient { return "remote desktop client in front" }
+        let frontID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        if AutoSwitchPolicy.isDeniedApp(frontID) { return "denied app \(frontID ?? "?")" }
+        if frontID == Bundle.main.bundleIdentifier { return "our own app in front" }
+        return "unknown"
+    }
+
     private func feedbackAllowed() -> Bool {
         guard AXIsProcessTrusted() else { return false }
         guard !SecureFieldDetector.isFocusedPassword else { return false }

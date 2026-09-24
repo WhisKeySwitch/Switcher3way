@@ -1,3 +1,7 @@
+// The App Store flavour must not update itself — Apple rejects apps that do.
+// Compiled out rather than disabled at runtime: a flag would leave the code, the network
+// calls and the preference in the shipped binary for a later edit to re-enable by accident.
+#if !SWITCHER_APPSTORE
 import AppKit
 
 /// A discovered release worth offering to the user.
@@ -246,3 +250,5 @@ final class UpdateChecker {
         alert.runModal()
     }
 }
+
+#endif  // !SWITCHER_APPSTORE

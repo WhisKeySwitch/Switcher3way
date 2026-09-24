@@ -30,6 +30,11 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>11</string>
+	<!-- Export compliance: the app's only encryption is HTTPS provided by the operating
+	     system (StoreKit, and the update check in the direct build). That is exempt, so this
+	     answers Apple's question once here instead of being asked on every single upload. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>

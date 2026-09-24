@@ -39,7 +39,7 @@ Typed `ghbdtn` when you meant `привет` — or `ghbdsn` when you meant `п�
 
 **Download the DMG** from the [latest release](https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest), open it, and drag **Switcher3way.app** into **Applications**.
 
-The app is unnotarized (no Apple Developer account), so the **first** launch is blocked by Gatekeeper if you double-click it — instead **right-click the app → Open**, then confirm. macOS remembers the choice, so later launches are normal.
+Releases from 1.6.2 onward are signed with an Apple Developer ID and notarized by Apple, with the notarization ticket stapled to both the disk image and the app — so it opens by double-clicking, with no Gatekeeper warning, and works offline. Earlier releases were unnotarized and needed right-click → **Open** on first launch; so does a copy you build yourself.
 
 On first launch the onboarding checklist asks for two macOS permissions — **Accessibility** (read and retype the mistyped word) and **Input Monitoring** (see keystrokes). Grants are detected live; the app restarts itself after Input Monitoring is granted.
 

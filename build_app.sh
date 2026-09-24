@@ -4,7 +4,35 @@ set -e
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PRODUCT_NAME="Switcher3w"   # SwiftPM build product / module name (can't start with a digit)
 APP_NAME="Switcher3way"     # user-facing app + bundle name
-APP_BUNDLE="$PROJECT_DIR/$APP_NAME.app"
+
+# Two flavours from one source (see openspec/changes/ship-an-app-store-variant):
+#
+#   bash build_app.sh              direct     unsandboxed, Developer ID, self-updating
+#   bash build_app.sh --appstore   App Store  sandboxed, updater compiled out
+#
+# Both produce a bundle called Switcher3way.app — the user-facing name is the same product —
+# but in different directories and under different bundle identifiers, so both can be installed
+# at once (one in /Applications, one in ~/Applications). That side-by-side install is not a
+# convenience: the two flavours have DIFFERENT password-field protection, and comparing them is
+# the only way to see it.
+FLAVOUR="direct"
+if [ "${1:-}" = "--appstore" ] || [ "${SWITCHER_APPSTORE:-0}" = "1" ]; then
+    FLAVOUR="appstore"
+fi
+
+if [ "$FLAVOUR" = "appstore" ]; then
+    export SWITCHER_APPSTORE=1          # read by Package.swift → -DSWITCHER_APPSTORE
+    APP_BUNDLE="$PROJECT_DIR/dist/appstore/$APP_NAME.app"
+    BUNDLE_ID="site.ironmade.switcher3way"
+    ENTITLEMENTS="$PROJECT_DIR/signing/appstore.entitlements"
+else
+    unset SWITCHER_APPSTORE
+    APP_BUNDLE="$PROJECT_DIR/$APP_NAME.app"
+    # Unchanged on purpose: this identifier holds the Accessibility and Input Monitoring grants
+    # on every machine the app is already installed on. Changing it would drop them silently.
+    BUNDLE_ID="com.switcher3way.app"
+    ENTITLEMENTS=""
+fi
 # The products directory moves between toolchains (.build/apple/… on older SwiftPM,
 # .build/out/… on the swiftbuild system), so ask the toolchain instead of hardcoding:
 # a wrong guess here silently packages whatever stale binary the old path still holds.
@@ -23,7 +51,7 @@ if [ -z "$SHORT_VERSION" ]; then
     exit 1
 fi
 
-echo "=== Building $APP_NAME v$SHORT_VERSION (build $BUILD_VERSION) ==="
+echo "=== Building $APP_NAME v$SHORT_VERSION (build $BUILD_VERSION) — $FLAVOUR flavour ==="
 
 # 1. Собираем release — universal (arm64 + x86_64), чтобы работало и на Intel-маках
 echo "→ swift build -c release --arch arm64 --arch x86_64 (universal)..."
@@ -33,6 +61,7 @@ swift build -c release --arch arm64 --arch x86_64
 # 2. Создаём .app bundle
 echo "→ Creating app bundle..."
 rm -rf "$APP_BUNDLE"
+mkdir -p "$(dirname "$APP_BUNDLE")"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
@@ -54,6 +83,9 @@ cp "$PROJECT_DIR/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :RSDevTag $DEV_TAG" "$APP_BUNDLE/Contents/Info.plist" 2>/dev/null \
   || /usr/libexec/PlistBuddy -c "Add :RSDevTag string $DEV_TAG" "$APP_BUNDLE/Contents/Info.plist"
 echo "→ Stamped Info.plist: CFBundleShortVersionString=$SHORT_VERSION$DEV_TAG CFBundleVersion=$BUILD_VERSION"
+
+/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$APP_BUNDLE/Contents/Info.plist"
+echo "→ Bundle identifier: $BUNDLE_ID"
 
 # 4a. Stamp the Developer ID Team ID the updater will accept in a successor build.
 #     Read from signing/developer-id.conf (sourced in step 7 below — do it early here so
@@ -101,6 +133,29 @@ fi
 # 5. Копируем иконку (имя файла = APP_NAME, чтобы совпадало с CFBundleIconFile)
 cp "$PROJECT_DIR/Switcher3way.icns" "$APP_BUNDLE/Contents/Resources/$APP_NAME.icns"
 
+# 5a. Compile the asset catalogue into Assets.car.
+#     The Mac App Store REQUIRES the app icon in a compiled asset catalogue; a legacy .icns
+#     referenced by CFBundleIconFile is rejected at upload with "Missing asset catalog" (90546).
+#     Info.plist already declares CFBundleIconName=AppIcon, which is the other half of that
+#     contract. Built for both flavours so the two do not drift, and because the catalogue is
+#     what modern macOS prefers anyway.
+if [ -d "$PROJECT_DIR/Assets.xcassets" ]; then
+    echo "→ Compiling asset catalogue..."
+    ACTOOL_PLIST=$(mktemp -t actool-partial)
+    xcrun actool "$PROJECT_DIR/Assets.xcassets" \
+        --compile "$APP_BUNDLE/Contents/Resources" \
+        --platform macosx \
+        --minimum-deployment-target 13.0 \
+        --app-icon AppIcon \
+        --output-partial-info-plist "$ACTOOL_PLIST" >/dev/null
+    if [ ! -f "$APP_BUNDLE/Contents/Resources/Assets.car" ]; then
+        echo "ERROR: actool produced no Assets.car — the App Store would reject this build."
+        exit 1
+    fi
+    echo "→ Assets.car: $(du -h "$APP_BUNDLE/Contents/Resources/Assets.car" | cut -f1)"
+    rm -f "$ACTOOL_PLIST"
+fi
+
 # 5b. Генерируем встроенную справку из docs/user-guide*.md — руководства в репо
 #     единственный источник правды; отсутствующий исходник валит сборку (см. scripts/md2html.py).
 echo "→ Generating in-app help from docs/..."
@@ -108,6 +163,21 @@ echo "→ Generating in-app help from docs/..."
 
 # 6. Создаём PkgInfo
 echo -n "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
+
+# 6a. App Store flavour: embed the provisioning profile. It must be in place BEFORE signing,
+#     because the signature covers it. Without it the app has no App Store context: StoreKit
+#     loads no products, so nothing about purchasing can be tested at all — and the failure is
+#     an empty product list, which looks exactly like products not yet approved.
+if [ "$FLAVOUR" = "appstore" ]; then
+    PROFILE_PATH="$PROJECT_DIR/${PROVISION_PROFILE:-}"
+    if [ -n "${PROVISION_PROFILE:-}" ] && [ -f "$PROFILE_PATH" ]; then
+        cp "$PROFILE_PATH" "$APP_BUNDLE/Contents/embedded.provisionprofile"
+        echo "→ Embedded provisioning profile: $(basename "$PROFILE_PATH")"
+    else
+        echo "→ WARNING: no provisioning profile at ${PROFILE_PATH:-<unset>}."
+        echo "  StoreKit will load no products in this build and purchases cannot be tested."
+    fi
+fi
 
 # 7. Sign. Three identities in descending order of preference; every one of them is
 #    STABLE, which is the whole point — macOS ties Accessibility / Input Monitoring
@@ -125,6 +195,15 @@ echo -n "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 #    REQUIRE_DEVELOPER_ID=1 turns (b) and (c) into hard failures. create_dmg.sh sets it,
 #    because a release DMG signed with anything else fails notarization halfway through
 #    the build instead of here.
+# Strip extended attributes before signing — quarantine flags and anything else the bundle picked
+# up while being assembled. Must happen BEFORE signing, since the signature covers the bundle as
+# it stands.
+#
+# This does NOT clear com.apple.provenance, which macOS re-applies to every file as it is written
+# and which therefore appears as AppleDouble "._" entries in the package. That is normal and
+# present in Xcode-built packages too; do not go chasing it.
+xattr -cr "$APP_BUNDLE" 2>/dev/null || true
+
 DEV_ID_CONF="$PROJECT_DIR/signing/developer-id.conf"
 if [ -f "$DEV_ID_CONF" ]; then
     # Environment wins over the file: `DEVELOPER_ID_APP=… bash build_app.sh` overrides.
@@ -144,13 +223,32 @@ if [ -n "$DEVELOPER_ID_APP" ] && security find-identity -p codesigning -v 2>/dev
     HAVE_DEV_ID=1
 fi
 
-if [ "$HAVE_DEV_ID" = "1" ]; then
+if [ "$FLAVOUR" = "appstore" ]; then
+    # The Mac App Store rejects a Developer ID signature outright. Different certificate,
+    # different purpose: Developer ID vouches for software distributed outside the store.
+    if ! security find-identity -p codesigning -v 2>/dev/null | grep -qF "${APPLE_DISTRIBUTION:-<unset>}"; then
+        echo "ERROR: App Store flavour needs '${APPLE_DISTRIBUTION:-<unset>}' in the keychain."
+        echo "       Set APPLE_DISTRIBUTION in $DEV_ID_CONF and check:"
+        echo "         security find-identity -p codesigning -v"
+        exit 1
+    fi
+    echo "→ Code signing with '$APPLE_DISTRIBUTION' (sandboxed, App Store)..."
+    codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" \
+             --sign "$APPLE_DISTRIBUTION" "$APP_BUNDLE"
+    SIGNED_AS="'$APPLE_DISTRIBUTION' + $(basename "$ENTITLEMENTS") (App Store)"
+elif [ "$HAVE_DEV_ID" = "1" ]; then
     echo "→ Code signing with '$DEVELOPER_ID_APP' (hardened runtime + timestamp)..."
     # No --deep: Apple deprecated it for Developer ID, and this bundle has nothing
     # nested to sign anyway (one binary + resources). --options runtime is mandatory
     # for notarization; --timestamp is what keeps the signature valid past cert expiry.
-    codesign --force --options runtime --timestamp --sign "$DEVELOPER_ID_APP" "$APP_BUNDLE"
-    SIGNED_AS="'$DEVELOPER_ID_APP' (Developer ID, hardened runtime — notarizable)"
+    if [ -n "$ENTITLEMENTS" ]; then
+        codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" \
+                 --sign "$DEVELOPER_ID_APP" "$APP_BUNDLE"
+        SIGNED_AS="'$DEVELOPER_ID_APP' + $(basename "$ENTITLEMENTS") (sandboxed)"
+    else
+        codesign --force --options runtime --timestamp --sign "$DEVELOPER_ID_APP" "$APP_BUNDLE"
+        SIGNED_AS="'$DEVELOPER_ID_APP' (Developer ID, hardened runtime — notarizable)"
+    fi
 elif [ "${REQUIRE_DEVELOPER_ID:-0}" = "1" ]; then
     echo "ERROR: REQUIRE_DEVELOPER_ID=1 but no usable Developer ID Application identity."
     if [ -z "$DEVELOPER_ID_APP" ]; then

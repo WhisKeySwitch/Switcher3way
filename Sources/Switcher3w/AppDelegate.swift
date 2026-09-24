@@ -35,6 +35,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     private let settingsController = SettingsWindowController()
     private let onboardingController = OnboardingWindowController()
     private let helpController = HelpWindowController()
+#if SWITCHER_APPSTORE
+    private let purchaseWindow = PurchaseWindowController()
+#endif
     private let perAppLayoutManager = PerAppLayoutManager()
     private var iconRefreshTimer: Timer?
     private var pauseTimer: Timer?         // auto-resume when the timed pause expires (W4)
@@ -60,8 +63,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
 
         // Software updates: menu state follows the checker; first background check ~15 s
         // after launch, then daily (gated on the setting inside startSchedule).
+#if !SWITCHER_APPSTORE
         UpdateChecker.shared.onStateChange = { [weak self] in self?.rebuildMenu() }
         UpdateChecker.shared.startSchedule()
+#else
+        Purchases.shared.onChange = { [weak self] in
+            self?.rebuildMenu()
+            self?.updateStatusIcon()
+            self?.purchaseWindow.refreshContents()
+        }
+        Purchases.shared.start()
+#endif
     }
 
     private func setupSettingsCallbacks() {
@@ -259,6 +271,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             onAltTap: { [weak self] in
                 guard let self else { return }
                 guard SettingsManager.shared.effectivelyEnabled else { return }
+#if SWITCHER_APPSTORE
+                guard Purchases.shared.entitlement.allowsConversion else {
+                    rslog("trigger: suppressed — trial over, nothing purchased")
+                    return
+                }
+#endif
                 // Manual control invalidates the phrase memory (its conversions/undos
                 // aren't tracked, so later corrections would erase the wrong segment).
                 self.resetPhrase()
@@ -322,11 +340,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
                     // silent no-op that reads exactly like the app being broken.
                     rslog("trigger: nothing could be applied")
                     ConversionNotifier.reportRewriteFailure()
+                } else {
+                    // Nothing buffered at all. The usual cause is a mouse click, which clears the
+                    // buffer on purpose so a retype cannot erase text at a cursor that has since
+                    // moved — but from the user's side the trigger simply did nothing, five times
+                    // in a row, with no way to tell that from a broken app.
+                    rslog("trigger: nothing buffered — click or focus change cleared it")
+                    self.caretIndicator?.notice(L10n.triggerNothingBuffered)
                 }
             },
             onAltReconvert: { [weak self] in
                 guard let self else { return }
                 guard SettingsManager.shared.effectivelyEnabled else { return }
+#if SWITCHER_APPSTORE
+                guard Purchases.shared.entitlement.allowsConversion else {
+                    rslog("trigger: suppressed — trial over, nothing purchased")
+                    return
+                }
+#endif
                 self.resetPhrase()   // manual control — see onAltTap
                 guard !SecureFieldDetector.isFocusedPassword else {
                     rslog("trigger: suppressed — password field")
@@ -439,6 +470,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     private func handleAutoConvert() {
         rslog("auto: fired")
         guard SettingsManager.shared.effectivelyEnabled else { rslog("auto: bail master-off"); return }
+#if SWITCHER_APPSTORE
+        guard Purchases.shared.entitlement.allowsConversion else {
+            rslog("auto: bail — trial over, nothing purchased")
+            return
+        }
+#endif
         guard SettingsManager.shared.autoConvert else { rslog("auto: bail flag-off"); return }
         // Contexts where words go unevaluated make the phrase memory incomplete —
         // reset it so a later correction can't be computed over a gap.
@@ -842,6 +879,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             menu.addItem(remoteDesktopItem)
         }
 
+#if SWITCHER_APPSTORE
+        menu.addItem(NSMenuItem.separator())
+        switch Purchases.shared.entitlement {
+        case .trial(let daysRemaining):
+            let item = NSMenuItem(title: L10n.purchaseTrialDaysLeft(daysRemaining), action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+            addPurchaseItems(to: menu)
+        case .expired:
+            let item = NSMenuItem(title: L10n.purchaseExpired, action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+            addPurchaseItems(to: menu)
+        case .purchased, .unknown:
+            break
+        }
+#endif
+
         menu.addItem(NSMenuItem.separator())
 
         // Pause with durations instead of the "Enable" checkbox (W4): a disabled
@@ -883,8 +938,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         helpItem.target = self
         menu.addItem(helpItem)
 
+#if !SWITCHER_APPSTORE
         // Updates: the fork's own updater (source = this repo's own releases).
         // Disabled with a busy title while a check or install is in progress.
+        // Absent from the App Store flavour, which is updated by the store itself.
         let checker = UpdateChecker.shared
         let updatesTitle = checker.isInstalling ? L10n.menuInstallingUpdate
                          : checker.isBusy ? L10n.menuCheckingUpdates
@@ -894,6 +951,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
                                      keyEquivalent: "")
         updatesItem.target = self
         menu.addItem(updatesItem)
+#endif
 
         // "Support Development", "Star on GitHub" removed in the Switcher3way fork.
         menu.addItem(NSMenuItem.separator())
@@ -1093,9 +1151,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         helpController.show()
     }
 
+#if SWITCHER_APPSTORE
+    /// One row per product, priced in the customer's own currency by StoreKit, plus restore.
+    /// Buying opens Apple's own sheet — there is no payment UI of ours to get wrong.
+    /// One entry that opens the purchase window. Buying cannot happen from the menu itself: the
+    /// sheet needs a window to attach to, and this app has none until the window opens.
+    private func addPurchaseItems(to menu: NSMenu) {
+        let item = NSMenuItem(title: L10n.purchaseMenuItem, action: #selector(showPurchaseWindow),
+                              keyEquivalent: "")
+        item.target = self
+        menu.addItem(item)
+    }
+
+    @objc private func showPurchaseWindow() {
+        purchaseWindow.show()
+    }
+#endif
+
+#if !SWITCHER_APPSTORE
     @objc private func checkForUpdatesTapped() {
         UpdateChecker.shared.checkManually()
     }
+#endif
 
     func applicationWillTerminate(_ notification: Notification) {
         // Don't lose the clipboard in the 2-second window of deferred restore
