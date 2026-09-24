@@ -43,6 +43,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     private var pauseTimer: Timer?         // auto-resume when the timed pause expires (W4)
     private var lastPermissionsOK: Bool?   // to rebuild the menu when permissions state changes
     private var monitoringActive = false
+    /// Why monitoring stopped, when it stopped through a fault rather than a user's choice.
+    /// Pause and the master toggle are deliberate; these are not, and must not look the same.
+    enum MonitoringFault {
+        case accessibility, inputMonitoring, bothPermissions, tap
+    }
+    private var monitoringFault: MonitoringFault?
     /// Watches for a permission grant that arrives while no onboarding window is open.
     ///
     /// The checklist polls, but it stops the moment its window closes — and the window itself
@@ -440,6 +446,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         }
 
         monitoringActive = true
+        monitoringFault = nil
         stopWatchingForPermissions()
         keyboardMonitor.onWordBoundary = { [weak self] in
             self?.handleAutoConvert()
@@ -474,12 +481,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         // Safety net for issue #9: the system notification about a layout change is unreliable
         // (especially over remote desktop — on that machine it often doesn't arrive), so
         // the flag "gets stuck". A constant light poll keeps the icon in sync with the system.
-        // The same poll watches the permissions state (W4: menu item — only when broken).
+        // The same poll is where the app checks that it still works at all — permissions still
+        // held, event tap still enabled (notice-revoked-permissions). One timer, one place where
+        // "is this app actually working" is decided; two would eventually disagree.
         iconRefreshTimer?.invalidate()
         iconRefreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.updateStatusIcon()
-                self?.watchPermissions()
+                self?.checkMonitoringHealth()
             }
         }
         rslog("Monitoring started successfully")
@@ -493,14 +502,60 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         offerAutoConvertIfNeeded()
     }
 
-    /// Rebuilds the menu when permissions state changes (loss/return) — so that
-    /// "Check Permissions…" appears only when it's really broken.
-    private func watchPermissions() {
-        let ok = AXIsProcessTrusted() && CGPreflightListenEventAccess()
+    /// Confirms the app can still do its job, rather than assuming the launch-time answer holds.
+    ///
+    /// Permissions are continuing preconditions: macOS withdraws Accessibility and Input
+    /// Monitoring on its own (a changed signature is enough), and users turn them off while
+    /// debugging something else. Both happened here. Until this existed, `monitoringActive`
+    /// stayed true, the tap was dead, and the app reported itself as working — which in an app
+    /// whose successful state is invisible is indistinguishable from having nothing to do.
+    ///
+    /// Three synchronous calls, no locks, no conversion state: it cannot delay a conversion.
+    private func checkMonitoringHealth() {
+        let acc = AXIsProcessTrusted()
+        let inp = CGPreflightListenEventAccess()
+        let ok = acc && inp
+
         if ok != lastPermissionsOK {
             lastPermissionsOK = ok
             rebuildMenu()
         }
+
+        // Nothing to verify while monitoring isn't supposed to be running: the grant watcher
+        // owns that state.
+        guard monitoringActive else { return }
+
+        if !ok {
+            let missing: MonitoringFault = !acc && !inp ? .bothPermissions : (!acc ? .accessibility : .inputMonitoring)
+            logAlways("health: permission revoked while running (accessibility=\(acc) inputMonitoring=\(inp)) — monitoring stopped")
+            stopMonitoring(fault: missing)
+            return
+        }
+
+        // Permissions held — but a tap the system disabled delivers no events, so the
+        // in-callback re-enable can never fire for it.
+        guard !keyboardMonitor.isTapEnabled else { return }
+
+        if keyboardMonitor.reenableTap() {
+            // Routine and recoverable. Logged, not announced: an app that reports every
+            // transient hiccup teaches its user to ignore the reports that matter.
+            rslog("health: event tap was disabled — re-enabled, monitoring continues")
+        } else {
+            logAlways("health: event tap disabled and could not be re-enabled — monitoring stopped")
+            stopMonitoring(fault: .tap)
+        }
+    }
+
+    /// Leaves the app in the state it uses when permissions were never granted — including the
+    /// watcher — so that recovery runs through a path that is exercised on every first launch,
+    /// instead of one that only runs in a rare case and therefore only fails in a rare case.
+    private func stopMonitoring(fault: MonitoringFault) {
+        monitoringActive = false
+        monitoringFault = fault
+        keyboardMonitor.stop()
+        startWatchingForPermissions()
+        rebuildMenu()
+        updateStatusIcon()
     }
 
     /// Auto-conversion at the word boundary: detect the wrong layout → convert + switch.
@@ -965,6 +1020,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             menu.addItem(resumeItem)
         }
 
+        // Why the app stopped. Red and clickable, not the default disabled grey: this line is
+        // the only thing distinguishing "cannot work" from "had nothing to convert", and in the
+        // menu of an app whose successful state is invisible, a greyed-out sentence reads as
+        // decoration. Same mistake the expired-licence line above already made once.
+        if let fault = monitoringFault {
+            let item = NSMenuItem(title: "", action: #selector(recheckPermissions), keyEquivalent: "")
+            item.target = self
+            item.attributedTitle = NSAttributedString(
+                string: L10n.menuMonitoringStopped(faultName(fault)),
+                attributes: [.foregroundColor: NSColor.systemRed,
+                             .font: NSFont.menuFont(ofSize: 0)])
+            menu.addItem(item)
+        }
+
         // "Check Permissions…" — only when permissions are broken (W4);
         // in a healthy state the item isn't needed in the everyday menu.
         if !(AXIsProcessTrusted() && CGPreflightListenEventAccess()) {
@@ -1071,7 +1140,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         let flag = flagForCurrentLayout()
         // W4: while paused (or with the master toggle off) the icon is clearly different —
         // a disabled switcher shouldn't look enabled.
-        let title = SettingsManager.shared.effectivelyEnabled ? flag : "⏸" + flag
+        // A fault takes precedence over a pause: both stop conversion, but only one of them
+        // needs the user to do something, and only one of them they didn't choose.
+        let title: String
+        if monitoringFault != nil {
+            title = "⚠️" + flag
+        } else if SettingsManager.shared.effectivelyEnabled {
+            title = flag
+        } else {
+            title = "⏸" + flag
+        }
         // We poke the caret ONLY on a real layout flag change: updateStatusIcon
         // is also called by the 2-second safety poll, otherwise the caret flag would pop
         // up every 2s (and a pause change is not a layout change).
@@ -1085,6 +1163,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     }
 
     private var lastFlagShown = ""
+
+    /// What the user has to restore, in the wording System Settings uses for it.
+    private func faultName(_ fault: MonitoringFault) -> String {
+        switch fault {
+        case .accessibility:   return L10n.onboardingAccessibilityTitle
+        case .inputMonitoring: return L10n.onboardingInputMonitoringTitle
+        case .bothPermissions: return "\(L10n.onboardingAccessibilityTitle) + \(L10n.onboardingInputMonitoringTitle)"
+        case .tap:             return L10n.onboardingInputMonitoringTitle
+        }
+    }
 
     /// Flag of the current layout by language code (BCP-47), not by a substring in the ID — otherwise
     /// "Belarusian" falsely matched "ru", and any non-RU/EN pair was shown as 🇺🇸.

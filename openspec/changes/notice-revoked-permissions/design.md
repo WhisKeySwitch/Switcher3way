@@ -5,7 +5,7 @@ See `proposal.md` — Why.
 The relevant facts about the code as it stands:
 
 - `AppDelegate.monitoringActive` is set `true` once, in `startMonitoring()`, and never re-examined.
-- Nothing calls `CGEventTapIsEnabled`. The only tap-health handling is inside the event callback: `tapDisabledByTimeout` and `tapDisabledByUserInput` re-enable the tap. That works only while events still arrive, which is precisely not the case when the tap is dead.
+- Nothing calls `CGEvent.tapIsEnabled`. The only tap-health handling is inside the event callback: `tapDisabledByTimeout` and `tapDisabledByUserInput` re-enable the tap. That works only while events still arrive, which is precisely not the case when the tap is dead.
 - `AXIsProcessTrusted()` and `CGPreflightListenEventAccess()` are cheap, synchronous, and already called at launch.
 - A watcher added in September 2026 polls for *missing* permissions to appear, every two seconds, but only runs while monitoring is off.
 
@@ -29,7 +29,9 @@ So the machinery for the opposite direction already exists and runs in the other
 
 **Extend the existing watcher rather than adding a second timer.** A permission watcher already exists for the not-yet-granted state. Making it run in both states — watching for grants when monitoring is off, and for losses when it is on — keeps one timer, one cadence, and one place where "is this app actually working" is decided. Two independent timers checking overlapping conditions would eventually disagree, and the disagreement would be the bug.
 
-**Check the tap, not only the permissions.** A permission can be intact while the tap is disabled, and the reverse is possible during a grant transition. `CGEventTapIsEnabled` is the direct question and the cheap one; the permission calls say what to do about the answer. Checking only permissions would miss the case the in-callback handler cannot reach — a tap disabled while no events flow.
+*Amended during implementation:* the active state already had its own two-second poll — `iconRefreshTimer`, which keeps the menu-bar flag in sync and already called `watchPermissions()`. So the health check went there, and `watchPermissions()` became `checkMonitoringHealth()`. The decision's substance holds — no new timer, and one function decides whether the app is working — but the mechanism is one poll per state rather than a single poll in both. The grant watcher stays as it is, and the health check hands back to it on a revocation.
+
+**Check the tap, not only the permissions.** A permission can be intact while the tap is disabled, and the reverse is possible during a grant transition. `CGEvent.tapIsEnabled` is the direct question and the cheap one; the permission calls say what to do about the answer. Checking only permissions would miss the case the in-callback handler cannot reach — a tap disabled while no events flow.
 
 **Re-enable silently; report only what the user must act on.** A tap disabled by the system is recoverable and routine, so it is re-enabled and logged, with nothing shown. A revoked permission is not recoverable by the app, so it must be surfaced. The distinction matters: an app that announces every transient hiccup trains its user to ignore it.
 
@@ -39,7 +41,7 @@ So the machinery for the opposite direction already exists and runs in the other
 
 ## Risks / Trade-offs
 
-- **A false positive stops a working app** → The check must only act on an unambiguous answer. `CGEventTapIsEnabled` returning false and a permission call returning false are both definitive; nothing here infers from silence or from absence of events, which is what made the original defect invisible in the first place.
+- **A false positive stops a working app** → The check must only act on an unambiguous answer. `CGEvent.tapIsEnabled` returning false and a permission call returning false are both definitive; nothing here infers from silence or from absence of events, which is what made the original defect invisible in the first place.
 - **The check runs during a conversion and interferes** → It touches no conversion state and holds no locks. The requirement that it cannot delay a conversion is in the spec so that a future implementation cannot quietly acquire one.
 - **Revocation during a legitimate transition causes a flap** → Granting Input Monitoring already triggers a self-restart, and a changed signature drops grants at a point where the app is restarting anyway. If flapping appears in practice, the answer is a second consecutive failing check before acting, not a longer interval.
 - **The status icon gains a third state and becomes noise** → Paused already has an indicator. The fault state must be distinguishable from it, which is a design constraint rather than a new mechanism.
