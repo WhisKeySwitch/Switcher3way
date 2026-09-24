@@ -133,6 +133,29 @@ fi
 # 5. Копируем иконку (имя файла = APP_NAME, чтобы совпадало с CFBundleIconFile)
 cp "$PROJECT_DIR/Switcher3way.icns" "$APP_BUNDLE/Contents/Resources/$APP_NAME.icns"
 
+# 5a. Compile the asset catalogue into Assets.car.
+#     The Mac App Store REQUIRES the app icon in a compiled asset catalogue; a legacy .icns
+#     referenced by CFBundleIconFile is rejected at upload with "Missing asset catalog" (90546).
+#     Info.plist already declares CFBundleIconName=AppIcon, which is the other half of that
+#     contract. Built for both flavours so the two do not drift, and because the catalogue is
+#     what modern macOS prefers anyway.
+if [ -d "$PROJECT_DIR/Assets.xcassets" ]; then
+    echo "→ Compiling asset catalogue..."
+    ACTOOL_PLIST=$(mktemp -t actool-partial)
+    xcrun actool "$PROJECT_DIR/Assets.xcassets" \
+        --compile "$APP_BUNDLE/Contents/Resources" \
+        --platform macosx \
+        --minimum-deployment-target 13.0 \
+        --app-icon AppIcon \
+        --output-partial-info-plist "$ACTOOL_PLIST" >/dev/null
+    if [ ! -f "$APP_BUNDLE/Contents/Resources/Assets.car" ]; then
+        echo "ERROR: actool produced no Assets.car — the App Store would reject this build."
+        exit 1
+    fi
+    echo "→ Assets.car: $(du -h "$APP_BUNDLE/Contents/Resources/Assets.car" | cut -f1)"
+    rm -f "$ACTOOL_PLIST"
+fi
+
 # 5b. Генерируем встроенную справку из docs/user-guide*.md — руководства в репо
 #     единственный источник правды; отсутствующий исходник валит сборку (см. scripts/md2html.py).
 echo "→ Generating in-app help from docs/..."
