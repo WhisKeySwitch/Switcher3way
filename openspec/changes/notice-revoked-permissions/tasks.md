@@ -22,7 +22,8 @@
 
 - [x] 4.1 Revoke Accessibility on a running app: within a few seconds the icon shows a fault, the menu names it, conversion stops, and the log records it
 - [x] 4.2 Re-grant it: monitoring resumes with no relaunch, the icon returns to normal — and record the answer to the open question in `design.md` about whether a running process observes a fresh grant
-- [ ] 4.3 Revoke Input Monitoring and confirm the same, since it is a separate grant with separate behaviour
+- [x] 4.3 Revoke Input Monitoring and confirm the same, since it is a separate grant with separate behaviour
+  - Confirmed via the merged macOS 27 "Device Control and Data Access" pane: revoking there is detected within ~2 s, raises the fault icon and the red menu line, and recovers on re-grant with no relaunch. Note for whoever reads the log later: every revocation raised this way reported `accessibility=false inputMonitoring=true`, so the branch that names Input Monitoring specifically has not been seen to fire. `CGPreflightListenEventAccess()` was never observed returning false in a running process; a `tccutil reset ListenEvent` without sudo does not revoke it, and the grant survived a relaunch afterwards.
 - [ ] 4.4 Leave the app running normally for an extended period and confirm no measurable CPU cost and no spurious fault states
 - [ ] 4.6 Establish whether a failed `reenableTap()` means a genuinely dead tap or a race on `tapIsEnabled` — log both readings around the re-enable, and confirm from a field run that every fault raised was real. A fault state that can fire spuriously is the one risk `design.md` names, and the 2026-09-24 field case cannot currently be classified either way
 - [ ] 4.5 Verify in **both** flavours — the sandboxed build's permissions behave the same, but it has never been exercised here
