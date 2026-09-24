@@ -49,6 +49,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         case accessibility, inputMonitoring, bothPermissions, tap
     }
     private var monitoringFault: MonitoringFault?
+    /// Consecutive health checks that found the tap dead and could not revive it.
+    private var tapFailStrikes = 0
+    private static let tapFailStrikesBeforeActing = 2
     /// Watches for a permission grant that arrives while no onboarding window is open.
     ///
     /// The checklist polls, but it stops the moment its window closes — and the window itself
@@ -447,6 +450,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
 
         monitoringActive = true
         monitoringFault = nil
+        tapFailStrikes = 0
         stopWatchingForPermissions()
         keyboardMonitor.onWordBoundary = { [weak self] in
             self?.handleAutoConvert()
@@ -534,16 +538,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
 
         // Permissions held — but a tap the system disabled delivers no events, so the
         // in-callback re-enable can never fire for it.
-        guard !keyboardMonitor.isTapEnabled else { return }
+        guard !keyboardMonitor.isTapEnabled else { tapFailStrikes = 0; return }
 
         if keyboardMonitor.reenableTap() {
             // Routine and recoverable. Logged, not announced: an app that reports every
             // transient hiccup teaches its user to ignore the reports that matter.
+            tapFailStrikes = 0
             rslog("health: event tap was disabled — re-enabled, monitoring continues")
-        } else {
-            logAlways("health: event tap disabled and could not be re-enabled — monitoring stopped")
-            stopMonitoring(fault: .tap)
+            return
         }
+
+        // Two consecutive failing checks before acting. One reading cannot distinguish a dead
+        // tap from a reading that raced the enable, and the two call for opposite responses:
+        // tearing down a working tap is a self-inflicted outage, and a fault the user can see
+        // is worth two more seconds of certainty. Costs ~2 s of an outage that has already
+        // happened; buys a fault state that cannot fire on a momentary false reading.
+        tapFailStrikes += 1
+        guard tapFailStrikes >= Self.tapFailStrikesBeforeActing else {
+            rslog("health: event tap re-enable failed (strike \(tapFailStrikes)) — rechecking before acting")
+            return
+        }
+
+        logAlways("health: event tap disabled and could not be re-enabled after \(tapFailStrikes) checks — monitoring stopped")
+        tapFailStrikes = 0
+        stopMonitoring(fault: .tap)
     }
 
     /// Leaves the app in the state it uses when permissions were never granted — including the

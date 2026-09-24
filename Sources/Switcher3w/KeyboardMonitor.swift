@@ -207,9 +207,17 @@ final class KeyboardMonitor: @unchecked Sendable {
     /// the call was made — a re-enable that didn't take must not read as a recovery.
     @discardableResult
     func reenableTap() -> Bool {
-        guard let tap = eventTap else { return false }
+        guard let tap = eventTap else {
+            rslog("tap: re-enable skipped — no tap exists")
+            return false
+        }
+        let before = CGEvent.tapIsEnabled(tap: tap)
         CGEvent.tapEnable(tap: tap, enable: true)
-        return CGEvent.tapIsEnabled(tap: tap)
+        let after = CGEvent.tapIsEnabled(tap: tap)
+        // Both readings, because "the re-enable failed" and "the reading raced the enable"
+        // produce the same single `false` and call for opposite responses.
+        rslog("tap: re-enable before=\(before) after=\(after)")
+        return after
     }
 
     func stop() {

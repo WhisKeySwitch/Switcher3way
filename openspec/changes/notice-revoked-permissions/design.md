@@ -46,6 +46,31 @@ So the machinery for the opposite direction already exists and runs in the other
 - **Revocation during a legitimate transition causes a flap** → Granting Input Monitoring already triggers a self-restart, and a changed signature drops grants at a point where the app is restarting anyway. If flapping appears in practice, the answer is a second consecutive failing check before acting, not a longer interval.
 - **The status icon gains a third state and becomes noise** → Paused already has an indicator. The fault state must be distinguishable from it, which is a design constraint rather than a new mechanism.
 
+## Observed in the field during implementation
+
+On 2026-09-24, twenty minutes into ordinary use of 1.7.0 build 50 and seconds after a
+conversion in Telegram, the event tap stopped and `CGEvent.tapEnable` would not restore it:
+
+```
+09:57:39  auto: convert 8 keys → Ukrainian-PC
+09:58:26  trig: armed (key=56)        ← no CONVERT followed
+09:58:29  health: event tap disabled and could not be re-enabled — monitoring stopped
+09:58:31  Event tap created and enabled successfully / Monitoring started successfully
+```
+
+Nobody staged this. It is the defect the change exists for, occurring unprompted, and before
+the change it would have been permanent — the in-callback re-enable cannot run for a tap that
+delivers no events. Recovery took about five seconds and ran entirely through the grant
+watcher, i.e. the path first launch exercises every time.
+
+Unresolved: whether the tap was genuinely dead, or whether `reenableTap()` read
+`tapIsEnabled == false` in a race immediately after enabling. The armed trigger at 09:58:26
+producing no conversion leans toward a real death, but that is suggestive rather than
+conclusive, and it is the difference between a fault that is always real and one that can
+fire spuriously — the risk named below.
+
+Cost over the same 64-minute run: 0.1% CPU, 50 MB RSS.
+
 ## Migration Plan
 
 Additive and self-contained. No stored state, no format change, nothing a user must do. If the check proves troublesome it can be removed without leaving anything behind.
@@ -54,4 +79,6 @@ Worth shipping to the direct channel first: revocation is more common there, bec
 
 ## Open Questions
 
-- Whether a running process reliably observes a *newly granted* permission, or whether macOS caches the authorization per process. Established as unresolved in `ship-an-app-store-variant` 3b.3: the retest self-restarted before the watcher could demonstrate it. It affects how well recovery works here, but not whether detection does, and the answer will fall out of the first revoke-and-restore test.
+- ~~Whether a running process reliably observes a *newly granted* permission, or whether macOS caches the authorization per process.~~ **Answered 2026-09-24, for Accessibility: yes.** Carried unresolved from `ship-an-app-store-variant` 3b.3, where the retest self-restarted before the watcher could demonstrate it. Measured on macOS 27 with 1.7.0 build 50: Accessibility revoked at 09:24:33 and detected in the same second, re-granted at 09:26:19 and monitoring running in the same second, with no relaunch — and conversion actually worked afterwards, which the log alone could not have shown. A tap created after a fresh grant delivers events; the authorization is not cached against the process.
+
+  Input Monitoring is a separate question and may well answer differently: the onboarding flow already restarts the app when that one is granted, because macOS was observed to require it. Task 4.3 is where that gets established rather than assumed.
