@@ -194,6 +194,32 @@ final class KeyboardMonitor: @unchecked Sendable {
         return true
     }
 
+    /// Is the tap still live? The system disables taps on its own, and the handler for that
+    /// lives in the event callback — which cannot run, because a disabled tap delivers no
+    /// events. Asking from outside is the only way to find out while nothing is arriving.
+    /// No tap at all counts as not enabled: the question is whether keystrokes reach us.
+    var isTapEnabled: Bool {
+        guard let tap = eventTap else { return false }
+        return CGEvent.tapIsEnabled(tap: tap)
+    }
+
+    /// Re-enables a tap the system disabled. Reports the state afterwards rather than whether
+    /// the call was made — a re-enable that didn't take must not read as a recovery.
+    @discardableResult
+    func reenableTap() -> Bool {
+        guard let tap = eventTap else {
+            rslog("tap: re-enable skipped — no tap exists")
+            return false
+        }
+        let before = CGEvent.tapIsEnabled(tap: tap)
+        CGEvent.tapEnable(tap: tap, enable: true)
+        let after = CGEvent.tapIsEnabled(tap: tap)
+        // Both readings, because "the re-enable failed" and "the reading raced the enable"
+        // produce the same single `false` and call for opposite responses.
+        rslog("tap: re-enable before=\(before) after=\(after)")
+        return after
+    }
+
     func stop() {
         if let tap = eventTap {
             CGEvent.tapEnable(tap: tap, enable: false)

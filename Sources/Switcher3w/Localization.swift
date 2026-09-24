@@ -5,6 +5,7 @@ enum L10n {
     // MARK: - Menu
     static var menuAutoSwitch: String { s("menu.autoSwitch") }
     static var menuCheckPermissions: String { s("menu.checkPermissions") }
+    static func menuMonitoringStopped(_ what: String) -> String { String(format: s("menu.monitoringStopped"), what) }
     static var menuSettings: String { s("menu.settings") }
     static var menuQuit: String { s("menu.quit") }
 
@@ -252,6 +253,7 @@ enum L10n {
         "en": [
             "menu.autoSwitch": "Enable Switcher3Way",
             "menu.checkPermissions": "Check Permissions…",
+            "menu.monitoringStopped": "Not working — %@ was turned off",
             "menu.checkUpdates": "Check for Updates…",
             "menu.checkingUpdates": "Checking for updates…",
             "menu.installingUpdate": "Installing update…",
@@ -386,6 +388,7 @@ enum L10n {
         "ru": [
             "menu.autoSwitch": "Включить Switcher3Way",
             "menu.checkPermissions": "Проверить разрешения…",
+            "menu.monitoringStopped": "Не работает — отключено: %@",
             "menu.checkUpdates": "Проверить обновления…",
             "menu.checkingUpdates": "Проверка обновлений…",
             "menu.installingUpdate": "Установка обновления…",
@@ -1302,6 +1305,7 @@ enum L10n {
         "uk": [
             "menu.autoSwitch": "Увімкнути Switcher3Way",
             "menu.checkPermissions": "Перевірити дозволи…",
+            "menu.monitoringStopped": "Не працює — вимкнено: %@",
             "menu.checkUpdates": "Перевірити оновлення…",
             "menu.checkingUpdates": "Перевірка оновлень…",
             "menu.installingUpdate": "Встановлення оновлення…",
