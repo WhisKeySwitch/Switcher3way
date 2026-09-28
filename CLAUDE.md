@@ -327,6 +327,12 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   people type (see the architecture map). Coverage over real prose 100% in all three languages; the
   same change took the dormant vowel-less rule's false conversions from 8/76 to 2/76 on macOS and
   0/76 on Windows.
+  **Unreleased on `main` (2026-09-24): a quarantined dictionary no longer hands the word to its
+  sibling.** The field log showed `Вітаю` → `Вытаю` and unopposed ru wins on uk/ru shared words,
+  every one inside a uk quarantine window: `isAvailable == false` dropped uk from the candidate set,
+  so the preference was never asked. Quarantined languages now stay in `byLang` as untrusted
+  candidates (`DictionaryValidating.isQuarantined`); a word-shaped untrusted rendering contests a
+  sibling win unless the phrase backs it, and the rescue weighs it by shape. `QuarantinedCandidateTests`.
   1.5.2: the manual cycle lists the winning layout once, not twice.
   Promotion matched the winner into the candidate list by rendered text alone, so for a word built
   from letters uk and ru place identically it evicted the *other* language — one ⌥ tap changed

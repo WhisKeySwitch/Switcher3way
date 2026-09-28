@@ -18,6 +18,14 @@ The system SHALL periodically verify each language's dictionary against two cana
 - **WHEN** a language's dictionary rejects the common-word canary
 - **THEN** the language SHALL be excluded from detection until a subsequent probe passes, rather than silently eating conversions word by word
 
+#### Scenario: A quarantined language stays a candidate
+- **WHEN** a language's dictionary is quarantined and the typed keys render as a plausible word shape in that language
+- **THEN** the language SHALL remain in the candidate set with its verdict marked unusable, a sibling language SHALL NOT win the word by default (the word is left alone and the reason recorded) unless the phrase has already settled on the sibling, and the gibberish rescue SHALL weigh the quarantined rendering by shape as it does any other — so a Ukrainian word typed on the English layout during a uk quarantine is never converted into a Russian misspelling of itself
+
+#### Scenario: Typing in a quarantined language
+- **WHEN** the current layout's language is quarantined
+- **THEN** the word SHALL be left alone and the record SHALL name the quarantine, not a missing language
+
 #### Scenario: A healthy dictionary is untouched
 - **WHEN** the probes pass
 - **THEN** validation behaves exactly as before, and the probe cost stays off the per-keystroke path (probes run on first use and on a cooldown interval, not per word)
