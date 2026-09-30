@@ -66,12 +66,24 @@ public protocol DictionaryValidating {
     ///
     /// Defaults to true: an adapter that cannot verify itself is trusted exactly as before.
     func verifyTrust(_ lang: String) -> Bool
+
+    /// Whether `isAvailable` answered false because the dictionary is installed but currently
+    /// distrusted (it failed its canaries), as opposed to not being installed at all.
+    ///
+    /// The distinction matters to the resolver. A language with no dictionary is not a
+    /// candidate; a language whose dictionary is lying still IS one — its rendering exists and
+    /// the user may well have meant it — only its verdict is unusable. Dropping it from the
+    /// candidate set made the machine look two-language for a minute, and every Ukrainian word
+    /// typed on the English layout in that minute converted into Russian unopposed (`Вітаю` →
+    /// `Вытаю`, field log 2026-09-16..24, six times). Defaults to false.
+    func isQuarantined(_ lang: String) -> Bool
 }
 
 public extension DictionaryValidating {
     func alphabet(_ lang: String) -> String { "" }
     func vowels(_ lang: String) -> String { "" }
     func verifyTrust(_ lang: String) -> Bool { true }
+    func isQuarantined(_ lang: String) -> Bool { false }
 }
 
 /// Installed layouts and how keystrokes render in them. Production wraps the TIS input-source

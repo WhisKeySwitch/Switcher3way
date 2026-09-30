@@ -27,6 +27,10 @@ public final class NWayResolver {
         let lang: String      // 2-letter code (ru/uk/en…)
         let string: String    // keycodes read in this layout
         let isValid: Bool     // string is a real word in the language dictionary
+        /// False while the language's dictionary is quarantined: the rendering is real, the
+        /// verdict is not. Such a candidate never wins, but it is not dropped either — see
+        /// `contested(by:)`.
+        var isTrusted: Bool = true
     }
 
     /// Decision: which layout to switch to and what text to type. nil — leave as is.
@@ -209,8 +213,17 @@ public final class NWayResolver {
         var byLang: [String: Candidate] = [:]
         for layout in layouts {
             let lang = String(layout.lang.prefix(2))
-            guard dict.isAvailable(lang) else { continue }
             guard let rendered = rendered(keys, in: layout.id) else { continue }
+            guard dict.isAvailable(lang) else {
+                // A quarantined dictionary takes its verdict out of the decision, not its
+                // language. The candidate stays, marked untrusted and never valid, so that a
+                // word it might have claimed is not handed to the sibling language by default.
+                if dict.isQuarantined(lang), byLang[lang] == nil {
+                    byLang[lang] = Candidate(layoutID: layout.id, lang: lang, string: rendered,
+                                             isValid: false, isTrusted: false)
+                }
+                continue
+            }
             // A token with no letters at all — "10", ".", "))" — is not a word anywhere, whatever the
             // dictionary says: NSSpellChecker and Hunspell both accept the empty string, and that
             // verdict used to make a number "valid in the current language" and lock the phrase to
@@ -235,7 +248,7 @@ public final class NWayResolver {
         // Compact candidate dump for diagnosing "keep" decisions (only built when debug log is on).
         let dump = byLang.values
             .sorted { $0.lang < $1.lang }
-            .map { "\($0.lang):'\($0.string)'\($0.isValid ? " VALID" : "")" }
+            .map { "\($0.lang):'\($0.string)'\($0.isValid ? " VALID" : "")\($0.isTrusted ? "" : " QUARANTINED")" }
             .joined(separator: " ")
 
         guard let current = byLang[currentLang] else {
@@ -246,9 +259,17 @@ public final class NWayResolver {
         // the "always convert" list, switch there even bypassing the dictionary and vetoes.
         for cand in byLang.values where cand.lang != currentLang {
             if exceptions.isAlwaysConvert(SoftGates.letterCore(Array(cand.string))) {
+                CoreLog.write("nway: always-convert exception → \(cand.lang) [\(dump)]")
                 return .convert(Decision(targetLayoutID: cand.layoutID, lang: cand.lang,
                                          original: current.string, converted: cand.string))
             }
+        }
+
+        // Typing in a language whose dictionary is lying: whether this is a real word of it cannot
+        // be known, and "not valid here" is the premise of every conversion below. Nothing moves.
+        if !current.isTrusted {
+            CoreLog.write("nway: nil — \(currentLang) dictionary is quarantined, cannot judge the word [\(dump)]")
+            return .keep(.dictionaryUntrusted)
         }
 
         // Typed correctly in the current language (its letter core is a real word) → do nothing.
@@ -287,6 +308,18 @@ public final class NWayResolver {
             }
             CoreLog.write("nway: nil — no valid target language [\(dump)]")
             return .keep(.notAWordAnywhere)
+        }
+
+        // A winner is only a winner against the field that could answer. If a quarantined language
+        // renders these keys as something word-shaped, it might have claimed the word too — uk and
+        // ru spell most shared words identically — and with a healthy dictionary that would have
+        // been an ambiguity for the preference setting, not a win. The phrase may still speak for
+        // the winner: a run of real words in its language is evidence the quarantine does not touch.
+        let contesting = contested(by: byLang, currentLang: currentLang, capsLock: capsLock)
+        if !contesting.isEmpty, !winners.contains(where: { $0.lang == phraseLang }) {
+            CoreLog.write("nway: nil — word-shaped in quarantined \(contesting.sorted().joined(separator: "/")),"
+                          + " which cannot answer; not handing it to \(winners.map(\.lang).sorted().joined(separator: "/")) by default [\(dump)]")
+            return .keep(.dictionaryUntrusted)
         }
 
         // How far the dictionary hit can be trusted depends almost entirely on how long the word is,
@@ -382,6 +415,22 @@ public final class NWayResolver {
         }
         return .convert(Decision(targetLayoutID: winner.layoutID, lang: winner.lang,
                                  original: current.string, converted: winner.converted))
+    }
+
+    /// The quarantined languages whose rendering of the keys could be a word of theirs: the soft
+    /// gates pass and the shape is plausible. Unknown shape (no vowel set) counts as plausible —
+    /// an adapter that cannot say must not let the sibling win by default.
+    private func contested(by byLang: [String: Candidate], currentLang: String, capsLock: Bool) -> [String] {
+        byLang.values.compactMap { cand -> String? in
+            guard !cand.isTrusted, cand.lang != currentLang else { return nil }
+            let core = SoftGates.letterCore(Array(cand.string))
+            guard SoftGates.passes(core, capsLock: capsLock) else { return nil }
+            let vowels = dict.vowels(cand.lang)
+            guard vowels.isEmpty || WordShape.isPlausible(core.lowercased(), vowels: vowels, lang: cand.lang) else {
+                return nil
+            }
+            return cand.lang
+        }
     }
 
     /// The gibberish rescue: no dictionary validates the word in any language, so the shape of the
