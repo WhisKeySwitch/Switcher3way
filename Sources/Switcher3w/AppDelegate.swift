@@ -233,9 +233,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     /// Onboarding checklist (W3) instead of a chain of modal alerts: one window with a live
     /// status of both permissions; closing loses nothing.
     private func runPermissionWizard(interactive: Bool = false) {
-        let acc = AXIsProcessTrusted()
-        let inp = CGPreflightListenEventAccess()
-        rslog("Permissions: accessibility=\(acc) inputMonitoring=\(inp)")
+        let acc = Permissions.accessibility
+        let inp = Permissions.inputMonitoring
+        rslog(Permissions.logLine)
 
         if acc && inp {
             // Remember that permissions were granted
@@ -269,7 +269,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         let bundleID = Bundle.main.bundleIdentifier ?? "com.switcher3way.app"
         rslog("Resetting TCC entries for \(bundleID)")
 
-        for service in ["Accessibility", "ListenEvent"] {
+        // The Store build never asked for Input Monitoring, so there is no entry of its to reset.
+        for service in Permissions.asksForInputMonitoring ? ["Accessibility", "ListenEvent"] : ["Accessibility"] {
             let reset = Process()
             reset.launchPath = "/usr/bin/tccutil"
             reset.arguments = ["reset", service, bundleID]
@@ -295,7 +296,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         permissionWatchTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, !self.monitoringActive else { return }
-                guard AXIsProcessTrusted(), CGPreflightListenEventAccess() else { return }
+                guard Permissions.allGranted else { return }
                 rslog("permissions: granted while running — starting without a relaunch")
                 SettingsManager.shared.permissionsWereGranted = true
                 self.startMonitoring()
@@ -516,8 +517,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     ///
     /// Three synchronous calls, no locks, no conversion state: it cannot delay a conversion.
     private func checkMonitoringHealth() {
-        let acc = AXIsProcessTrusted()
-        let inp = CGPreflightListenEventAccess()
+        let acc = Permissions.accessibility
+        let inp = Permissions.inputMonitoring
         let ok = acc && inp
 
         if ok != lastPermissionsOK {
@@ -1054,7 +1055,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
 
         // "Check Permissions…" — only when permissions are broken (W4);
         // in a healthy state the item isn't needed in the everyday menu.
-        if !(AXIsProcessTrusted() && CGPreflightListenEventAccess()) {
+        if !Permissions.allGranted {
             let permItem = NSMenuItem(title: L10n.menuCheckPermissions, action: #selector(recheckPermissions), keyEquivalent: "")
             permItem.target = self
             menu.addItem(permItem)

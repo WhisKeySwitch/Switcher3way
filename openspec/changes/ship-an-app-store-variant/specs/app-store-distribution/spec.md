@@ -26,8 +26,29 @@ The App Store variant SHALL declare the App Sandbox entitlement and SHALL retain
 
 #### Scenario: End-to-end conversion under the sandbox
 
-- **WHEN** a user types a word in the wrong layout and invokes the manual trigger in the sandboxed variant, with Accessibility and Input Monitoring granted
+- **WHEN** a user types a word in the wrong layout and invokes the manual trigger in the sandboxed variant, with only the Accessibility permission granted (Device Control and Data Access on macOS 27)
 - **THEN** the system SHALL replace the typed text with the converted text and switch the keyboard layout
+
+### Requirement: The App Store variant asks for one permission
+
+The App Store variant SHALL require macOS 27 and SHALL request only the Accessibility permission, shown on macOS 27 as Privacy & Security → Device Control and Data Access. It SHALL NOT request Input Monitoring at any point, and its keyboard monitoring SHALL use a mechanism that the Accessibility grant alone permits. Its setup checklist SHALL show that single permission, name the pane as the user's macOS shows it, and state what the permission is used for: seeing what is typed and replacing a word typed in the wrong layout.
+
+App Review rejected the two-permission build under guideline 2.4.5(v) for requesting Input Monitoring (2026-09-28). On macOS 27 the Accessibility grant also covers keyboard access for an active event tap: measured 2026-09-30, a sandboxed build granted only Device Control and Data Access saw every real and posted keystroke through an active tap, and did not appear in the Input Monitoring list. Earlier macOS versions were not measured, which is why the variant requires macOS 27.
+
+#### Scenario: First launch asks for one permission
+
+- **WHEN** the App Store variant runs for the first time on macOS 27
+- **THEN** its setup checklist SHALL show a single step for Device Control and Data Access, and the system SHALL NOT show an Input Monitoring prompt at any time
+
+#### Scenario: Monitoring works with the single grant
+
+- **WHEN** the user has granted Device Control and Data Access and nothing else
+- **THEN** keyboard monitoring SHALL start and see the user's keystrokes, and a later loss of that grant SHALL be reported as the Accessibility permission, never as Input Monitoring
+
+#### Scenario: The variant does not install on earlier macOS
+
+- **WHEN** the App Store variant's bundle is inspected
+- **THEN** it SHALL declare macOS 27.0 as its minimum system version
 
 ### Requirement: Capabilities lost to the sandbox are identified and degraded deliberately
 

@@ -85,6 +85,13 @@ cp "$PROJECT_DIR/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 echo "→ Stamped Info.plist: CFBundleShortVersionString=$SHORT_VERSION$DEV_TAG CFBundleVersion=$BUILD_VERSION"
 
 /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$APP_BUNDLE/Contents/Info.plist"
+# The App Store build requires macOS 27. It asks for one permission only, which works because
+# macOS 27 gates keyboard access for an active event tap under that same grant (measured
+# 2026-09-30; earlier versions untested). See Sources/Switcher3w/Permissions.swift.
+if [ "$FLAVOUR" = "appstore" ]; then
+    /usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion 27.0" "$APP_BUNDLE/Contents/Info.plist"
+    echo "→ App Store build: LSMinimumSystemVersion=27.0"
+fi
 echo "→ Bundle identifier: $BUNDLE_ID"
 
 # 4a. Stamp the Developer ID Team ID the updater will accept in a successor build.
