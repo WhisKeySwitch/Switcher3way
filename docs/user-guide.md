@@ -74,8 +74,8 @@ macOS requires two permissions before any layout switcher can work:
 
 | Permission | Why Switcher3Way needs it |
 |---|---|
-| **Accessibility** | To read and retype the mistyped word |
-| **Input Monitoring** | To see your keystrokes and the trigger key |
+| **Accessibility** | To replace a word typed in the wrong layout, and to keep away from password fields |
+| **Input Monitoring** | To see what you type, so it can catch the wrong layout |
 
 On first launch a **setup checklist** window opens. For each permission, click **Open
 Settings**, flip the switch for Switcher3Way, and come back — the checklist detects the grant by
@@ -88,6 +88,11 @@ language). If Switcher3Way is not already listed, add it with the **+** button a
 the list — on macOS 27 the app cannot raise that dialog for you. After Input
 Monitoring is granted, the app restarts itself once (macOS requires it). The same window offers
 a **Launch at login** switch.
+
+**The App Store version asks for one permission, not two.** It requires macOS 27 and needs only
+**Device Control and Data Access**, which on macOS 27 also covers seeing what you type — so its
+checklist has a single step and it never asks for Input Monitoring or restarts itself. Nothing you
+type leaves your Mac in either version.
 
 Closing the window loses nothing: your grants stay, and the checklist can be reopened from the
 menu (**Check Permissions…** — the item appears only while something is missing).

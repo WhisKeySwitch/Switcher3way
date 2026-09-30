@@ -150,7 +150,9 @@ final class KeyboardMonitor: @unchecked Sendable {
 
         let precheck = CGPreflightListenEventAccess()
         rslog("Preflight check = \(precheck)")
-        if !precheck {
+        // The Store build must never raise the Input Monitoring prompt: it does not use that
+        // permission, and App Review rejected a build that asked for it. See `Permissions`.
+        if !precheck && Permissions.asksForInputMonitoring {
             rslog("Requesting access...")
             CGRequestListenEventAccess()
         }
@@ -163,9 +165,14 @@ final class KeyboardMonitor: @unchecked Sendable {
             | (1 << CGEventType.leftMouseDown.rawValue)
             | (1 << CGEventType.rightMouseDown.rawValue)
 
-        // Caps Lock requires an active tap (consume) to suppress case
-        // switching. For modifiers we keep listenOnly — don't interfere with input.
-        let options: CGEventTapOptions = triggerConfig.isCapsLock ? .defaultTap : .listenOnly
+        // Caps Lock requires an active tap (consume) to suppress case switching. The Store build
+        // always uses one, because an active tap is gated under Accessibility rather than Input
+        // Monitoring (see `Permissions`). Otherwise listenOnly — don't sit in the input path.
+        // An active tap passes every event through untouched unless the callback returns nil,
+        // which only the Caps Lock trigger does.
+        let options: CGEventTapOptions =
+            Permissions.needsActiveTap(capsLockTrigger: triggerConfig.isCapsLock) ? .defaultTap : .listenOnly
+        rslog("Tap mode: \(options == .defaultTap ? "active" : "listen-only")")
 
         // Remote desktop mode: the session level sees the keystrokes forwarded by Screen
         // Sharing (they're injected via CGEventPost, which the HID tap doesn't see).
@@ -514,6 +521,9 @@ final class KeyboardMonitor: @unchecked Sendable {
 
 // MARK: - C Callback
 
+/// Every path returns the event it was given, unretained: the tap owns the event, and returning
+/// it retained leaked one event per keystroke whenever the tap was active (the Caps Lock trigger,
+/// and every keystroke in the Store build). Only the Caps Lock trigger returns nil, to swallow it.
 private func keyboardCallback(
     proxy: CGEventTapProxy,
     type: CGEventType,
@@ -527,16 +537,16 @@ private func keyboardCallback(
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
         }
-        return Unmanaged.passRetained(event)
+        return Unmanaged.passUnretained(event)
     }
 
     // Ignore our own synthesized events by the marker
     if event.getIntegerValueField(.eventSourceUserData) == kSwitcher3wEventMarker {
-        return Unmanaged.passRetained(event)
+        return Unmanaged.passUnretained(event)
     }
 
     guard let userInfo else {
-        return Unmanaged.passRetained(event)
+        return Unmanaged.passUnretained(event)
     }
 
     let monitor = Unmanaged<KeyboardMonitor>.fromOpaque(userInfo).takeUnretainedValue()
@@ -547,7 +557,7 @@ private func keyboardCallback(
         // Remote desktop: ignore key auto-repeat — Screen Sharing latency produces
         // false repeats (that same runaway repeat) that clutter the conversion buffer.
         if event.getIntegerValueField(.keyboardEventAutorepeat) != 0, remote {
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
         // Remote desktop: Screen Sharing forwards characters as keyCode 0 + unicode payload.
         // We read the character itself — without it the buffer fills with keyCode 0 (= one character → runaway repeat).
@@ -573,5 +583,5 @@ private func keyboardCallback(
         monitor.resetBuffersOnClick()
     }
 
-    return Unmanaged.passRetained(event)
+    return Unmanaged.passUnretained(event)
 }

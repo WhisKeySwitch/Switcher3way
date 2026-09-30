@@ -22,8 +22,10 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
     /// Input Monitoring was just granted — a restart is needed (as in the old wizard).
     var onRequestRestart: (() -> Void)?
 
-    private var accGranted: Bool { AXIsProcessTrusted() }
-    private var inpGranted: Bool { CGPreflightListenEventAccess() }
+    private var accGranted: Bool { Permissions.accessibility }
+    private var inpGranted: Bool { Permissions.inputMonitoring }
+    /// The Store build asks for one permission, so its checklist has one row.
+    private var steps: Int { Permissions.asksForInputMonitoring ? 2 : 1 }
 
     func show(resetNotice: Bool = false) {
         showResetNotice = resetNotice
@@ -50,7 +52,8 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         title.font = .boldSystemFont(ofSize: 17)
         title.alignment = .center
 
-        let subtitle = NSTextField(wrappingLabelWithString: L10n.onboardingSubtitle)
+        let subtitle = NSTextField(wrappingLabelWithString: Permissions.asksForInputMonitoring
+                                   ? L10n.onboardingSubtitle : L10n.onboardingSubtitleOne)
         subtitle.font = .systemFont(ofSize: 12)
         subtitle.textColor = .secondaryLabelColor
         subtitle.alignment = .center
@@ -68,21 +71,26 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         // Checklist: two permissions + launch at login (instead of a separate alert)
         let box = FormBox()
 
+        // Title: the pane's name as the user will see it — renamed on macOS 27.
         let (accRow, accB, accT) = makeChecklistRow(
             number: 1,
-            title: L10n.onboardingAccessibilityTitle,
-            subtitle: L10n.onboardingAccessibilityText,
+            title: Permissions.accessibilityPaneIsRenamed
+                ? L10n.onboardingAccessibilityTitle27 : L10n.onboardingAccessibilityTitle,
+            subtitle: Permissions.asksForInputMonitoring
+                ? L10n.onboardingAccessibilityText : L10n.onboardingOnePermissionText,
             action: #selector(openAccessibilitySettings))
         accBubble = accB; accTrailing = accT
         box.addRow(accRow)
 
-        let (inpRow, inpB, inpT) = makeChecklistRow(
-            number: 2,
-            title: L10n.onboardingInputMonitoringTitle,
-            subtitle: L10n.onboardingInputMonitoringText,
-            action: #selector(openInputMonitoringSettings))
-        inpBubble = inpB; inpTrailing = inpT
-        box.addRow(inpRow)
+        if Permissions.asksForInputMonitoring {
+            let (inpRow, inpB, inpT) = makeChecklistRow(
+                number: 2,
+                title: L10n.onboardingInputMonitoringTitle,
+                subtitle: L10n.onboardingInputMonitoringText,
+                action: #selector(openInputMonitoringSettings))
+            inpBubble = inpB; inpTrailing = inpT
+            box.addRow(inpRow)
+        }
 
         let loginSwitch = FormUI.makeSwitch(isOn: SettingsManager.shared.launchAtLogin,
                                             target: self, action: #selector(launchAtLoginChanged))
@@ -193,8 +201,9 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         let inpWasGranted = inpTrailingShowsGranted
         refresh()
         // Input Monitoring was just granted: like the old wizard — restart,
-        // otherwise the event tap won't work (a macOS requirement).
-        if inpGranted && !inpWasGranted && accGranted {
+        // otherwise the event tap won't work (a macOS requirement). Not in the Store build, which
+        // never asks for it: the grant watcher starts monitoring there without a relaunch.
+        if Permissions.asksForInputMonitoring && inpGranted && !inpWasGranted && accGranted {
             rslog("Input Monitoring granted! Restarting...")
             SettingsManager.shared.permissionsWereGranted = true
             pollTimer?.invalidate()
@@ -213,8 +222,8 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
                   number: 2, action: #selector(openInputMonitoringSettings))
         inpTrailingShowsGranted = inpGranted
 
-        let total = 2
-        let granted = (accGranted ? 1 : 0) + (inpGranted ? 1 : 0)
+        let total = steps
+        let granted = (accGranted ? 1 : 0) + (Permissions.asksForInputMonitoring && inpGranted ? 1 : 0)
         if granted == total {
             stepLabel?.stringValue = L10n.permissionsOkText
             SettingsManager.shared.permissionsWereGranted = true
@@ -285,7 +294,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
     }
 
     @objc private func continueTapped() {
-        if accGranted && inpGranted { onAllGranted?() }
+        if Permissions.allGranted { onAllGranted?() }
         window?.close()   // "Later": nothing is lost, the window can be reopened
     }
 
