@@ -22,17 +22,10 @@ struct SystemDictionary: DictionaryValidating {
     func alphabet(_ lang: String) -> String { Self.alphabetCache.letters(for: String(lang.prefix(2))) }
 
     /// The language's vowels, for the gibberish-rescue shape check. Static knowledge, not derived:
-    /// which letters are vowels is a fact about the language, and the three languages this app
-    /// ships for are known. Unlisted languages return "" — the rescue then never runs for them,
-    /// the same fail-open convention as `alphabet(_:)`.
-    func vowels(_ lang: String) -> String {
-        switch String(lang.prefix(2)) {
-        case "en": return "aeiouy"
-        case "uk": return "аеєиіїоуюя"
-        case "ru": return "аеёиоуыэюя"
-        default:   return ""
-        }
-    }
+    /// which letters are vowels is a fact about the language, kept in `LanguageProfile`. Languages
+    /// without a profile return "" — the rescue then never runs for them, the same fail-open
+    /// convention as `alphabet(_:)`.
+    func vowels(_ lang: String) -> String { LanguageProfile.of(lang)?.vowels ?? "" }
 
     @MainActor
     private final class AlphabetCache {
@@ -75,9 +68,35 @@ struct SystemLayoutCatalog: LayoutCatalog {
     func installedLayouts() -> [Layout] {
         LayoutSwitcher.installedLayouts().compactMap { source in
             guard let lang = LayoutSwitcher.languageCode(source) else { return nil }
-            return Layout(id: LayoutSwitcher.sourceID(source), lang: lang)
+            let id = LayoutSwitcher.sourceID(source)
+            return Layout(id: id, lang: lang, transliterates: Self.transliterates(source, id: id, lang: lang))
         }
     }
+
+    /// Does this layout type its language's vowels on the US `a e i o u` keys? A scrambling layout
+    /// (ЙЦУКЕН, standard Bulgarian) yields one at most; a phonetic one yields all five. Latin-script
+    /// languages are never flagged: for them, being close to US is the normal case, not a hazard.
+    /// Cached per layout id, because this runs on every evaluation and a layout's keys do not change.
+    private static func transliterates(_ source: TISInputSource, id: String, lang: String) -> Bool {
+        if let hit = transliterationCache[id] { return hit }
+        var result = false
+        if let profile = LanguageProfile.of(lang), profile.script != .latin,
+           let data = DynamicKeyMapping.layoutDataForSource(source) {
+            let vowels = Set(profile.vowels)
+            let keys: [UInt16] = [0x00, 0x0E, 0x22, 0x1F, 0x20]   // a e i o u
+            let hits = keys.filter { code in
+                guard let c = DynamicKeyMapping.translateKeycode(code, layoutData: data, shift: false, caps: false)
+                else { return false }
+                return String(c).lowercased().contains { vowels.contains($0) }
+            }.count
+            result = hits >= 4
+        }
+        transliterationCache[id] = result
+        if result { rslog("layouts: \(id) transliterates Latin (\(lang))") }
+        return result
+    }
+
+    private static var transliterationCache: [String: Bool] = [:]
 
     func currentLayoutID() -> String { LayoutSwitcher.currentLayoutID() }
 
@@ -116,11 +135,7 @@ enum NWay {
     /// are deliberately the most ordinary ones each language has.
     static let dictionary = DictionarySentinel(
         wrapping: SystemDictionary(),
-        canaries: [
-            "en": .init(word: "the", mash: "zzqxjw"),
-            "uk": .init(word: "привіт", mash: "нзукжз"),
-            "ru": .init(word: "привет", mash: "нзукжз"),
-        ])
+        canaries: LanguageProfile.all.mapValues { .init(word: $0.canary.word, mash: $0.canary.mash) })
 
     static let resolver = NWayResolver(catalog: SystemLayoutCatalog(),
                                        dict: dictionary,

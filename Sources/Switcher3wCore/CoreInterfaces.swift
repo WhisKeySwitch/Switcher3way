@@ -24,10 +24,16 @@ public struct Layout: Sendable, Equatable {
     public let id: String
     /// 2-letter language code (ru/uk/en…).
     public let lang: String
+    /// The layout transliterates Latin rather than scrambling it: its `a e i o u` keys type that
+    /// language's vowels (Bulgarian Phonetic types `reda` as `реда`). English typos then render as
+    /// real words of the other language, so such a layout is not an automatic-fix target — see
+    /// `NWayResolver.evaluate`.
+    public let transliterates: Bool
 
-    public init(id: String, lang: String) {
+    public init(id: String, lang: String, transliterates: Bool = false) {
         self.id = id
         self.lang = lang
+        self.transliterates = transliterates
     }
 }
 

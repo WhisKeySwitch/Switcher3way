@@ -4,7 +4,7 @@
 
 Switcher3Way notices when you've typed a word in the wrong keyboard layout and fixes it —
 retyping the word in the layout you meant and switching the keyboard for you. It works across
-**all** your installed layouts (e.g. English, Ukrainian, Russian), not just a pair.
+**all** your installed layouts (e.g. English, Ukrainian, Russian, Bulgarian), not just a pair.
 
 It runs in the **menu bar** on macOS and in the **notification area** on Windows. This guide is
 written with the macOS names for menus and settings; the Windows app has the same settings under
@@ -61,8 +61,10 @@ screen untouched and converted a moment later, together with the first word long
 question — or, in a message where every word is short, as soon as two of them agree. A word left alone
 because it was truly the only thing you typed is always fixable with one tap of the trigger.
 
-Words valid in **both Ukrainian and Russian** (`там`, `добре`) get special treatment: they are
-converted to the **language for ambiguous words** (Settings → Auto-fix; Ukrainian by default).
+Words valid in **both Ukrainian and Russian** (`там`, `добре`) — or in Bulgarian and one of them —
+get special treatment: they are converted to the **language for ambiguous words** (Settings →
+Auto-fix; Ukrainian by default). If you write Bulgarian and also have the Ukrainian layout enabled,
+choose Bulgarian there: `нещо` typed on the English layout is also the Ukrainian `луна`.
 If the phrase you're typing later turns out to be the other language — a word appears that's
 valid **only** in it — the earlier ambiguous words are re-converted automatically, in one step
 you can undo with a single trigger tap. Set the option to *Do not convert* to keep such words
@@ -199,12 +201,18 @@ holds back when:
 
 Words in **Always convert** are converted even if the dictionary doesn't know them.
 
-**Ambiguous words and phrases.** A word valid in both Ukrainian and Russian converts to the
+**Ambiguous words and phrases.** A word valid in more than one of your Cyrillic languages converts to the
 *language for ambiguous words* (default: Ukrainian). Auto-fix then remembers the phrase you're
 typing (until Enter, a click, an arrow key, or an app switch). If a later word is valid in only
 one language, the phrase's ambiguous words are re-converted to that language together with it —
 one replacement, one trigger-tap undo. Phrases that mix clearly-Ukrainian and clearly-Russian
 words are never touched retroactively.
+
+**Bulgarian, and phonetic layouts.** Auto-fix converts into the standard **Bulgarian** layout. The
+**Bulgarian – Phonetic** layout puts Cyrillic letters on the Latin keys that sound alike, so an
+English typo such as `reda` is already a Bulgarian word (`реда`) there — Auto-fix therefore never
+converts *into* it. Typing *on* it works as usual, and the trigger still reaches it. (macOS only:
+the Windows app handles Bulgarian on its own terms.)
 
 **Jargon and names the dictionaries don't know.** Slang, tech loanwords and names (`апка`,
 `айді`, `Kyiv`) are valid in no dictionary, so for a long time they simply stayed as typed.
@@ -247,7 +255,8 @@ Open with **⌘,** from the menu. Four tabs:
 ### Auto-fix
 
 The automatic-conversion master switch, the **Language for ambiguous words** popup
-(Ukrainian / Russian / Do not convert — see *Auto-fix* above), and the exception lists.
+(Ukrainian / Russian / Do not convert, plus Bulgarian when a Bulgarian layout is enabled — see
+*Auto-fix* above), and the exception lists.
 
 ### Advanced
 

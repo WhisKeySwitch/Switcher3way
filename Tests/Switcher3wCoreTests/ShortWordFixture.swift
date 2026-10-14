@@ -37,5 +37,15 @@ enum ShortWordFixture {
             "раз", "сам", "так", "там", "тем", "тот", "три", "тут", "уже", "чем", "что", "эта",
             "эти", "это", "эту",
         ],
+        // The short words of the Bulgarian prose in `CombinationCorpus`, extracted as above, plus
+        // the clitics and particles that prose of that length happens not to use — `му`, `ги`, `ѝ`
+        // and the copula forms are in nearly every Bulgarian sentence.
+        "bg": [
+            "а", "ако", "без", "в", "го", "да", "ден", "дни", "е", "за", "и", "или", "как", "към",
+            "ми", "на", "не", "но", "нов", "по", "при", "с", "се", "си", "сме", "съм", "там", "тя",
+            "че", "ще",
+            "аз", "ти", "то", "те", "ни", "ви", "му", "ги", "им", "ѝ", "са", "сте", "от", "до",
+            "във", "със", "той", "ние", "вие", "кой", "коя", "кое", "още", "тук", "път", "ли",
+        ],
     ]
 }

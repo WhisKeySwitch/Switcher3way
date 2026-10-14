@@ -829,6 +829,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         case .sameTextUncorroborated:
             return "spelled the same in the other language, but the phrase does not read as it — "
                  + "leaving the layout alone"
+        case .claimedByTransliteratingLayout:
+            return "a word on a phonetic layout Auto-fix does not convert into — not handing it to "
+                 + "another language either"
         }
     }
 
@@ -1203,7 +1206,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         }
         let code = String(lang.prefix(2))
         let flags: [String: String] = [
-            "ru": "🇷🇺", "en": "🇺🇸", "uk": "🇺🇦", "be": "🇧🇾",
+            "ru": "🇷🇺", "en": "🇺🇸", "uk": "🇺🇦", "be": "🇧🇾", "bg": "🇧🇬",
             "de": "🇩🇪", "fr": "🇫🇷", "es": "🇪🇸", "it": "🇮🇹",
             "pt": "🇵🇹", "pl": "🇵🇱", "ja": "🇯🇵", "zh": "🇨🇳", "ko": "🇰🇷",
         ]

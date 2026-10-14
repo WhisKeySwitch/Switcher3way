@@ -1,4 +1,5 @@
 import AppKit
+import Switcher3wCore
 import Carbon
 
 /// Settings window: toolbar tabs in the System Settings style (W1/W2),
@@ -295,12 +296,17 @@ final class SettingsWindowController {
 
     private func populateAmbiguousPopup(_ popup: NSPopUpButton) {
         popup.removeAllItems()
-        // Own-language names, matching the interface-language dropdown convention.
-        let options: [(id: String, title: String)] = [
-            ("uk", "Українська"),
-            ("ru", "Русский"),
-            ("off", L10n.settingsAmbiguousOff),
-        ]
+        // Own-language names, matching the interface-language dropdown convention. Ukrainian and
+        // Russian are always offered, as before; Bulgarian when a Bulgarian layout is enabled, or
+        // when it is the stored choice — opening Settings must never rewrite the setting.
+        let stored = SettingsManager.shared.ambiguousLang
+        let enabled = Set(LayoutSwitcher.installedLayouts().compactMap {
+            LayoutSwitcher.languageCode($0).map { String($0.prefix(2)) }
+        })
+        var options: [(id: String, title: String)] = ["uk", "ru", "bg"]
+            .filter { ["uk", "ru"].contains($0) || enabled.contains($0) || stored == $0 }
+            .compactMap { code in LanguageProfile.of(code).map { (code, $0.nativeName) } }
+        options.append(("off", L10n.settingsAmbiguousOff))
         for option in options {
             popup.addItem(withTitle: option.title)
             popup.menu?.items.last?.representedObject = option.id as NSString

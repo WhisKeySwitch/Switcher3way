@@ -178,7 +178,11 @@ legible side by side.
   `letterCore` trimming, shared verbatim by the 2-way and N-way paths.
 - **`TypoGuard.swift`** — `nearMiss`: does the language being typed hold a word one edit away?
   Port of the Windows `TypoGuard`, and the answer to the same defect — see below.
-- **`ShortWords.swift`** — the curated short words of en/uk/ru. Below four letters a dictionary hit
+- **`LanguageProfiles.swift`** — `LanguageProfile`: per-language script, vowels, sentinel canary and
+  native name for en/uk/ru/bg, in one table. The adapter's `vowels`, `NWay.dictionary`'s canaries,
+  the rescue's tie rule (`shareScript`) and the Settings popup all read it. A language without a
+  profile still takes part on the dictionary alone (fail-open) — that is how Bulgarian ran before.
+- **`ShortWords.swift`** — the curated short words of en/uk/ru/bg. Below four letters a dictionary hit
   is not believed on its own, on either side of the decision: `NSSpellChecker` calls `wt` an English
   word, which is how a Ukrainian `це` typed on the Latin layout came back "already a word in this
   layout's language" and was left on screen (the September 2026 report). An **allow**-list, because
@@ -198,7 +202,7 @@ legible side by side.
   the Windows port, which shares this algorithm.
 - **`PhraseTracker.swift`** — phrase memory and retro-corrections; takes a renderer closure.
 
-`Tests/Switcher3wCoreTests/` covers it (123 cases, `swift test`): soft gates, evaluate outcomes,
+`Tests/Switcher3wCoreTests/` covers it (143 cases, `swift test`): soft gates, evaluate outcomes,
 manual plan, phrase tracking, the typo guard, and a **dictionary-quality** test measuring the real
 NSSpellChecker against `WordFixture.swift`. Everything except that last file is Foundation-only and
 guarded with `#if canImport(AppKit)`, so the decision core can be built — and its logic exercised —
@@ -327,6 +331,18 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   people type (see the architecture map). Coverage over real prose 100% in all three languages; the
   same change took the dormant vowel-less rule's false conversions from 8/76 to 2/76 on macOS and
   0/76 on Windows.
+  **Unreleased on `main` (2026-10-14): Bulgarian on macOS** — the Bulgarian slice of
+  `openspec/changes/detect-chosen-language-combinations` (German/French there are not done):
+  profile + short-word list + canary `здравей`; same-script rescue ties go to the preference;
+  `ambiguousLang` accepts `bg` (popup shows Български when a Bulgarian layout is enabled); 🇧🇬 badge;
+  and **transliterating layouts** (`Layout.transliterates`, detected from the `a e i o u` keys) are
+  not auto-fix targets unless current — Bulgarian Phonetic types `reda` as `реда`. Russian Phonetic
+  and Ukrainian QWERTY are exempt (`NWayResolver.transliterationExempt`), pending their own decision.
+  An excluded phonetic layout still *witnesses*: a word on it keeps rather than going to another
+  language (`claimedByTransliteratingLayout`). English apostrophe words are judged by grammar
+  (`Contractions.swift`) — BDS puts `ч` on the apostrophe key and NSSpellChecker accepts `fr'd`.
+  Measured numbers and the one open gate failure (en+ru+bg typos 0.33% vs 0.28% bar) are in that
+  change's `tasks.md`. `ShortWords.cs` not regenerated yet; not yet verified in the installed app.
   **Unreleased on `main` (2026-09-24): a quarantined dictionary no longer hands the word to its
   sibling.** The field log showed `Вітаю` → `Вытаю` and unopposed ru wins on uk/ru shared words,
   every one inside a uk quarantine window: `isAvailable == false` dropped uk from the candidate set,
@@ -374,8 +390,8 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 - **Short-word lists are curated, so they are never finished** — `ShortWords.swift` decides which
   short dictionary hits are believed. A word missing from its own language's list can be converted
   away when the phrase is already settled the other way, so treat an "it converted a word I meant"
-  report as a missing entry first, and add it with a coverage case. Bulgarian and Serbian have no
-  list at all and fall through to the dictionary alone, which is the pre-fix behaviour.
+  report as a missing entry first, and add it with a coverage case. Serbian has no list at all and
+  falls through to the dictionary alone, which is the pre-fix behaviour.
 - **Lone short messages** ("Hi", "no", "так" as the whole message) still need the trigger: the held
   run wants two short words, and the vowel-less extension measured 8/76 false conversions
   (`VowelLessHeldWordMeasurement` prints the number every run; flip the constant if it ever reads 0).

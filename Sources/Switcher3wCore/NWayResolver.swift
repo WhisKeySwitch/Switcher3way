@@ -83,6 +83,11 @@ public final class NWayResolver {
         /// a Ukrainian typo is a real Russian word as often as not — so without the phrase's word
         /// for it, the layout stays.
         case sameTextUncorroborated
+        /// A real word on a transliterating layout that is not a target (Bulgarian Phonetic). The
+        /// user may well have meant it, so it is not handed to another language instead: measured,
+        /// Bulgarian typed on Phonetic with Ukrainian active became English transliteration
+        /// (`няколко` → `nqkolko`) for 67 of 195 words when the layout was simply dropped.
+        case claimedByTransliteratingLayout
     }
 
     /// Full evaluation result. `.ambiguous` carries every validating language so the caller
@@ -101,10 +106,21 @@ public final class NWayResolver {
         /// language while exactly one candidate is a plausible word shape in its own — jargon or a
         /// name typed in the wrong layout (`Лншм` → `Kyiv`). Weaker evidence than a dictionary hit:
         /// the caller converts but records the word as *defaulted*, not locked, so the phrase can
-        /// still overrule it. When the plausible pair is uk/ru the outcome is `.ambiguous` instead,
-        /// and the ambiguity preference decides, exactly as for shared dictionary words.
+        /// still overrule it. When several languages of one script are plausible (uk/ru, bg/uk) the
+        /// outcome is `.ambiguous` instead, and the ambiguity preference decides, exactly as for
+        /// shared dictionary words.
         case rescued(Decision)
     }
+
+    /// Languages whose transliterating layouts (Russian Phonetic, Ukrainian QWERTY) stay automatic-fix
+    /// targets. They were targets before transliteration was detected, and their measured cost —
+    /// English typo conversions 0.26% → 1.22% and 0.74% — is recorded in
+    /// `openspec/changes/detect-chosen-language-combinations` for a separate decision, because
+    /// taking auto-fix away from people who use it today is not a side effect to ship quietly.
+    public static let transliterationExempt: Set<String> = ["ru", "uk"]
+
+    /// Layouts already reported as skipped, so the log says it once per session, not per word.
+    private var skippedTransliterating: Set<String> = []
 
     /// Shorter than this, a dictionary hit carries no information: a quarter of all two-letter Latin
     /// strings are in the English dictionary — `ft`, `bf`, `kw`, `lb` — mostly abbreviations. Words
@@ -211,8 +227,28 @@ public final class NWayResolver {
         // Validity is judged on the letter "core" — edge punctuation/digits stripped — so that a
         // trailing "!" or a leading "(" doesn't hide an otherwise-valid word.
         var byLang: [String: Candidate] = [:]
+        var claimedBy: [String] = []   // excluded transliterating layouts on which this is a word
         for layout in layouts {
             let lang = String(layout.lang.prefix(2))
+            // What is on screen is the current layout's rendering; a sibling layout of the same
+            // language must not speak for it when the two type different letters.
+            if currentLayout.transliterates, lang == currentLang, layout.id != currentID { continue }
+            if layout.transliterates, layout.id != currentID, !Self.transliterationExempt.contains(lang) {
+                if skippedTransliterating.insert(layout.id).inserted {
+                    CoreLog.write("nway: \(layout.id.components(separatedBy: ".").last ?? "?") transliterates Latin,"
+                                  + " not an automatic-fix target (manual trigger still reaches it)")
+                }
+                // Not a target — but still a witness. Dropping it outright let the rest of the field
+                // claim words the user typed on it.
+                if dict.isAvailable(lang), let r = rendered(keys, in: layout.id) {
+                    let core = SoftGates.letterCore(Array(r))
+                    if !core.isEmpty, ShortWords.admits(core, lang: lang), Contractions.admits(core, lang: lang),
+                       dict.isValidWord(core.lowercased(), lang: lang) {
+                        claimedBy.append("\(lang):'\(r)'")
+                    }
+                }
+                continue
+            }
             guard let rendered = rendered(keys, in: layout.id) else { continue }
             guard dict.isAvailable(lang) else {
                 // A quarantined dictionary takes its verdict out of the decision, not its
@@ -233,8 +269,11 @@ public final class NWayResolver {
             // by the language's list of short words people actually type. `NSSpellChecker` calls `wt`
             // an English word, which is how a Ukrainian `це` typed on the English layout came back
             // "already a word in this layout's language" and was left on screen. See `ShortWords`.
+            // An English apostrophe word must also be one English grammar makes: the spell checker
+            // accepts `fr'd` and `l'ed`, which is what Bulgarian `ч` on the apostrophe key renders as.
             let valid = !core.isEmpty
                 && ShortWords.admits(core, lang: lang)
+                && Contractions.admits(core, lang: lang)
                 && dict.isValidWord(core.lowercased(), lang: lang)
             if let existing = byLang[lang] {
                 if valid && !existing.isValid {   // a valid render outweighs any other
@@ -278,6 +317,12 @@ public final class NWayResolver {
         if current.isValid {
             CoreLog.write("nway: nil — '\(current.string)' is a valid \(currentLang) word [\(dump)]")
             return .keep(.validInCurrent)
+        }
+
+        if !claimedBy.isEmpty {
+            CoreLog.write("nway: nil — a word on a phonetic layout that is not a target"
+                          + " (\(claimedBy.joined(separator: " "))) [\(dump)]")
+            return .keep(.claimedByTransliteratingLayout)
         }
 
         // Other languages where the input's letter core is a real word. Only the LETTER core is
@@ -388,7 +433,12 @@ public final class NWayResolver {
                           + " phrase does not corroborate a layout switch [\(dump)]")
             return .keep(.sameTextUncorroborated)
         }
-        if weighEvidence, coreLength >= Self.nearMissTrustedFrom, !phraseCorroborates,
+        // On a transliterating layout the guard starts lower. There a typo of the language being
+        // typed reads as a Latin word letter for letter — `денс` is `dens`, `нико` is `niko` — so the
+        // two explanations stop being far apart at four letters, not six. Measured on Bulgarian
+        // Phonetic: 12 of 3,340 Bulgarian typos converted into English with the usual band.
+        let guardFrom = currentLayout.transliterates ? Self.undecidableBelow : Self.nearMissTrustedFrom
+        if weighEvidence, coreLength >= guardFrom, !phraseCorroborates,
            TypoGuard.nearMiss(currentCore, lang: currentLang, dict: dict) {
             CoreLog.write("nway: nil — near miss of a \(currentLang) word, reading it as a typo [\(dump)]")
             return .keep(.looksLikeATypo)
@@ -490,13 +540,14 @@ public final class NWayResolver {
             return .rescued(Decision(targetLayoutID: w.layoutID, lang: w.lang,
                                      original: current.string, converted: w.converted))
         default:
-            // The uk/ru pair is the ambiguity the preference setting exists for; report it the
-            // same way dictionary words shared by both languages are reported. Anything wider —
-            // plausible across scripts — is a coin toss, and a wrong pick costs the user the
+            // A tie within one script — uk/ru, or bg with either — is the ambiguity the preference
+            // setting exists for; report it the same way dictionary words shared by several
+            // languages are reported, and the preference settles it only if it is one of them.
+            // Plausible across scripts is a coin toss, and a wrong pick costs the user the
             // sentence while a keep costs one trigger tap.
             let langs = Set(plausible.map(\.lang))
-            if langs == ["ru", "uk"] {
-                CoreLog.write("nway: rescue ambiguous (ru/uk) — word-shaped in both [\(dump)]")
+            if LanguageProfile.shareScript(langs) {
+                CoreLog.write("nway: rescue ambiguous (\(langs.sorted().joined(separator: "/"))) — word-shaped in each [\(dump)]")
                 return .ambiguous(original: current.string, winners: plausible)
             }
             CoreLog.write("nway: rescue declined — word-shaped in \(langs.sorted().joined(separator: "/")), nothing to choose [\(dump)]")
