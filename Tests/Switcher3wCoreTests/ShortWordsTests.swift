@@ -59,8 +59,8 @@ final class ShortWordsTests: XCTestCase {
     func testAnUnlistedLanguageFallsThroughToTheDictionary() {
         // Fail open, like the near-miss alphabet and the rescue's vowels: a language with no list
         // behaves as it did before, rather than having every short word silently vetoed.
-        XCTAssertFalse(ShortWords.covers("bg"))
-        XCTAssertTrue(ShortWords.admits("що", lang: "bg"))
+        XCTAssertFalse(ShortWords.covers("de"))
+        XCTAssertTrue(ShortWords.admits("zu", lang: "de"))
     }
 
     // MARK: - end to end, through the resolver

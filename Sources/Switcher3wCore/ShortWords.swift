@@ -60,8 +60,9 @@ public enum ShortWords {
     /// English deliberately excludes the two- and three-letter dictionary noise that caused the
     /// defect — `wt`, `pf`, `ps` is kept but `ye`, `lys`, `oe`, `ee` are not — while including the
     /// abbreviations that are typed daily and meant (`api`, `npm`, `src`, `pwd`, `msg`, `sql`): a
-    /// structural rule cannot tell those from noise, but a list can. Ukrainian and Russian carry
-    /// their function words in full, because those are the words a mistake here would convert away.
+    /// structural rule cannot tell those from noise, but a list can. Ukrainian, Russian and Bulgarian
+    /// carry their function words in full, because those are the words a mistake here would convert
+    /// away.
     static let common: [String: Set<String>] = [
         "en": [
             // pronouns, articles, prepositions, conjunctions, particles — the real ones
@@ -124,6 +125,35 @@ public enum ShortWords {
             // and their absence would have converted them away.
             "так", "там", "тот", "тем", "той", "том", "тех", "нет", "он", "нём", "нем", "вон",
             "эту", "всю", "хз", "ага", "эта", "чём", "мал", "мой", "два",
+        ],
+        // Bulgarian leans on short words harder than Russian or Ukrainian: it has no cases, so the
+        // clitic pronouns (`го`, `му`, `ги`, `ѝ`), the future particle `ще` and the copula forms
+        // (`е`, `са`, `съм`, `сме`, `сте`) carry what endings carry elsewhere, and they are in nearly
+        // every sentence. `ъ` is a full vowel here — `път`, `съм`, `към` are ordinary words.
+        "bg": [
+            "а", "в", "е", "и", "о", "с", "я", "ѝ",
+            // pronouns and clitics
+            "аз", "ти", "тя", "то", "те", "ни", "ви", "ме", "го", "му", "ги", "им", "ми", "се",
+            "си", "ние", "вие", "той", "мен", "теб", "нея", "нас", "вас", "тях", "нам",
+            "вам", "мой", "моя", "мое", "мои", "наш", "ваш", "сам", "кой", "коя", "кое", "кои",
+            "чий", "чия", "чие", "чии", "що", "кво",
+            // copula, auxiliaries and particles
+            "са", "съм", "сме", "сте", "бях", "бил", "бе", "би", "ще", "щя", "щях", "да", "не",
+            "ли", "че", "де", "ма", "бре", "абе", "ами", "аха", "ага", "мда", "ъхъ",
+            // prepositions and conjunctions
+            "за", "на", "от", "до", "по", "из", "във", "със", "към", "над", "под", "при", "без",
+            "зад", "но", "или", "ала", "ако", "щом",
+            // adverbs and interjections
+            "как", "там", "тук", "още", "пак", "все", "май", "зле", "ето", "ей", "ох", "ах",
+            "ех", "оф", "уф", "хей", "чао", "ок", "мн", "хз",
+            // ordinary short words typed as themselves
+            "ден", "дни", "час", "път", "дом", "чай", "сок", "сол", "лук", "нос", "око", "ухо",
+            "зъб", "кон", "лъв", "мед", "лед", "нож", "мир", "сън", "мъж", "син", "род", "ред",
+            "вид", "дял", "тон", "мач", "рай", "ад", "юг", "ток", "бой", "нов", "лош", "мил",
+            "тих", "жив", "див", "лек", "има", "дам", "дай", "дал", "ям", "пия", "спя", "ида",
+            "иди", "ела", "виж", "яж", "пий", "два", "две", "три", "пет", "сто", "бар", "бас",
+            // abbreviations typed as themselves
+            "лв", "км", "кг", "см", "мм", "мин", "сек", "бр", "ул", "др", "гр", "тел",
         ],
     ]
 }
