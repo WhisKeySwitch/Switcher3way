@@ -234,7 +234,7 @@ with open("version.json") as f:
     data = json.load(f)
 data["sha256"] = sha
 with open("version.json", "w") as f:
-    json.dump(data, f, indent=2)
+    json.dump(data, f, indent=2, ensure_ascii=False)
     f.write("\n")
 PY
 echo ""

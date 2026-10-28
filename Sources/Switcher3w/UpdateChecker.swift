@@ -7,7 +7,8 @@ import AppKit
 /// A discovered release worth offering to the user.
 struct UpdateInfo {
     let version: String          // "1.1.0" (tag without the leading "v")
-    let notes: String            // release body (markdown, shown truncated in the alert)
+    let notes: String            // release body (markdown — the alert's fallback, see ReleaseNotes)
+    let localizedNotes: [String: String]  // version.json `notes`: plain text per interface language
     let dmgURL: URL
     let manifestURL: URL?        // version.json release asset — checksum source of truth
     let notesSHA256: String?     // fallback: checksum parsed from the release body (pre-manifest releases)
@@ -135,8 +136,9 @@ final class UpdateChecker {
         let alert = NSAlert()
         alert.messageText = L10n.updateAvailableTitle(info.version)
         var body = L10n.updateInstalledVersion(Self.currentVersion())
-        let notes = info.notes.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !notes.isEmpty { body += "\n\n" + String(notes.prefix(700)) }
+        let notes = ReleaseNotes.text(localized: info.localizedNotes, body: info.notes,
+                                      language: L10n.effectiveLanguage)
+        if !notes.isEmpty { body += "\n\n" + notes }
         alert.informativeText = body
         alert.addButton(withTitle: L10n.updateInstall)
         alert.addButton(withTitle: L10n.updateLater)
@@ -217,8 +219,15 @@ final class UpdateChecker {
         }
         let manifestURL = rel.assets.first(where: { $0.name == "version.json" })
             .flatMap { URL(string: $0.browser_download_url) }
+        // Notes only: the checksum is read again at install time, from a fresh download. A
+        // manifest that cannot be fetched here just means the alert falls back to the description.
+        var localizedNotes: [String: String] = [:]
+        if let manifestURL, let (manifest, _) = try? await URLSession.shared.data(from: manifestURL) {
+            localizedNotes = ReleaseNotes.localized(fromManifest: manifest)
+        }
         return UpdateInfo(version: version,
                           notes: rel.body ?? "",
+                          localizedNotes: localizedNotes,
                           dmgURL: dmgURL,
                           manifestURL: manifestURL,
                           notesSHA256: parseSHA256(from: rel.body ?? ""))
