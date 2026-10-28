@@ -99,6 +99,18 @@ How it works (`UpdateChecker.swift` + `UpdateInstaller.swift`):
 version.json`) — it's the updater's checksum source of truth. Keep the sha256 in the release
 notes too (human verification + fallback).
 
+**What the update alert shows.** Add `notes` to `version.json` before tagging — plain text, one
+entry per interface language, under ~700 characters each (en at least; uk and ru for this
+audience). `create_dmg.sh` keeps the key when it writes the checksum back. The alert shows the
+user's language, else `en`, else the release description stripped of markdown
+(`ReleaseNotes.swift`). Copies before 1.7.2 ignore `notes` and show the first 700 characters of the
+description raw, so open the description with a plain-text summary shorter than that — no
+heading, no `**`. 1.7.1 is the first release shaped this way.
+
+```json
+"notes": { "en": "…", "uk": "…", "ru": "…" }
+```
+
 (The trigger's ambiguous-word layout fix — `*-fix-collapsed-layout-candidates` — shipped in
 1.3.0 and its release notes called it out, as intended.)
 
