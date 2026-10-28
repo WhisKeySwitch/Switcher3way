@@ -121,13 +121,17 @@ final class CaretIndicator {
     /// indistinguishable from the app being broken. It is the documented behaviour ("the trigger
     /// always answers") and it was never implemented for the commonest case of all: the buffer
     /// having been cleared by a click before the user reached for the trigger.
-    func notice(_ message: String) {
+    ///
+    /// `overSecureInputElsewhere` lets the notice through when the password guard refused only
+    /// because another application holds secure input — the message reads nothing from the field.
+    func notice(_ message: String, overSecureInputElsewhere: Bool = false) {
         guard SettingsManager.shared.conversionChip else { return }
-        guard feedbackAllowed() else {
+        guard feedbackAllowed(overSecureInputElsewhere: overSecureInputElsewhere) else {
             rslog("chip: notice suppressed — \(feedbackRefusal())")
             return
         }
-        guard let rect = axCaretRectAppKit() ?? focusedWindowAnchor() ?? screenAnchor() else {
+        guard let rect = axCaretRectAppKit(overSecureInputElsewhere: overSecureInputElsewhere)
+                ?? focusedWindowAnchor() ?? screenAnchor() else {
             rslog("chip: notice has no anchor (front=\(frontmostDescription()))")
             return
         }
@@ -319,9 +323,9 @@ final class CaretIndicator {
         return "unknown"
     }
 
-    private func feedbackAllowed() -> Bool {
+    private func feedbackAllowed(overSecureInputElsewhere: Bool = false) -> Bool {
         guard AXIsProcessTrusted() else { return false }
-        guard !SecureFieldDetector.isFocusedPassword else { return false }
+        guard overSecureInputElsewhere || !SecureFieldDetector.isFocusedPassword else { return false }
         guard !AutoSwitchPolicy.shouldDeferToRemoteClient else { return false }
         let frontID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         guard !AutoSwitchPolicy.isDeniedApp(frontID) else { return false }
@@ -361,11 +365,12 @@ final class CaretIndicator {
     }
 
     /// The caret in AppKit coordinates (bottom-left), or nil if unavailable / a guard rejected it.
-    private func axCaretRectAppKit() -> NSRect? {
+    private func axCaretRectAppKit(overSecureInputElsewhere: Bool = false) -> NSRect? {
         guard AXIsProcessTrusted() else { return nil }
         // The focused-element guard, not just the process-global secure-input flag: an unmasked
         // "show password" field sets neither, and the badge would otherwise appear over one.
-        guard !SecureFieldDetector.isFocusedPassword else { return nil }
+        // Waived only for the secure-input notice, whose field answered "not a password" itself.
+        guard overSecureInputElsewhere || !SecureFieldDetector.isFocusedPassword else { return nil }
         let frontID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         // We do NOT apply the auto-conversion denylist: it's about "don't change text", and the flag changes nothing —
         // in IDEs/terminals the layout indicator is actually useful. Passwords are guarded by secure-input above.

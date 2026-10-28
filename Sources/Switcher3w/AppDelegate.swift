@@ -45,6 +45,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     private var monitoringActive = false
     private var caretIndicator: CaretIndicator?   // issue #10: caret flag (beta, OFF by default)
     private var secureFieldFocusObserver: NSObjectProtocol?   // invalidates the password-guard cache
+    private var deafWatch: (element: AXUIElement, count: Int)?  // typing seen while secure input hides keys
+    private var lastDeafNotice = Date.distantPast
 
     // References to the live labels of the menu status header (updated by icon polling)
     private weak var headerBadgeLabel: NSTextField?
@@ -266,6 +268,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
 
     // MARK: - Start Monitoring
 
+    /// Secure input held by another application — Chrome keeps it after you leave a focused
+    /// password field — makes the event tap deaf everywhere: auto-conversion never sees a word, so
+    /// it has no failure to report. Arriving in a text field is the one moment left to say so.
+    private func noticeSecureInputOnArrival() {
+        guard SettingsManager.shared.effectivelyEnabled, SettingsManager.shared.autoConvert,
+              AutoSwitchPolicy.secureInputActive else { return }
+        let secure = SecureFieldDetector.verdict()
+        guard secure.focusIsTextEntry, SecureFieldDetector.secureInputBlocksOnly(secure) else { return }
+        rslog("auto: deaf — \(secure.describe)")
+        lastDeafNotice = Date()
+        noticeSecureInputElsewhere()
+    }
+
+    /// The same failure, caught while it happens: the arrival notice fades after a moment, and a
+    /// user who goes on typing a wrong-layout word otherwise sees auto-fix do nothing at all. The
+    /// keystrokes never reach the tap, so the focused field's character count is watched instead.
+    /// Free while secure input is off — the first guard is all that runs.
+    private func checkDeafTyping() {
+        guard AutoSwitchPolicy.secureInputActive, SettingsManager.shared.effectivelyEnabled,
+              SettingsManager.shared.autoConvert,
+              let (element, count) = SecureFieldDetector.focusedCharacterCount() else {
+            deafWatch = nil
+            return
+        }
+        defer { deafWatch = (element, count) }
+        guard let prev = deafWatch, CFEqual(prev.element, element), prev.count != count,
+              Date().timeIntervalSince(lastDeafNotice) >= 20 else { return }
+        let secure = SecureFieldDetector.verdict()
+        guard secure.focusIsTextEntry, SecureFieldDetector.secureInputBlocksOnly(secure) else { return }
+        rslog("auto: deaf — typing seen, keys withheld — \(secure.describe)")
+        lastDeafNotice = Date()
+        noticeSecureInputElsewhere()
+    }
+
+    private func noticeSecureInputElsewhere() {
+        let holder = SecureFieldDetector.secureInputHolderNameIfElsewhere()
+        caretIndicator?.notice(holder.map(L10n.triggerSecureInputElsewhere) ?? L10n.triggerSecureInputUnknown,
+                               overSecureInputElsewhere: true)
+    }
+
     private func startMonitoring() {
         if !keyboardMonitor.start(
             onAltTap: { [weak self] in
@@ -283,8 +325,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
                 // The trigger is an explicit user action, which is why it converts words auto
                 // declines — but that does not make it safe to read a password field through the
                 // clipboard fallback, or to retype its contents. Checked before anything reads text.
-                guard !SecureFieldDetector.isFocusedPassword else {
-                    rslog("trigger: suppressed — password field")
+                let secure = SecureFieldDetector.verdict()
+                guard !secure.isPassword else {
+                    rslog("trigger: suppressed — \(secure.describe)")
+                    if SecureFieldDetector.secureInputBlocksOnly(secure) { self.noticeSecureInputElsewhere() }
                     return
                 }
                 if AutoSwitchPolicy.shouldDeferToRemoteClient {
@@ -359,8 +403,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
                 }
 #endif
                 self.resetPhrase()   // manual control — see onAltTap
-                guard !SecureFieldDetector.isFocusedPassword else {
-                    rslog("trigger: suppressed — password field")
+                let secure = SecureFieldDetector.verdict()
+                guard !secure.isPassword else {
+                    rslog("trigger: suppressed — \(secure.describe)")
+                    if SecureFieldDetector.secureInputBlocksOnly(secure) { self.noticeSecureInputElsewhere() }
                     return
                 }
                 if AutoSwitchPolicy.shouldDeferToRemoteClient {
@@ -424,8 +470,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         // App switches likewise change what has focus.
         secureFieldFocusObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
-        ) { _ in
+        ) { [weak self] _ in
             MainActor.assumeIsolated { SecureFieldDetector.invalidate() }
+            // After the switch has settled: an app that does release secure input when it loses
+            // focus does so after we hear about the activation.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                MainActor.assumeIsolated { self?.noticeSecureInputOnArrival() }
+            }
         }
         keyboardMonitor.onExtraSpace = { [weak self] in
             DispatchQueue.main.async { self?.phraseTracker.noteExtraSpace() }
@@ -442,6 +493,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             Task { @MainActor in
                 self?.updateStatusIcon()
                 self?.watchPermissions()
+                self?.checkDeafTyping()
             }
         }
         rslog("Monitoring started successfully")

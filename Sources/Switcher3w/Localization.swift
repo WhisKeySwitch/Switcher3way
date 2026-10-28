@@ -82,6 +82,8 @@ enum L10n {
     static var settingsConversionChip: String { s("settings.conversionChip") }
     static func chipUndoHint(_ trigger: String) -> String { String(format: s("chip.undoHint"), trigger) }
     static var triggerNothingBuffered: String { s("trigger.nothingBuffered") }
+    static func triggerSecureInputElsewhere(_ app: String) -> String { String(format: s("trigger.secureInputElsewhere"), app) }
+    static var triggerSecureInputUnknown: String { s("trigger.secureInputUnknown") }
 
     /// The trigger keys offered in Settings, in order, as (settings key, display title). Key names
     /// are deliberately NOT localized — they are standard Apple notations. Single source for the
@@ -250,6 +252,7 @@ enum L10n {
     private static let strings: [String: [String: String]] = [
         // ========== ENGLISH ==========
         "en": [
+            "trigger.secureInputUnknown": "A password field in another app is hiding your typing",
             "menu.autoSwitch": "Enable Switcher3Way",
             "menu.checkPermissions": "Check Permissions…",
             "menu.checkUpdates": "Check for Updates…",
@@ -361,6 +364,7 @@ enum L10n {
             "menu.flag": "Flag at cursor",
             "menu.pause": "Pause Switcher3Way",
             "trigger.nothingBuffered": "Nothing to convert — retype the word",
+            "trigger.secureInputElsewhere": "%@ is hiding your typing — leave its password field",
             "purchase.trial.daysLeft": "Trial — %d days left",
             "purchase.trial.oneDay": "Trial — last day",
             "purchase.expired": "Trial over — conversion is off",
@@ -384,6 +388,8 @@ enum L10n {
 
         // ========== RUSSIAN ==========
         "ru": [
+            "trigger.secureInputUnknown": "Поле пароля в другом приложении скрывает ваш ввод",
+            "trigger.secureInputElsewhere": "%@ скрывает ваш ввод — выйдите из поля пароля",
             "menu.autoSwitch": "Включить Switcher3Way",
             "menu.checkPermissions": "Проверить разрешения…",
             "menu.checkUpdates": "Проверить обновления…",
@@ -509,6 +515,8 @@ enum L10n {
 
         // ========== DEUTSCH ==========
         "de": [
+            "trigger.secureInputUnknown": "Ein Passwortfeld in einer anderen App verbirgt Ihre Eingabe",
+            "trigger.secureInputElsewhere": "%@ verbirgt Ihre Eingabe – verlassen Sie das Passwortfeld",
             "menu.autoSwitch": "Switcher3Way aktivieren",
             "menu.checkPermissions": "Berechtigungen prüfen…",
             "menu.checkUpdates": "Nach Updates suchen…",
@@ -622,6 +630,8 @@ enum L10n {
 
         // ========== FRANÇAIS ==========
         "fr": [
+            "trigger.secureInputUnknown": "Un champ de mot de passe d’une autre app masque votre saisie",
+            "trigger.secureInputElsewhere": "%@ masque votre saisie — quittez le champ du mot de passe",
             "menu.autoSwitch": "Activer Switcher3Way",
             "menu.checkPermissions": "Vérifier les autorisations…",
             "menu.checkUpdates": "Rechercher des mises à jour…",
@@ -735,6 +745,8 @@ enum L10n {
 
         // ========== ESPAÑOL ==========
         "es": [
+            "trigger.secureInputUnknown": "Un campo de contraseña de otra app oculta lo que escribes",
+            "trigger.secureInputElsewhere": "%@ oculta lo que escribes: sal del campo de contraseña",
             "menu.autoSwitch": "Activar Switcher3Way",
             "menu.checkPermissions": "Verificar permisos…",
             "menu.checkUpdates": "Buscar actualizaciones…",
@@ -848,6 +860,8 @@ enum L10n {
 
         // ========== PORTUGUÊS ==========
         "pt": [
+            "trigger.secureInputUnknown": "Um campo de senha em outro app está ocultando sua digitação",
+            "trigger.secureInputElsewhere": "%@ está ocultando sua digitação — saia do campo de senha",
             "menu.autoSwitch": "Ativar Switcher3Way",
             "menu.checkPermissions": "Verificar permissões…",
             "menu.checkUpdates": "Procurar atualizações…",
@@ -961,6 +975,8 @@ enum L10n {
 
         // ========== 中文 ==========
         "zh": [
+            "trigger.secureInputUnknown": "另一个应用中的密码栏正在隐藏您的输入",
+            "trigger.secureInputElsewhere": "%@ 正在隐藏您的输入 — 请离开其密码栏",
             "menu.autoSwitch": "启用 Switcher3Way",
             "menu.checkPermissions": "检查权限…",
             "menu.checkUpdates": "检查更新…",
@@ -1074,6 +1090,8 @@ enum L10n {
 
         // ========== 日本語 ==========
         "ja": [
+            "trigger.secureInputUnknown": "別のアプリのパスワード欄が入力を隠しています",
+            "trigger.secureInputElsewhere": "%@ が入力を隠しています — パスワード欄から離れてください",
             "menu.autoSwitch": "Switcher3Way を有効にする",
             "menu.checkPermissions": "権限を確認…",
             "menu.checkUpdates": "アップデートを確認…",
@@ -1187,6 +1205,8 @@ enum L10n {
 
         // ========== 한국어 ==========
         "ko": [
+            "trigger.secureInputUnknown": "다른 앱의 암호 입력란이 입력을 숨기고 있습니다",
+            "trigger.secureInputElsewhere": "%@이(가) 입력을 숨기고 있습니다 — 암호 입력란에서 나가세요",
             "menu.autoSwitch": "Switcher3Way 사용",
             "menu.checkPermissions": "권한 확인…",
             "menu.checkUpdates": "업데이트 확인…",
@@ -1300,6 +1320,8 @@ enum L10n {
 
         // ========== UKRAINIAN ==========
         "uk": [
+            "trigger.secureInputUnknown": "Поле пароля в іншому застосунку приховує ваше введення",
+            "trigger.secureInputElsewhere": "%@ приховує ваше введення — вийдіть із поля пароля",
             "menu.autoSwitch": "Увімкнути Switcher3Way",
             "menu.checkPermissions": "Перевірити дозволи…",
             "menu.checkUpdates": "Перевірити оновлення…",
@@ -1425,6 +1447,8 @@ enum L10n {
 
         // ========== BELARUSIAN ==========
         "be": [
+            "trigger.secureInputUnknown": "Поле пароля ў іншай праграме хавае ваш увод",
+            "trigger.secureInputElsewhere": "%@ хавае ваш увод — выйдзіце з поля пароля",
             "menu.autoSwitch": "Уключыць Switcher3Way",
             "menu.checkPermissions": "Праверыць дазволы…",
             "menu.checkUpdates": "Праверыць абнаўленні…",
@@ -1541,6 +1565,8 @@ enum L10n {
 
         // ========== POLSKI ==========
         "pl": [
+            "trigger.secureInputUnknown": "Pole hasła w innej aplikacji ukrywa to, co piszesz",
+            "trigger.secureInputElsewhere": "%@ ukrywa to, co piszesz — opuść pole hasła",
             "menu.autoSwitch": "Włącz Switcher3Way",
             "menu.checkPermissions": "Sprawdź uprawnienia…",
             "menu.checkUpdates": "Sprawdź uaktualnienia…",
@@ -1652,6 +1678,8 @@ enum L10n {
             "menu.help": "Pomoc",
         ],
         "el": [
+            "trigger.secureInputUnknown": "Ένα πεδίο κωδικού σε άλλη εφαρμογή αποκρύπτει την πληκτρολόγησή σας",
+            "trigger.secureInputElsewhere": "Το %@ αποκρύπτει την πληκτρολόγησή σας — βγείτε από το πεδίο κωδικού",
             "menu.autoSwitch": "Ενεργοποίηση Switcher3Way",
             "menu.checkPermissions": "Έλεγχος δικαιωμάτων…",
             "menu.checkUpdates": "Έλεγχος για ενημερώσεις…",
@@ -1763,6 +1791,8 @@ enum L10n {
             "settings.perAppLayout": "Απομνημόνευση διάταξης ανά εφαρμογή",
         ],
         "bg": [
+            "trigger.secureInputUnknown": "Поле за парола в друго приложение скрива въвеждането ви",
+            "trigger.secureInputElsewhere": "%@ скрива въвеждането ви — излезте от полето за парола",
             "menu.autoSwitch": "Включи Switcher3Way",
             "menu.checkPermissions": "Проверка на разрешения…",
             "menu.checkUpdates": "Проверка за обновления…",
@@ -1874,6 +1904,8 @@ enum L10n {
             "settings.perAppLayout": "Запомняне на подредбата за всяко приложение",
         ],
         "hy": [
+            "trigger.secureInputUnknown": "Մեկ այլ հավելվածի գաղտնաբառի դաշտը թաքցնում է ձեր մուտքագրումը",
+            "trigger.secureInputElsewhere": "%@-ը թաքցնում է ձեր մուտքագրումը — դուրս եկեք գաղտնաբառի դաշտից",
             "menu.autoSwitch": "Միացնել Switcher3Way",
             "menu.checkPermissions": "Ստուգել թույլտվությունները…",
             "menu.checkUpdates": "Ստուգել թարմացումները…",
@@ -1985,6 +2017,8 @@ enum L10n {
             "settings.perAppLayout": "Հիշել դասավորությունն ըստ ծրագրի",
         ],
         "ka": [
+            "trigger.secureInputUnknown": "სხვა აპის პაროლის ველი მალავს თქვენს აკრეფას",
+            "trigger.secureInputElsewhere": "%@ მალავს თქვენს აკრეფას — დატოვეთ პაროლის ველი",
             "menu.autoSwitch": "Switcher3Way-ის ჩართვა",
             "menu.checkPermissions": "ნებართვების შემოწმება…",
             "menu.checkUpdates": "განახლებების შემოწმება…",
