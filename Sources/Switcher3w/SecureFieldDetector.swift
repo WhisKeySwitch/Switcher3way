@@ -40,6 +40,9 @@ struct SecureFieldVerdict {
     let credentialApp: SignalState
     /// What had focus, for the log — role/subrole and the label we matched against.
     let focusDescription: String
+    /// The focused element accepts typed text — not a signal, but what tells "the field you are
+    /// typing in" apart from a window or a list when nothing else is known about it.
+    var focusIsTextEntry = false
 
     /// Any signal fired → treat as a password field.
     var isPassword: Bool {
@@ -50,8 +53,9 @@ struct SecureFieldVerdict {
     /// One line naming the verdict and every signal, for the debug log and `diagpw`.
     var describe: String {
         "password=\(isPassword)  (subrole=\(subroleSecure.rawValue) " +
-        "labelled=\(labelledPassword.rawValue) secureInput=\(secureInput.rawValue) " +
-        "credentialApp=\(credentialApp.rawValue))  focus[\(focusDescription)]"
+        "labelled=\(labelledPassword.rawValue) secureInput=\(secureInput.rawValue)" +
+        (secureInput.isPositive ? " heldBy=\(SecureFieldDetector.secureInputHolder())" : "") +
+        " credentialApp=\(credentialApp.rawValue))  focus[\(focusDescription)]"
     }
 
     /// No element to inspect — the signals exist in this build, they simply had nothing to answer
@@ -131,7 +135,8 @@ enum SecureFieldDetector {
                                       labelledPassword: cached.labelledPassword,
                                       secureInput: SignalState(IsSecureEventInputEnabled()),
                                       credentialApp: frontmostIsCredentialApp(),
-                                      focusDescription: cached.focusDescription)
+                                      focusDescription: cached.focusDescription,
+                                      focusIsTextEntry: cached.focusIsTextEntry)
         }
         let fresh = evaluate(element: element, axApp: axApp)
         cachedElement = element
@@ -169,6 +174,57 @@ enum SecureFieldDetector {
         return SignalState(AutoSwitchPolicy.protectedApps.contains(id))
     }
 
+    /// Which process turned secure input on. The flag is process-global, so when it is set the
+    /// question is rarely "is this a password field" but "who forgot to release it" — and while it
+    /// is set the system withholds every non-modifier keystroke from the event tap, so the app looks
+    /// dead. Naming the holder is the only way a user can act on that.
+    nonisolated static func secureInputHolder() -> String {
+        guard let pid = secureInputHolderPID() else { return "unknown" }
+        let app = NSRunningApplication(processIdentifier: pid)
+        return "\(app?.localizedName ?? "?") (\(app?.bundleIdentifier ?? "pid \(pid)"))"
+    }
+
+    nonisolated static func secureInputHolderPID() -> pid_t? {
+        guard let session = CGSessionCopyCurrentDictionary() as? [String: Any],
+              let pid = session["kCGSSessionSecureInputPID"] as? pid_t, pid > 0 else { return nil }
+        return pid
+    }
+
+    /// Secure input is the verdict's ONLY positive, and the focused element itself answered "not a
+    /// password" on both element signals. Chrome keeps secure input after a focused password field is
+    /// left in a background window, and every other app goes deaf — the event tap sees only
+    /// modifiers. The verdict still refuses (no keystrokes arrive anyway); this only lets the app say
+    /// why instead of doing nothing.
+    ///
+    /// Decided from the element signals, not from `kCGSSessionSecureInputPID`: in the field that key
+    /// named Notes and Telegram — the apps in front, neither holding anything — while Chrome held it.
+    static func secureInputBlocksOnly(_ v: SecureFieldVerdict) -> Bool {
+        v.secureInput.isPositive && v.subroleSecure == .no
+            && v.labelledPassword == .no && !v.credentialApp.isPositive
+    }
+
+    /// The holder's name when the session reports one other than the app in front; nil otherwise,
+    /// since a report naming the frontmost app has been seen to be wrong (see above).
+    static func secureInputHolderNameIfElsewhere() -> String? {
+        guard let pid = secureInputHolderPID(),
+              pid != NSWorkspace.shared.frontmostApplication?.processIdentifier else { return nil }
+        return NSRunningApplication(processIdentifier: pid)?.localizedName
+    }
+
+    /// The focused element and how many characters it holds — a count, never the text. While secure
+    /// input withholds every keystroke, a changing count is the only sign that the user is typing.
+    static func focusedCharacterCount() -> (AXUIElement, Int)? {
+        guard let (element, _) = focusedElement() else { return nil }
+        var raw: AnyObject?
+        if AXUIElementCopyAttributeValue(element, kAXNumberOfCharactersAttribute as CFString, &raw) == .success,
+           let n = raw as? Int {
+            return (element, n)
+        }
+        // Not every host publishes the count (Qt, some web views); the value's length is the same fact.
+        guard let value = string(element, kAXValueAttribute) else { return nil }
+        return (element, value.utf16.count)
+    }
+
     // MARK: - The signals
 
     private static func evaluate(element: AXUIElement, axApp: AXUIElement) -> SecureFieldVerdict {
@@ -196,7 +252,8 @@ enum SecureFieldDetector {
                                   labelledPassword: SignalState(labelled),
                                   secureInput: SignalState(secure),
                                   credentialApp: frontmostIsCredentialApp(),
-                                  focusDescription: focus)
+                                  focusDescription: focus,
+                                  focusIsTextEntry: textEntryRoles.contains(role))
     }
 
     /// Roles that accept typed text. A non-text element cannot be a password box, and skipping the
