@@ -1,6 +1,11 @@
 {
-  "version": "1.7.0",
-  "build": "51",
+  "version": "1.7.2",
+  "build": "53",
   "dev": "",
-  "sha256": "8cd63df00302c9b0fa482aade48fa2b5bc9dc82d064959d3f3fc48dfd894be7a"
+  "sha256": "32e511b23b1bc2ef4e6942d7219d7572cc5d4eabb42428ae16ea056e73544db9",
+  "notes": {
+    "en": "Update notes now appear in your language.\n\nWhen a new version is available, the window that offers it showed the release notes in English, with formatting marks and cut off mid-sentence. From the next update on, it shows them in the interface language — Ukrainian, Russian or English — as plain text that ends where a sentence does.\n\nNothing else has changed.",
+    "uk": "Опис оновлень тепер вашою мовою.\n\nКоли виходила нова версія, вікно з пропозицією оновитися показувало опис англійською, із символами розмітки й обрізаним посеред речення. Починаючи з наступного оновлення, опис буде мовою інтерфейсу — українською, російською чи англійською — звичайним текстом, що закінчується на кінці речення.\n\nБільше нічого не змінилося.",
+    "ru": "Описание обновлений теперь на вашем языке.\n\nКогда выходила новая версия, окно с предложением обновиться показывало описание на английском, с символами разметки и обрезанным посреди предложения. Начиная со следующего обновления, описание будет на языке интерфейса — украинском, русском или английском — обычным текстом, который заканчивается на конце предложения.\n\nБольше ничего не изменилось."
+  }
 }
