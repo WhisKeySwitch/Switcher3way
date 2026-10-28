@@ -2,5 +2,10 @@
   "version": "1.7.1",
   "build": "52",
   "dev": "",
-  "sha256": "7675d3869b8a20d1529bd469a2696f822cc40f969a0264ee20f7b33e7e6b3a9b"
+  "sha256": "7675d3869b8a20d1529bd469a2696f822cc40f969a0264ee20f7b33e7e6b3a9b",
+  "notes": {
+    "en": "Switcher3Way now tells you when a password field in another app is hiding your typing.\n\nWhile a password field has focus, macOS hides your keystrokes from every other app. Chrome can keep doing this after you switch away from a login page — and until now Switcher3Way then silently stopped converting, everywhere.\n\nNow a message at the cursor says so. To fix it, click out of that password field or close the tab. Password fields themselves are still never touched.",
+    "uk": "Switcher3Way тепер повідомляє, коли поле пароля в іншому застосунку приховує ваше введення.\n\nПоки поле пароля у фокусі, macOS приховує натискання клавіш від усіх інших застосунків. Chrome може робити це й після того, як ви перейшли зі сторінки входу деінде, — і досі Switcher3Way тоді мовчки переставав виправляти будь-де.\n\nТепер про це скаже повідомлення біля курсора. Щоб виправити, клацніть поза полем пароля або закрийте вкладку. Самих полів пароля застосунок, як і раніше, не торкається.",
+    "ru": "Switcher3Way теперь сообщает, когда поле пароля в другом приложении скрывает ваш ввод.\n\nПока поле пароля в фокусе, macOS скрывает нажатия клавиш от всех остальных приложений. Chrome может делать это и после того, как вы ушли со страницы входа в другое приложение, — и до сих пор Switcher3Way тогда молча переставал исправлять где бы то ни было.\n\nТеперь об этом скажет сообщение у курсора. Чтобы исправить, щёлкните вне поля пароля или закройте вкладку. Самих полей пароля приложение, как и прежде, не касается."
+  }
 }
