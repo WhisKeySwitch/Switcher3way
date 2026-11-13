@@ -55,6 +55,41 @@ final class PhraseTrackerTests: XCTestCase {
         XCTAssertEqual(c.newSegment, "RU ")
     }
 
+    /// A word that is no word where it was typed, between a held word and the word that converts,
+    /// converts with them. Before, it was reproduced verbatim and left stranded in Latin.
+    func testUnrecognisedWordsInsideTheSegmentConvert() {
+        let t = tracker { keys, _ in "UK\(keys.count)" }
+        t.record(keys: keys(2), shownText: "Wt", spacesAfter: 1, kind: .defaulted(lang: "en"))
+        t.record(keys: keys(3), shownText: "xbv", spacesAfter: 1, kind: .unrecognised(lang: "en"))
+        t.record(keys: keys(1), shownText: "z", spacesAfter: 1, kind: .unrecognised(lang: "en"))
+        guard let c = t.correction(toLang: "uk", layoutID: "uk") else {
+            return XCTFail("expected a correction")
+        }
+        XCTAssertEqual(c.oldSegment, "Wt xbv z ")
+        XCTAssertEqual(c.newSegment, "UK2 UK3 UK1 ")
+    }
+
+    /// …but never starts one: a lone English typo before a Ukrainian word stays as typed.
+    func testAnUnrecognisedWordDoesNotStartACorrection() {
+        let t = simpleTracker()
+        t.record(keys: keys(8), shownText: "Exchanfe", spacesAfter: 1, kind: .unrecognised(lang: "en"))
+        XCTAssertNil(t.correction(toLang: "uk", layoutID: "uk"))
+
+        // Before the first defaulted word, it is outside the segment and untouched.
+        t.record(keys: keys(2), shownText: "Wt", spacesAfter: 1, kind: .defaulted(lang: "en"))
+        let c = t.correction(toLang: "uk", layoutID: "uk")
+        XCTAssertEqual(c?.firstIndex, 1)
+        XCTAssertEqual(c?.oldSegment, "Wt ")
+    }
+
+    /// An unrecognised word already in the target language is not re-rendered.
+    func testUnrecognisedWordInTheTargetLanguageStays() {
+        let t = tracker { _, _ in "RE" }
+        t.record(keys: keys(2), shownText: "Wt", spacesAfter: 1, kind: .defaulted(lang: "en"))
+        t.record(keys: keys(3), shownText: "абв", spacesAfter: 1, kind: .unrecognised(lang: "uk"))
+        XCTAssertEqual(t.correction(toLang: "uk", layoutID: "uk")?.newSegment, "RE абв ")
+    }
+
     func testNoCorrectionWhenNothingWasDefaultedElsewhere() {
         let t = simpleTracker()
         t.record(keys: keys(3), shownText: "abc", spacesAfter: 1, kind: .neutral)

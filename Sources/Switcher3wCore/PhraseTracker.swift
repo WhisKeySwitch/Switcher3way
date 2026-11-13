@@ -24,6 +24,12 @@ public final class PhraseTracker {
         case defaulted(lang: String)  // ambiguity resolved by preference/lock — retro-correctable
         case locked(lang: String)     // valid in exactly one language — locks the phrase
         case neutral                  // kept / valid as typed — reproduced verbatim in corrections
+        /// Left alone because it is not a word in `lang`, the language of the layout it was typed on
+        /// (a single letter counts: it is never judged alone). It never starts a correction, but one
+        /// that already spans it converts it too — otherwise `Це все, xbv z допомогти` came out with
+        /// the words on both sides converted and `чим я` stranded in Latin between them (field log,
+        /// 2026-11-13; 4 of 15 corrections that fortnight).
+        case unrecognised(lang: String)
     }
 
     public struct PhraseWord {
@@ -83,8 +89,8 @@ public final class PhraseTracker {
 
     /// Builds the correction toward `lang` (rendered through the layout `layoutID`): the
     /// segment from the first defaulted-to-another-language word through the last recorded
-    /// word. Defaulted words re-render their keystrokes; neutral/locked words are reproduced
-    /// verbatim. nil — nothing defaulted to another language, the phrase is locked to a
+    /// word. Defaulted words, and unrecognised words inside the segment, re-render their keystrokes;
+    /// neutral/locked words are reproduced verbatim. nil — nothing defaulted to another language, the phrase is locked to a
     /// conflicting language, a re-render failed, or the segment exceeds the length cap.
     public func correction(toLang lang: String, layoutID: String) -> Correction? {
         if let locked = lockedLang, locked != lang {
@@ -102,7 +108,7 @@ public final class PhraseTracker {
             var word = words[index]
             let spaces = String(repeating: " ", count: word.spacesAfter)
             old += word.shownText + spaces
-            if case .defaulted(let l) = word.kind, l != lang {
+            if Self.convertsInCorrection(word.kind, toLang: lang) {
                 guard let rerendered = render(word.keys, layoutID) else {
                     CoreLog.write("phrase: re-render failed — no correction")
                     return nil
@@ -118,6 +124,14 @@ public final class PhraseTracker {
             return nil
         }
         return Correction(oldSegment: old, newSegment: new, firstIndex: first, correctedWords: corrected)
+    }
+
+    /// Does a word of this kind, inside a correction segment, take the target language's text?
+    static func convertsInCorrection(_ kind: WordKind, toLang lang: String) -> Bool {
+        switch kind {
+        case .defaulted(let l), .unrecognised(let l): return l != lang
+        case .locked, .neutral:                        return false
+        }
     }
 
     /// Commits a successful correction to the memory (call from the retype success completion,

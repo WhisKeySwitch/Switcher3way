@@ -49,6 +49,35 @@ public class PhraseTrackerTests
     }
 
     [Fact]
+    public void BuildCorrection_unrecognisedWordsInsideTheSegmentConvert()
+    {
+        // Field log 2026-11-13: Ukrainian typed on the English layout, `Wt dct? xbv z`. The held words
+        // converted and `xbv z` (чим я — not a word anywhere, and a lone letter) stayed in Latin.
+        var t = Make(new() { [(1, "uk")] = "Це", [(2, "uk")] = "все,", [(3, "uk")] = "чим", [(4, "uk")] = "я" });
+        t.Record(W(1), "Wt", 1, new Kind.Defaulted("en"));
+        t.Record(W(2), "dct?", 1, new Kind.Defaulted("en"));
+        t.Record(W(3), "xbv", 1, new Kind.Unrecognised("en"));
+        t.Record(W(4), "z", 1, new Kind.Unrecognised("en"));
+        var c = t.BuildCorrection("uk", "uk");
+        Assert.NotNull(c);
+        Assert.Equal("Wt dct? xbv z ", c!.OldSegment);
+        Assert.Equal("Це все, чим я ", c.NewSegment);
+    }
+
+    [Fact]
+    public void BuildCorrection_unrecognisedWordDoesNotStartOne()
+    {
+        // A lone English typo before a Ukrainian word stays as typed.
+        var t = Make(new() { [(1, "uk")] = "Учсрфтау", [(2, "uk")] = "Це" });
+        t.Record(W(1), "Exchanfe", 1, new Kind.Unrecognised("en"));
+        Assert.Null(t.BuildCorrection("uk", "uk"));
+        t.Record(W(2), "Wt", 1, new Kind.Defaulted("en"));
+        var c = t.BuildCorrection("uk", "uk");
+        Assert.Equal(1, c!.FirstIndex);
+        Assert.Equal("Wt ", c.OldSegment);
+    }
+
+    [Fact]
     public void BuildCorrection_contradictoryLock_returnsNull()
     {
         var t = Make(new() { [(2, "ru-layout")] = "x" });

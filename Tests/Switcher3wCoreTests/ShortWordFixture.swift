@@ -15,6 +15,9 @@ enum ShortWordFixture {
     /// `words = {w.strip(punct).lower() for w in corpus.split()}; [w for w in words if len(w) <= 3]`
     static let inProse: [String: [String]] = [
         "uk": [
+            // The short words a fortnight's field log (2026-10-28..11-13) refused as "not a word in
+            // any installed language" — the prose above never used them, so coverage read 100%.
+            "він", "чим", "от", "ото", "же", "їду", "йти", "тю", "ок",
             "а", "або", "але", "без", "бо", "в", "вже", "все", "дні", "до", "дощ", "з", "за", "зі",
             "має", "ми", "між", "мій", "на", "не", "неї", "ні", "ніж", "по", "про", "під", "та",
             "так", "там", "те", "теж", "то", "у", "уже", "це", "ці", "чай", "час", "ще", "що",

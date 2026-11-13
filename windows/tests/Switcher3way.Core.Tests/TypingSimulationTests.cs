@@ -156,7 +156,9 @@ public class TypingSimulationTests
                     _heldLang = null; _heldRun = 0; _settledLang = null;
                     Keep(keys, shown, k.ValidInCurrent
                             ? new PhraseTracker.WordKind.Locked(currentLang)
-                            : new PhraseTracker.WordKind.Neutral(), gen);
+                            : k.Reason == KeepReason.NotAWordAnywhere
+                                ? new PhraseTracker.WordKind.Unrecognised(currentLang)
+                                : new PhraseTracker.WordKind.Neutral(), gen);
                     break;
 
                 case Outcome.Defer defer:

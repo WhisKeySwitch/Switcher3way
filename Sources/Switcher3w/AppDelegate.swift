@@ -714,6 +714,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
                let shown = NWay.resolver.renderCurrent(keys: keys), NWayResolver.settlesPhrase(shown) {
                 keepKind = .locked(lang: lang)
             }
+            // Not a word where it was typed (single letters land here too): left alone now, but a
+            // phrase correction that spans it converts it with its neighbours instead of stranding it.
+            if reason == .notAWordAnywhere, let lang = currentLanguageCode() {
+                keepKind = .unrecognised(lang: lang)
+            }
         case .held(let original, let winners):
             // Reads as another language, but it is two or three letters long, so that reading is
             // worth very little. Leave the screen alone and remember the keystrokes as defaulted to
