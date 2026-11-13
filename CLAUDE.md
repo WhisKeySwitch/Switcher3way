@@ -133,9 +133,12 @@ Rationale + detail: `NOTES-3WAY.md`. Summary:
 3. **Updater rebuilt for the fork** — the upstream updater was deleted at fork time (so
    stock 2-way upstream releases couldn't clobber the fork); July 2026 added a new one
    (`UpdateChecker.swift` + `UpdateInstaller.swift`) whose ONLY source is the fork's own
-   releases — on the main repo (`WhisKeySwitch/Switcher3way`) since the August 2026
-   consolidation (previously the separate `switcher3way-releases` downloads repo, which stays
-   up read-only until the one-time bridge release ships to both — see `NOTES-3WAY.md`):
+   releases on the public downloads repo `WhisKeySwitch/switcher3way-releases`. Hosting started
+   there, moved to the main repo in August 2026, and moved back with the 1.6.1 bridge, because the main repo
+   is going private and the releases API returns 404 to anonymous clients for a private repo.
+   **Publish macOS releases to `switcher3way-releases` only.** The main repo's `latest` stays
+   pinned at the 1.6.1 bridge for installs at 1.5.2 or older; a notarized build there would
+   fail their update silently (pin expires 31 Dec 2026 — see `NOTES-3WAY.md`):
    daily background check
    (General-tab toggle, default on) + "Check for Updates…" menu item; notify → one-click
    verified install (manifest sha256 + same-certificate codesign gate — that's what keeps
@@ -264,7 +267,7 @@ on a machine that is not a Mac.
   `docs/user-guide*.md` via `scripts/md2html.py` — the manuals are the single source of truth,
   a missing guide fails the build.
 - **`Localization.swift`** — `L10n` strings, 16 languages; `s()` falls back to English.
-- **`UpdateChecker.swift`** — fork updater: GitHub Releases API of the public downloads repo,
+- **`UpdateChecker.swift`** — fork updater: GitHub Releases API of `switcher3way-releases`,
   numeric semver compare, 15 s-after-launch + daily schedule (gated on the setting), the
   notify alert (Install / Later / Skip This Version), busy state for the menu item.
 - **`UpdateInstaller.swift`** — verified install: DMG download → sha256 vs the `version.json`
@@ -359,7 +362,7 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   trusts a dictionary that answers wrong (see `openspec/changes/quarantine-a-lying-dictionary`:
   one verdict per decision, canary probes, verify-before-act). 1.4.0 was the typo-guard release.
   Feature-complete: 3-way auto + manual switching, custom icon, in-app updates from the fork's own
-  releases (on the main repo since the August 2026 consolidation), modernized UI (toolbar-tab
+  releases (`switcher3way-releases`), modernized UI (toolbar-tab
   Settings, onboarding checklist, status-first menu with Pause), stable signing, abort-safe
   retype with phrase-aware ambiguity resolution.
 - **Windows — 0.4.0 on both channels** (August 2026), also the typo-guard release. Live on the
@@ -404,8 +407,9 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   the right design at a fourth or fifth language, not at three.
 - **Not code-signed on the MSI channel** — SmartScreen warns. Needs an OV/EV certificate from a CA;
   self-signed does not satisfy SmartScreen. x64 only, no arm64 build.
-- **The old downloads repo can be archived** once pre-0.4.0 installs have crossed over: 0.4.0 was
-  published to both repos as the one-time bridge, and archived repos keep serving downloads read-only.
+- **Release hosting needs a decision by 31 December 2026.** `switcher3way-releases` is the live
+  update source and must stay public and unarchived. The main repo's `latest` is pinned at the
+  1.6.1 bridge for old installs; that pin expires at year end (`NOTES-3WAY.md`).
 - **Icon optical balance** — S/Э/Є are fine; could optically size-match if desired.
 - **Git:** work happens on feature branches merged into `main` via PRs on
   `WhisKeySwitch/Switcher3way` (origin; the old `yaremenko2205/switcher3w` URL redirects there).
@@ -421,4 +425,4 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 - `openspec/` — OpenSpec capability specs back-filled from the code (`CAPABILITIES.md` is the
   overview; validate with `openspec validate --specs`). Software updates are a first-class
   capability (`specs/software-updates/`) since July 2026 — the updater targets only the fork's
-  own releases, hosted on the main repo since August 2026.
+  own releases, hosted on `switcher3way-releases`.
