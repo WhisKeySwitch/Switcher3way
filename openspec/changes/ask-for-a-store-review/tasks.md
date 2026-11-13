@@ -145,11 +145,13 @@ than read off.
       and logs the status. In a sideload this is expected to log a failure, and that *is* the result: it
       proves the call path and the HWND initialisation exist. Verified only as far as the unpackaged
       guard, which is as far as this machine can go without a flight.
-- [ ] 7.3 Walk the full localisation of the prompt in at least uk, ru and bg — the languages with
+- [x] 7.3 Walk the full localisation of the prompt in at least uk, ru and bg — the languages with
       shipping user guides.
-- [ ] 7.4 Package flight through Partner Center to the developer's own account, and see the real Store
+- [x] 7.4 Package flight through Partner Center to the developer's own account, and see the real Store
       dialog appear. A sideload has no Store licence and cannot do this, so this step is not optional and
-      is not substitutable.
+      is not substitutable. **Done on the live Store build instead of a flight** (2026-11-13): 0.7.0
+      installed from the Store (Store-signed) on the dev machine; "Rate Switcher3way…" opened the
+      Store's own rating dialog in-app.
 - [x] 7.5 `windows/RELEASING.md` gains the flight as a checklist line, with the reason, so it is not
       skipped under release pressure.
 - [x] 7.6 Checked by reading `AppxManifest.xml` out of the built `.msix` rather than trusting the
