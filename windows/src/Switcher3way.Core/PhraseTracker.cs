@@ -31,6 +31,11 @@ public sealed class PhraseTracker
         public sealed record Locked(string Lang) : WordKind;
         /// <summary>Kept / valid as typed — reproduced verbatim in corrections.</summary>
         public sealed record Neutral : WordKind;
+        /// <summary>Left alone because it is not a word in <paramref name="Lang"/>, the language of the
+        /// layout it was typed on (a single letter counts: it is never judged alone). It never starts a
+        /// correction, but one that already spans it converts it too — otherwise the words on both sides
+        /// were converted and it was stranded between them in the old layout's letters.</summary>
+        public sealed record Unrecognised(string Lang) : WordKind;
     }
 
     public sealed class PhraseWord
@@ -84,7 +89,8 @@ public sealed class PhraseTracker
     /// <summary>
     /// Builds the correction toward <paramref name="lang"/> (rendered through <paramref name="layoutId"/>):
     /// the segment from the first word defaulted to a *different* language through the last recorded
-    /// word. Defaulted words re-render their keystrokes; neutral/locked words are reproduced verbatim.
+    /// word. Defaulted words, and unrecognised words inside the segment, re-render their keystrokes;
+    /// neutral/locked words are reproduced verbatim.
     /// Null when nothing is defaulted to another language, the phrase is locked to a conflicting
     /// language, a re-render fails, or the segment exceeds the length cap.
     /// </summary>
@@ -107,7 +113,8 @@ public sealed class PhraseTracker
 
             var shown = w.ShownText;
             var kind = w.Kind;
-            if (w.Kind is WordKind.Defaulted dd && dd.Lang != lang)
+            if (w.Kind is WordKind.Defaulted dd && dd.Lang != lang
+                || w.Kind is WordKind.Unrecognised u && u.Lang != lang)
             {
                 var rerendered = _render(w.Keys, layoutId);
                 if (rerendered is null) return null;

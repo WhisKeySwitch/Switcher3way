@@ -188,7 +188,8 @@ legible side by side.
   layout's language" and was left on screen (the September 2026 report). An **allow**-list, because
   the junk is unbounded and the real short words are a small closed set. Omissions are the dangerous
   direction — a word missing from its own language's list can be converted away — so the lists are
-  generous and gated by coverage over real prose (`ShortWordPrecisionTests`). The Windows
+  generous and gated by coverage over real prose (`ShortWordPrecisionTests`) and by a review of
+  everything the dictionary accepts under four letters (`ShortWordReview`). The Windows
   `ShortWords.cs` is **generated from this file**; edit here and regenerate, never both.
 - **`NWayResolver.swift`** — `evaluate` / `manualPlan` / `render`. Instance-based; the executable
   owns one (`NWay.resolver`).
@@ -312,6 +313,18 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Current state
 
+- **macOS — 1.7.3** (November 2026, `openspec/changes/convert-words-left-behind`): words are no
+  longer stranded inside a phrase correction. A field log showed `Це все, xbv z …`: Ukrainian typed on
+  the English layout, the held words around `чим я` converted, `чим` and `я` left in Latin. 4 of 15
+  corrections in a fortnight did this. Two causes: a phrase correction reproduced *every* kept word
+  verbatim, including ones that are no word where they were typed (now `WordKind.unrecognised` —
+  converted when a correction already spans it, never starting one); and the short-word lists missed
+  `він`, `чим`, `от`, `же`… The lists are now checked against **every** 1–3 letter string the
+  dictionary accepts (`ShortWordReview`: 4,676 strings classified, uk/ru/bg). The suite fails on an
+  unclassified one, and on a listed word whose keys spell a listed English word on US (`еру`/the).
+  The combination measurement is unchanged row for row: it cannot see phrases, and
+  `WordsLeftBehindTests` replays the field episodes instead. Windows carries the same rule;
+  `ShortWords.cs` now has a Bulgarian list.
 - **macOS — 1.6.0** (September 2026, `openspec/changes/stop-missing-wrong-layout-words`): the
   recall release. A twelve-day field log (5,731 auto decisions, 121 manual triggers) showed the app
   leaving wrong-layout words alone for six reasons, all now fixed or measured: the typo guard ran on
