@@ -35,13 +35,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     private let settingsController = SettingsWindowController()
     private let onboardingController = OnboardingWindowController()
     private let helpController = HelpWindowController()
+#if SWITCHER_APPSTORE
+    private let purchaseWindow = PurchaseWindowController()
+#endif
     private let perAppLayoutManager = PerAppLayoutManager()
     private var iconRefreshTimer: Timer?
     private var pauseTimer: Timer?         // auto-resume when the timed pause expires (W4)
     private var lastPermissionsOK: Bool?   // to rebuild the menu when permissions state changes
     private var monitoringActive = false
+    /// Why monitoring stopped, when it stopped through a fault rather than a user's choice.
+    /// Pause and the master toggle are deliberate; these are not, and must not look the same.
+    enum MonitoringFault {
+        case accessibility, inputMonitoring, bothPermissions, tap
+    }
+    private var monitoringFault: MonitoringFault?
+    /// Consecutive health checks that found the tap dead and could not revive it.
+    private var tapFailStrikes = 0
+    private static let tapFailStrikesBeforeActing = 2
+    /// Watches for a permission grant that arrives while no onboarding window is open.
+    ///
+    /// The checklist polls, but it stops the moment its window closes — and the window itself
+    /// says closing loses nothing. So a user who closes it, grants Accessibility in System
+    /// Settings and comes back finds an app that never noticed and never starts working, with a
+    /// relaunch as the only cure nobody tells them about. This runs only while monitoring is off,
+    /// and stops itself the moment it starts.
+    private var permissionWatchTimer: Timer?
     private var caretIndicator: CaretIndicator?   // issue #10: caret flag (beta, OFF by default)
     private var secureFieldFocusObserver: NSObjectProtocol?   // invalidates the password-guard cache
+    private var deafWatch: (element: AXUIElement, count: Int)?  // typing seen while secure input hides keys
+    private var lastDeafNotice = Date.distantPast
 
     // References to the live labels of the menu status header (updated by icon polling)
     private weak var headerBadgeLabel: NSTextField?
@@ -60,8 +82,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
 
         // Software updates: menu state follows the checker; first background check ~15 s
         // after launch, then daily (gated on the setting inside startSchedule).
+#if !SWITCHER_APPSTORE
         UpdateChecker.shared.onStateChange = { [weak self] in self?.rebuildMenu() }
         UpdateChecker.shared.startSchedule()
+#else
+        Purchases.shared.onChange = { [weak self] in
+            self?.rebuildMenu()
+            self?.updateStatusIcon()
+            self?.purchaseWindow.refreshContents()
+        }
+        Purchases.shared.start()
+#endif
     }
 
     private func setupSettingsCallbacks() {
@@ -204,9 +235,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     /// Onboarding checklist (W3) instead of a chain of modal alerts: one window with a live
     /// status of both permissions; closing loses nothing.
     private func runPermissionWizard(interactive: Bool = false) {
-        let acc = AXIsProcessTrusted()
-        let inp = CGPreflightListenEventAccess()
-        rslog("Permissions: accessibility=\(acc) inputMonitoring=\(inp)")
+        let acc = Permissions.accessibility
+        let inp = Permissions.inputMonitoring
+        rslog(Permissions.logLine)
 
         if acc && inp {
             // Remember that permissions were granted
@@ -216,6 +247,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             if interactive { onboardingController.show() }
             return
         }
+
+        // Something is missing. Keep watching for it to appear, regardless of whether the user
+        // leaves the checklist window open.
+        startWatchingForPermissions()
 
         // Permissions were granted before but are now reset (update): clean the TCC entries
         // and show the checklist with a reset note.
@@ -236,7 +271,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         let bundleID = Bundle.main.bundleIdentifier ?? "com.switcher3way.app"
         rslog("Resetting TCC entries for \(bundleID)")
 
-        for service in ["Accessibility", "ListenEvent"] {
+        // The Store build never asked for Input Monitoring, so there is no entry of its to reset.
+        for service in Permissions.asksForInputMonitoring ? ["Accessibility", "ListenEvent"] : ["Accessibility"] {
             let reset = Process()
             reset.launchPath = "/usr/bin/tccutil"
             reset.arguments = ["reset", service, bundleID]
@@ -254,19 +290,92 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
 
     // MARK: - Start Monitoring
 
+    /// Poll for both grants while monitoring is off. Two cheap calls every two seconds, running
+    /// only in the state where the app is doing nothing anyway, and cancelled as soon as it works.
+    private func startWatchingForPermissions() {
+        guard permissionWatchTimer == nil, !monitoringActive else { return }
+        rslog("permissions: watching for a grant (checklist may be closed)")
+        permissionWatchTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, !self.monitoringActive else { return }
+                guard Permissions.allGranted else { return }
+                rslog("permissions: granted while running — starting without a relaunch")
+                SettingsManager.shared.permissionsWereGranted = true
+                self.startMonitoring()
+                self.rebuildMenu()
+                self.updateStatusIcon()
+            }
+        }
+    }
+
+    private func stopWatchingForPermissions() {
+        guard permissionWatchTimer != nil else { return }
+        permissionWatchTimer?.invalidate()
+        permissionWatchTimer = nil
+        rslog("permissions: watcher stopped — monitoring is running")
+    }
+
+    /// Secure input held by another application — Chrome keeps it after you leave a focused
+    /// password field — makes the event tap deaf everywhere: auto-conversion never sees a word, so
+    /// it has no failure to report. Arriving in a text field is the one moment left to say so.
+    private func noticeSecureInputOnArrival() {
+        guard SettingsManager.shared.effectivelyEnabled, SettingsManager.shared.autoConvert,
+              AutoSwitchPolicy.secureInputActive else { return }
+        let secure = SecureFieldDetector.verdict()
+        guard secure.focusIsTextEntry, SecureFieldDetector.secureInputBlocksOnly(secure) else { return }
+        rslog("auto: deaf — \(secure.describe)")
+        lastDeafNotice = Date()
+        noticeSecureInputElsewhere()
+    }
+
+    /// The same failure, caught while it happens: the arrival notice fades after a moment, and a
+    /// user who goes on typing a wrong-layout word otherwise sees auto-fix do nothing at all. The
+    /// keystrokes never reach the tap, so the focused field's character count is watched instead.
+    /// Free while secure input is off — the first guard is all that runs.
+    private func checkDeafTyping() {
+        guard AutoSwitchPolicy.secureInputActive, SettingsManager.shared.effectivelyEnabled,
+              SettingsManager.shared.autoConvert,
+              let (element, count) = SecureFieldDetector.focusedCharacterCount() else {
+            deafWatch = nil
+            return
+        }
+        defer { deafWatch = (element, count) }
+        guard let prev = deafWatch, CFEqual(prev.element, element), prev.count != count,
+              Date().timeIntervalSince(lastDeafNotice) >= 20 else { return }
+        let secure = SecureFieldDetector.verdict()
+        guard secure.focusIsTextEntry, SecureFieldDetector.secureInputBlocksOnly(secure) else { return }
+        rslog("auto: deaf — typing seen, keys withheld — \(secure.describe)")
+        lastDeafNotice = Date()
+        noticeSecureInputElsewhere()
+    }
+
+    private func noticeSecureInputElsewhere() {
+        let holder = SecureFieldDetector.secureInputHolderNameIfElsewhere()
+        caretIndicator?.notice(holder.map(L10n.triggerSecureInputElsewhere) ?? L10n.triggerSecureInputUnknown,
+                               overSecureInputElsewhere: true)
+    }
+
     private func startMonitoring() {
         if !keyboardMonitor.start(
             onAltTap: { [weak self] in
                 guard let self else { return }
                 guard SettingsManager.shared.effectivelyEnabled else { return }
+#if SWITCHER_APPSTORE
+                guard Purchases.shared.entitlement.allowsConversion else {
+                    rslog("trigger: suppressed — trial over, nothing purchased")
+                    return
+                }
+#endif
                 // Manual control invalidates the phrase memory (its conversions/undos
                 // aren't tracked, so later corrections would erase the wrong segment).
                 self.resetPhrase()
                 // The trigger is an explicit user action, which is why it converts words auto
                 // declines — but that does not make it safe to read a password field through the
                 // clipboard fallback, or to retype its contents. Checked before anything reads text.
-                guard !SecureFieldDetector.isFocusedPassword else {
-                    rslog("trigger: suppressed — password field")
+                let secure = SecureFieldDetector.verdict()
+                guard !secure.isPassword else {
+                    rslog("trigger: suppressed — \(secure.describe)")
+                    if SecureFieldDetector.secureInputBlocksOnly(secure) { self.noticeSecureInputElsewhere() }
                     return
                 }
                 if AutoSwitchPolicy.shouldDeferToRemoteClient {
@@ -322,14 +431,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
                     // silent no-op that reads exactly like the app being broken.
                     rslog("trigger: nothing could be applied")
                     ConversionNotifier.reportRewriteFailure()
+                } else {
+                    // Nothing buffered at all. The usual cause is a mouse click, which clears the
+                    // buffer on purpose so a retype cannot erase text at a cursor that has since
+                    // moved — but from the user's side the trigger simply did nothing, five times
+                    // in a row, with no way to tell that from a broken app.
+                    rslog("trigger: nothing buffered — click or focus change cleared it")
+                    self.caretIndicator?.notice(L10n.triggerNothingBuffered)
                 }
             },
             onAltReconvert: { [weak self] in
                 guard let self else { return }
                 guard SettingsManager.shared.effectivelyEnabled else { return }
+#if SWITCHER_APPSTORE
+                guard Purchases.shared.entitlement.allowsConversion else {
+                    rslog("trigger: suppressed — trial over, nothing purchased")
+                    return
+                }
+#endif
                 self.resetPhrase()   // manual control — see onAltTap
-                guard !SecureFieldDetector.isFocusedPassword else {
-                    rslog("trigger: suppressed — password field")
+                let secure = SecureFieldDetector.verdict()
+                guard !secure.isPassword else {
+                    rslog("trigger: suppressed — \(secure.describe)")
+                    if SecureFieldDetector.secureInputBlocksOnly(secure) { self.noticeSecureInputElsewhere() }
                     return
                 }
                 if AutoSwitchPolicy.shouldDeferToRemoteClient {
@@ -372,6 +496,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         }
 
         monitoringActive = true
+        monitoringFault = nil
+        tapFailStrikes = 0
+        stopWatchingForPermissions()
         keyboardMonitor.onWordBoundary = { [weak self] in
             self?.handleAutoConvert()
         }
@@ -393,8 +520,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         // App switches likewise change what has focus.
         secureFieldFocusObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
-        ) { _ in
+        ) { [weak self] _ in
             MainActor.assumeIsolated { SecureFieldDetector.invalidate() }
+            // After the switch has settled: an app that does release secure input when it loses
+            // focus does so after we hear about the activation.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                MainActor.assumeIsolated { self?.noticeSecureInputOnArrival() }
+            }
         }
         keyboardMonitor.onExtraSpace = { [weak self] in
             DispatchQueue.main.async { self?.phraseTracker.noteExtraSpace() }
@@ -405,12 +537,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         // Safety net for issue #9: the system notification about a layout change is unreliable
         // (especially over remote desktop — on that machine it often doesn't arrive), so
         // the flag "gets stuck". A constant light poll keeps the icon in sync with the system.
-        // The same poll watches the permissions state (W4: menu item — only when broken).
+        // The same poll is where the app checks that it still works at all — permissions still
+        // held, event tap still enabled (notice-revoked-permissions). One timer, one place where
+        // "is this app actually working" is decided; two would eventually disagree.
         iconRefreshTimer?.invalidate()
         iconRefreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.updateStatusIcon()
-                self?.watchPermissions()
+                self?.checkMonitoringHealth()
+                self?.checkDeafTyping()
             }
         }
         rslog("Monitoring started successfully")
@@ -424,14 +559,74 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         offerAutoConvertIfNeeded()
     }
 
-    /// Rebuilds the menu when permissions state changes (loss/return) — so that
-    /// "Check Permissions…" appears only when it's really broken.
-    private func watchPermissions() {
-        let ok = AXIsProcessTrusted() && CGPreflightListenEventAccess()
+    /// Confirms the app can still do its job, rather than assuming the launch-time answer holds.
+    ///
+    /// Permissions are continuing preconditions: macOS withdraws Accessibility and Input
+    /// Monitoring on its own (a changed signature is enough), and users turn them off while
+    /// debugging something else. Both happened here. Until this existed, `monitoringActive`
+    /// stayed true, the tap was dead, and the app reported itself as working — which in an app
+    /// whose successful state is invisible is indistinguishable from having nothing to do.
+    ///
+    /// Three synchronous calls, no locks, no conversion state: it cannot delay a conversion.
+    private func checkMonitoringHealth() {
+        let acc = Permissions.accessibility
+        let inp = Permissions.inputMonitoring
+        let ok = acc && inp
+
         if ok != lastPermissionsOK {
             lastPermissionsOK = ok
             rebuildMenu()
         }
+
+        // Nothing to verify while monitoring isn't supposed to be running: the grant watcher
+        // owns that state.
+        guard monitoringActive else { return }
+
+        if !ok {
+            let missing: MonitoringFault = !acc && !inp ? .bothPermissions : (!acc ? .accessibility : .inputMonitoring)
+            logAlways("health: permission revoked while running (accessibility=\(acc) inputMonitoring=\(inp)) — monitoring stopped")
+            stopMonitoring(fault: missing)
+            return
+        }
+
+        // Permissions held — but a tap the system disabled delivers no events, so the
+        // in-callback re-enable can never fire for it.
+        guard !keyboardMonitor.isTapEnabled else { tapFailStrikes = 0; return }
+
+        if keyboardMonitor.reenableTap() {
+            // Routine and recoverable. Logged, not announced: an app that reports every
+            // transient hiccup teaches its user to ignore the reports that matter.
+            tapFailStrikes = 0
+            rslog("health: event tap was disabled — re-enabled, monitoring continues")
+            return
+        }
+
+        // Two consecutive failing checks before acting. One reading cannot distinguish a dead
+        // tap from a reading that raced the enable, and the two call for opposite responses:
+        // tearing down a working tap is a self-inflicted outage, and a fault the user can see
+        // is worth two more seconds of certainty. Costs ~2 s of an outage that has already
+        // happened; buys a fault state that cannot fire on a momentary false reading.
+        tapFailStrikes += 1
+        guard tapFailStrikes >= Self.tapFailStrikesBeforeActing else {
+            rslog("health: event tap re-enable failed (strike \(tapFailStrikes)) — rechecking before acting")
+            return
+        }
+
+        logAlways("health: event tap disabled and could not be re-enabled after \(tapFailStrikes) checks — monitoring stopped")
+        tapFailStrikes = 0
+        stopMonitoring(fault: .tap)
+    }
+
+    /// Leaves the app in the state it uses when permissions were never granted — including the
+    /// watcher — so that recovery runs through a path that is exercised on every first launch,
+    /// instead of one that only runs in a rare case and therefore only fails in a rare case.
+    private func stopMonitoring(fault: MonitoringFault) {
+        monitoringActive = false
+        monitoringFault = fault
+        keyboardMonitor.stop()
+        startWatchingForPermissions()
+        rebuildMenu()
+        updateStatusIcon()
     }
 
     /// Auto-conversion at the word boundary: detect the wrong layout → convert + switch.
@@ -439,6 +634,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
     private func handleAutoConvert() {
         rslog("auto: fired")
         guard SettingsManager.shared.effectivelyEnabled else { rslog("auto: bail master-off"); return }
+#if SWITCHER_APPSTORE
+        guard Purchases.shared.entitlement.allowsConversion else {
+            rslog("auto: bail — trial over, nothing purchased")
+            return
+        }
+#endif
         guard SettingsManager.shared.autoConvert else { rslog("auto: bail flag-off"); return }
         // Contexts where words go unevaluated make the phrase memory incomplete —
         // reset it so a later correction can't be computed over a gap.
@@ -512,6 +713,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             if reason == .validInCurrent, let lang = currentLanguageCode(),
                let shown = NWay.resolver.renderCurrent(keys: keys), NWayResolver.settlesPhrase(shown) {
                 keepKind = .locked(lang: lang)
+            }
+            // Not a word where it was typed (single letters land here too): left alone now, but a
+            // phrase correction that spans it converts it with its neighbours instead of stranding it.
+            if reason == .notAWordAnywhere, let lang = currentLanguageCode() {
+                keepKind = .unrecognised(lang: lang)
             }
         case .held(let original, let winners):
             // Reads as another language, but it is two or three letters long, so that reading is
@@ -680,6 +886,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         case .sameTextUncorroborated:
             return "spelled the same in the other language, but the phrase does not read as it — "
                  + "leaving the layout alone"
+        case .claimedByTransliteratingLayout:
+            return "a word on a phonetic layout Auto-fix does not convert into — not handing it to "
+                 + "another language either"
         }
     }
 
@@ -842,6 +1051,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             menu.addItem(remoteDesktopItem)
         }
 
+#if SWITCHER_APPSTORE
+        menu.addItem(NSMenuItem.separator())
+        switch Purchases.shared.entitlement {
+        case .trial(let daysRemaining):
+            let item = NSMenuItem(title: L10n.purchaseTrialDaysLeft(daysRemaining), action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+            addPurchaseItems(to: menu)
+        case .expired:
+            // Red, not the default disabled grey. This line is the only thing telling the user why
+            // the app has stopped doing its job, and a greyed-out sentence reads as decoration —
+            // which leaves an expired licence indistinguishable from the app being broken.
+            let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+            item.attributedTitle = NSAttributedString(
+                string: L10n.purchaseExpired,
+                attributes: [.foregroundColor: NSColor.systemRed,
+                             .font: NSFont.menuFont(ofSize: 0)])
+            menu.addItem(item)
+            addPurchaseItems(to: menu)
+        case .purchased, .unknown:
+            break
+        }
+#endif
+
         menu.addItem(NSMenuItem.separator())
 
         // Pause with durations instead of the "Enable" checkbox (W4): a disabled
@@ -866,9 +1099,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
             menu.addItem(resumeItem)
         }
 
+        // Why the app stopped. Red and clickable, not the default disabled grey: this line is
+        // the only thing distinguishing "cannot work" from "had nothing to convert", and in the
+        // menu of an app whose successful state is invisible, a greyed-out sentence reads as
+        // decoration. Same mistake the expired-licence line above already made once.
+        if let fault = monitoringFault {
+            let item = NSMenuItem(title: "", action: #selector(recheckPermissions), keyEquivalent: "")
+            item.target = self
+            item.attributedTitle = NSAttributedString(
+                string: L10n.menuMonitoringStopped(faultName(fault)),
+                attributes: [.foregroundColor: NSColor.systemRed,
+                             .font: NSFont.menuFont(ofSize: 0)])
+            menu.addItem(item)
+        }
+
         // "Check Permissions…" — only when permissions are broken (W4);
         // in a healthy state the item isn't needed in the everyday menu.
-        if !(AXIsProcessTrusted() && CGPreflightListenEventAccess()) {
+        if !Permissions.allGranted {
             let permItem = NSMenuItem(title: L10n.menuCheckPermissions, action: #selector(recheckPermissions), keyEquivalent: "")
             permItem.target = self
             menu.addItem(permItem)
@@ -883,8 +1130,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         helpItem.target = self
         menu.addItem(helpItem)
 
+#if !SWITCHER_APPSTORE
         // Updates: the fork's own updater (source = this repo's own releases).
         // Disabled with a busy title while a check or install is in progress.
+        // Absent from the App Store flavour, which is updated by the store itself.
         let checker = UpdateChecker.shared
         let updatesTitle = checker.isInstalling ? L10n.menuInstallingUpdate
                          : checker.isBusy ? L10n.menuCheckingUpdates
@@ -894,6 +1143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
                                      keyEquivalent: "")
         updatesItem.target = self
         menu.addItem(updatesItem)
+#endif
 
         // "Support Development", "Star on GitHub" removed in the Switcher3way fork.
         menu.addItem(NSMenuItem.separator())
@@ -969,7 +1219,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         let flag = flagForCurrentLayout()
         // W4: while paused (or with the master toggle off) the icon is clearly different —
         // a disabled switcher shouldn't look enabled.
-        let title = SettingsManager.shared.effectivelyEnabled ? flag : "⏸" + flag
+        // A fault takes precedence over a pause: both stop conversion, but only one of them
+        // needs the user to do something, and only one of them they didn't choose.
+        let title: String
+        if monitoringFault != nil {
+            title = "⚠️" + flag
+        } else if SettingsManager.shared.effectivelyEnabled {
+            title = flag
+        } else {
+            title = "⏸" + flag
+        }
         // We poke the caret ONLY on a real layout flag change: updateStatusIcon
         // is also called by the 2-second safety poll, otherwise the caret flag would pop
         // up every 2s (and a pause change is not a layout change).
@@ -984,6 +1243,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
 
     private var lastFlagShown = ""
 
+    /// What the user has to restore, in the wording System Settings uses for it.
+    private func faultName(_ fault: MonitoringFault) -> String {
+        switch fault {
+        case .accessibility:   return L10n.onboardingAccessibilityTitle
+        case .inputMonitoring: return L10n.onboardingInputMonitoringTitle
+        case .bothPermissions: return "\(L10n.onboardingAccessibilityTitle) + \(L10n.onboardingInputMonitoringTitle)"
+        case .tap:             return L10n.onboardingInputMonitoringTitle
+        }
+    }
+
     /// Flag of the current layout by language code (BCP-47), not by a substring in the ID — otherwise
     /// "Belarusian" falsely matched "ru", and any non-RU/EN pair was shown as 🇺🇸.
     func flagForCurrentLayout() -> String {
@@ -994,7 +1263,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         }
         let code = String(lang.prefix(2))
         let flags: [String: String] = [
-            "ru": "🇷🇺", "en": "🇺🇸", "uk": "🇺🇦", "be": "🇧🇾",
+            "ru": "🇷🇺", "en": "🇺🇸", "uk": "🇺🇦", "be": "🇧🇾", "bg": "🇧🇬",
             "de": "🇩🇪", "fr": "🇫🇷", "es": "🇪🇸", "it": "🇮🇹",
             "pt": "🇵🇹", "pl": "🇵🇱", "ja": "🇯🇵", "zh": "🇨🇳", "ko": "🇰🇷",
         ]
@@ -1093,9 +1362,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @preconcurrency UNUser
         helpController.show()
     }
 
+#if SWITCHER_APPSTORE
+    /// One row per product, priced in the customer's own currency by StoreKit, plus restore.
+    /// Buying opens Apple's own sheet — there is no payment UI of ours to get wrong.
+    /// One entry that opens the purchase window. Buying cannot happen from the menu itself: the
+    /// sheet needs a window to attach to, and this app has none until the window opens.
+    private func addPurchaseItems(to menu: NSMenu) {
+        let item = NSMenuItem(title: L10n.purchaseMenuItem, action: #selector(showPurchaseWindow),
+                              keyEquivalent: "")
+        item.target = self
+        menu.addItem(item)
+    }
+
+    @objc private func showPurchaseWindow() {
+        purchaseWindow.show()
+    }
+#endif
+
+#if !SWITCHER_APPSTORE
     @objc private func checkForUpdatesTapped() {
         UpdateChecker.shared.checkManually()
     }
+#endif
 
     func applicationWillTerminate(_ notification: Notification) {
         // Don't lose the clipboard in the 2-second window of deferred restore

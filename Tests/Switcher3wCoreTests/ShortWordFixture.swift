@@ -15,6 +15,9 @@ enum ShortWordFixture {
     /// `words = {w.strip(punct).lower() for w in corpus.split()}; [w for w in words if len(w) <= 3]`
     static let inProse: [String: [String]] = [
         "uk": [
+            // The short words a fortnight's field log (2026-10-28..11-13) refused as "not a word in
+            // any installed language" — the prose above never used them, so coverage read 100%.
+            "він", "чим", "от", "ото", "же", "їду", "йти", "тю", "ок",
             "а", "або", "але", "без", "бо", "в", "вже", "все", "дні", "до", "дощ", "з", "за", "зі",
             "має", "ми", "між", "мій", "на", "не", "неї", "ні", "ніж", "по", "про", "під", "та",
             "так", "там", "те", "теж", "то", "у", "уже", "це", "ці", "чай", "час", "ще", "що",
@@ -36,6 +39,16 @@ enum ShortWordFixture {
             "как", "кто", "мне", "мой", "нам", "нас", "наш", "нет", "них", "под", "при", "про",
             "раз", "сам", "так", "там", "тем", "тот", "три", "тут", "уже", "чем", "что", "эта",
             "эти", "это", "эту",
+        ],
+        // The short words of the Bulgarian prose in `CombinationCorpus`, extracted as above, plus
+        // the clitics and particles that prose of that length happens not to use — `му`, `ги`, `ѝ`
+        // and the copula forms are in nearly every Bulgarian sentence.
+        "bg": [
+            "а", "ако", "без", "в", "го", "да", "ден", "дни", "е", "за", "и", "или", "как", "към",
+            "ми", "на", "не", "но", "нов", "по", "при", "с", "се", "си", "сме", "съм", "там", "тя",
+            "че", "ще",
+            "аз", "ти", "то", "те", "ни", "ви", "му", "ги", "им", "ѝ", "са", "сте", "от", "до",
+            "във", "със", "той", "ние", "вие", "кой", "коя", "кое", "още", "тук", "път", "ли",
         ],
     ]
 }

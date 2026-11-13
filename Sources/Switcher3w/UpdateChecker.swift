@@ -1,9 +1,14 @@
+// The App Store flavour must not update itself — Apple rejects apps that do.
+// Compiled out rather than disabled at runtime: a flag would leave the code, the network
+// calls and the preference in the shipped binary for a later edit to re-enable by accident.
+#if !SWITCHER_APPSTORE
 import AppKit
 
 /// A discovered release worth offering to the user.
 struct UpdateInfo {
     let version: String          // "1.1.0" (tag without the leading "v")
-    let notes: String            // release body (markdown, shown truncated in the alert)
+    let notes: String            // release body (markdown — the alert's fallback, see ReleaseNotes)
+    let localizedNotes: [String: String]  // version.json `notes`: plain text per interface language
     let dmgURL: URL
     let manifestURL: URL?        // version.json release asset — checksum source of truth
     let notesSHA256: String?     // fallback: checksum parsed from the release body (pre-manifest releases)
@@ -35,17 +40,28 @@ enum UpdateError: LocalizedError {
     }
 }
 
-/// Checks the fork's OWN releases for new versions and drives the
+/// Checks the project's OWN releases for new versions and drives the
 /// notify → one-click-install flow. The upstream updater was deleted at fork time;
 /// this one can never offer a stock rashn/RuSwitcher build because its only source
-/// is the main repo's own releases (WhisKeySwitch/Switcher3way — consolidated from
-/// the separate switcher3way-releases repo in August 2026).
+/// is the project's own releases.
+///
+/// Release hosting has moved twice. It was the separate `switcher3way-releases` repo,
+/// was consolidated onto the main repo in August 2026, and moves back to
+/// `switcher3way-releases` now that the source repo goes private: the GitHub releases
+/// API returns 404 to unauthenticated clients for a private repo, and background check
+/// failures are silent by design, so a private main repo would strand every installed
+/// copy with no way to tell it where to look.
+///
+/// Each move needs a bridge release published to BOTH the old and the new host, because
+/// installed copies only learn the new address by updating. This one rides the same
+/// bridge as the Developer ID migration (see `signing/README.md`).
 @MainActor
 final class UpdateChecker {
     static let shared = UpdateChecker()
 
-    /// The project's own releases — the only update source.
-    nonisolated private static let api = URL(string: "https://api.github.com/repos/WhisKeySwitch/Switcher3way/releases/latest")!
+    /// The project's own releases — the only update source. This repo must stay PUBLIC:
+    /// it is the one address every installed copy already knows.
+    nonisolated private static let api = URL(string: "https://api.github.com/repos/WhisKeySwitch/switcher3way-releases/releases/latest")!
     private static let checkInterval: TimeInterval = 24 * 60 * 60
 
     private var isChecking = false { didSet { onStateChange?() } }
@@ -120,8 +136,9 @@ final class UpdateChecker {
         let alert = NSAlert()
         alert.messageText = L10n.updateAvailableTitle(info.version)
         var body = L10n.updateInstalledVersion(Self.currentVersion())
-        let notes = info.notes.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !notes.isEmpty { body += "\n\n" + String(notes.prefix(700)) }
+        let notes = ReleaseNotes.text(localized: info.localizedNotes, body: info.notes,
+                                      language: L10n.effectiveLanguage)
+        if !notes.isEmpty { body += "\n\n" + notes }
         alert.informativeText = body
         alert.addButton(withTitle: L10n.updateInstall)
         alert.addButton(withTitle: L10n.updateLater)
@@ -202,8 +219,15 @@ final class UpdateChecker {
         }
         let manifestURL = rel.assets.first(where: { $0.name == "version.json" })
             .flatMap { URL(string: $0.browser_download_url) }
+        // Notes only: the checksum is read again at install time, from a fresh download. A
+        // manifest that cannot be fetched here just means the alert falls back to the description.
+        var localizedNotes: [String: String] = [:]
+        if let manifestURL, let (manifest, _) = try? await URLSession.shared.data(from: manifestURL) {
+            localizedNotes = ReleaseNotes.localized(fromManifest: manifest)
+        }
         return UpdateInfo(version: version,
                           notes: rel.body ?? "",
+                          localizedNotes: localizedNotes,
                           dmgURL: dmgURL,
                           manifestURL: manifestURL,
                           notesSHA256: parseSHA256(from: rel.body ?? ""))
@@ -235,3 +259,5 @@ final class UpdateChecker {
         alert.runModal()
     }
 }
+
+#endif  // !SWITCHER_APPSTORE

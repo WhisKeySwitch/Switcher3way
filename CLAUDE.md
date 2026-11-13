@@ -145,9 +145,12 @@ Rationale + detail: `NOTES-3WAY.md`. Summary:
 3. **Updater rebuilt for the fork** — the upstream updater was deleted at fork time (so
    stock 2-way upstream releases couldn't clobber the fork); July 2026 added a new one
    (`UpdateChecker.swift` + `UpdateInstaller.swift`) whose ONLY source is the fork's own
-   releases — on the main repo (`WhisKeySwitch/Switcher3way`) since the August 2026
-   consolidation (previously the separate `switcher3way-releases` downloads repo, which stays
-   up read-only until the one-time bridge release ships to both — see `NOTES-3WAY.md`):
+   releases on the public downloads repo `WhisKeySwitch/switcher3way-releases`. Hosting started
+   there, moved to the main repo in August 2026, and moved back with the 1.6.1 bridge, because the main repo
+   is going private and the releases API returns 404 to anonymous clients for a private repo.
+   **Publish macOS releases to `switcher3way-releases` only.** The main repo's `latest` stays
+   pinned at the 1.6.1 bridge for installs at 1.5.2 or older; a notarized build there would
+   fail their update silently (pin expires 31 Dec 2026 — see `NOTES-3WAY.md`):
    daily background check
    (General-tab toggle, default on) + "Check for Updates…" menu item; notify → one-click
    verified install (manifest sha256 + same-certificate codesign gate — that's what keeps
@@ -190,13 +193,18 @@ legible side by side.
   `letterCore` trimming, shared verbatim by the 2-way and N-way paths.
 - **`TypoGuard.swift`** — `nearMiss`: does the language being typed hold a word one edit away?
   Port of the Windows `TypoGuard`, and the answer to the same defect — see below.
-- **`ShortWords.swift`** — the curated short words of en/uk/ru. Below four letters a dictionary hit
+- **`LanguageProfiles.swift`** — `LanguageProfile`: per-language script, vowels, sentinel canary and
+  native name for en/uk/ru/bg, in one table. The adapter's `vowels`, `NWay.dictionary`'s canaries,
+  the rescue's tie rule (`shareScript`) and the Settings popup all read it. A language without a
+  profile still takes part on the dictionary alone (fail-open) — that is how Bulgarian ran before.
+- **`ShortWords.swift`** — the curated short words of en/uk/ru/bg. Below four letters a dictionary hit
   is not believed on its own, on either side of the decision: `NSSpellChecker` calls `wt` an English
   word, which is how a Ukrainian `це` typed on the Latin layout came back "already a word in this
   layout's language" and was left on screen (the September 2026 report). An **allow**-list, because
   the junk is unbounded and the real short words are a small closed set. Omissions are the dangerous
   direction — a word missing from its own language's list can be converted away — so the lists are
-  generous and gated by coverage over real prose (`ShortWordPrecisionTests`). The Windows
+  generous and gated by coverage over real prose (`ShortWordPrecisionTests`) and by a review of
+  everything the dictionary accepts under four letters (`ShortWordReview`). The Windows
   `ShortWords.cs` is **generated from this file**; edit here and regenerate, never both.
 - **`NWayResolver.swift`** — `evaluate` / `manualPlan` / `render`. Instance-based; the executable
   owns one (`NWay.resolver`).
@@ -210,7 +218,7 @@ legible side by side.
   the Windows port, which shares this algorithm.
 - **`PhraseTracker.swift`** — phrase memory and retro-corrections; takes a renderer closure.
 
-`Tests/Switcher3wCoreTests/` covers it (123 cases, `swift test`): soft gates, evaluate outcomes,
+`Tests/Switcher3wCoreTests/` covers it (143 cases, `swift test`): soft gates, evaluate outcomes,
 manual plan, phrase tracking, the typo guard, and a **dictionary-quality** test measuring the real
 NSSpellChecker against `WordFixture.swift`. Everything except that last file is Foundation-only and
 guarded with `#if canImport(AppKit)`, so the decision core can be built — and its logic exercised —
@@ -272,7 +280,7 @@ on a machine that is not a Mac.
   `docs/user-guide*.md` via `scripts/md2html.py` — the manuals are the single source of truth,
   a missing guide fails the build.
 - **`Localization.swift`** — `L10n` strings, 16 languages; `s()` falls back to English.
-- **`UpdateChecker.swift`** — fork updater: GitHub Releases API of the public downloads repo,
+- **`UpdateChecker.swift`** — fork updater: GitHub Releases API of `switcher3way-releases`,
   numeric semver compare, 15 s-after-launch + daily schedule (gated on the setting), the
   notify alert (Install / Later / Skip This Version), busy state for the menu item.
 - **`UpdateInstaller.swift`** — verified install: DMG download → sha256 vs the `version.json`
@@ -320,6 +328,18 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 
 ## Current state
 
+- **macOS — 1.7.3** (November 2026, `openspec/changes/convert-words-left-behind`): words are no
+  longer stranded inside a phrase correction. A field log showed `Це все, xbv z …`: Ukrainian typed on
+  the English layout, the held words around `чим я` converted, `чим` and `я` left in Latin. 4 of 15
+  corrections in a fortnight did this. Two causes: a phrase correction reproduced *every* kept word
+  verbatim, including ones that are no word where they were typed (now `WordKind.unrecognised` —
+  converted when a correction already spans it, never starting one); and the short-word lists missed
+  `він`, `чим`, `от`, `же`… The lists are now checked against **every** 1–3 letter string the
+  dictionary accepts (`ShortWordReview`: 4,676 strings classified, uk/ru/bg). The suite fails on an
+  unclassified one, and on a listed word whose keys spell a listed English word on US (`еру`/the).
+  The combination measurement is unchanged row for row: it cannot see phrases, and
+  `WordsLeftBehindTests` replays the field episodes instead. Windows carries the same rule;
+  `ShortWords.cs` now has a Bulgarian list.
 - **macOS — 1.6.0** (September 2026, `openspec/changes/stop-missing-wrong-layout-words`): the
   recall release. A twelve-day field log (5,731 auto decisions, 121 manual triggers) showed the app
   leaving wrong-layout words alone for six reasons, all now fixed or measured: the typo guard ran on
@@ -339,6 +359,24 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   people type (see the architecture map). Coverage over real prose 100% in all three languages; the
   same change took the dormant vowel-less rule's false conversions from 8/76 to 2/76 on macOS and
   0/76 on Windows.
+  **Unreleased on `main` (2026-10-14): Bulgarian on macOS** — the Bulgarian slice of
+  `openspec/changes/detect-chosen-language-combinations` (German/French there are not done):
+  profile + short-word list + canary `здравей`; same-script rescue ties go to the preference;
+  `ambiguousLang` accepts `bg` (popup shows Български when a Bulgarian layout is enabled); 🇧🇬 badge;
+  and **transliterating layouts** (`Layout.transliterates`, detected from the `a e i o u` keys) are
+  not auto-fix targets unless current — Bulgarian Phonetic types `reda` as `реда`. Russian Phonetic
+  and Ukrainian QWERTY are exempt (`NWayResolver.transliterationExempt`), pending their own decision.
+  An excluded phonetic layout still *witnesses*: a word on it keeps rather than going to another
+  language (`claimedByTransliteratingLayout`). English apostrophe words are judged by grammar
+  (`Contractions.swift`) — BDS puts `ч` on the apostrophe key and NSSpellChecker accepts `fr'd`.
+  Measured numbers and the one open gate failure (en+ru+bg typos 0.33% vs 0.28% bar) are in that
+  change's `tasks.md`. `ShortWords.cs` not regenerated yet; not yet verified in the installed app.
+  **Unreleased on `main` (2026-09-24): a quarantined dictionary no longer hands the word to its
+  sibling.** The field log showed `Вітаю` → `Вытаю` and unopposed ru wins on uk/ru shared words,
+  every one inside a uk quarantine window: `isAvailable == false` dropped uk from the candidate set,
+  so the preference was never asked. Quarantined languages now stay in `byLang` as untrusted
+  candidates (`DictionaryValidating.isQuarantined`); a word-shaped untrusted rendering contests a
+  sibling win unless the phrase backs it, and the rescue weighs it by shape. `QuarantinedCandidateTests`.
   1.5.2: the manual cycle lists the winning layout once, not twice.
   Promotion matched the winner into the candidate list by rendered text alone, so for a word built
   from letters uk and ru place identically it evicted the *other* language — one ⌥ tap changed
@@ -349,7 +387,7 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   trusts a dictionary that answers wrong (see `openspec/changes/quarantine-a-lying-dictionary`:
   one verdict per decision, canary probes, verify-before-act). 1.4.0 was the typo-guard release.
   Feature-complete: 3-way auto + manual switching, custom icon, in-app updates from the fork's own
-  releases (on the main repo since the August 2026 consolidation), modernized UI (toolbar-tab
+  releases (`switcher3way-releases`), modernized UI (toolbar-tab
   Settings, onboarding checklist, status-first menu with Pause), stable signing, abort-safe
   retype with phrase-aware ambiguity resolution.
 - **Windows — Store on 0.6.1; 0.7.0 built and awaiting submission** (October 2026). 0.7.0 carries two
@@ -392,8 +430,8 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 - **Short-word lists are curated, so they are never finished** — `ShortWords.swift` decides which
   short dictionary hits are believed. A word missing from its own language's list can be converted
   away when the phrase is already settled the other way, so treat an "it converted a word I meant"
-  report as a missing entry first, and add it with a coverage case. Bulgarian and Serbian have no
-  list at all and fall through to the dictionary alone, which is the pre-fix behaviour.
+  report as a missing entry first, and add it with a coverage case. Serbian has no list at all and
+  falls through to the dictionary alone, which is the pre-fix behaviour.
 - **Lone short messages** ("Hi", "no", "так" as the whole message) still need the trigger: the held
   run wants two short words. The **vowel-less** slice of this is now fixed on Windows — a lone word
   with no vowel of the typed language (`щт`/on) settles on its own since 0.7.0, admitted at the 0/76
@@ -409,8 +447,9 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   the right design at a fourth or fifth language, not at three.
 - **Not code-signed on the MSI channel** — SmartScreen warns. Needs an OV/EV certificate from a CA;
   self-signed does not satisfy SmartScreen. x64 only, no arm64 build.
-- **The old downloads repo can be archived** once pre-0.4.0 installs have crossed over: 0.4.0 was
-  published to both repos as the one-time bridge, and archived repos keep serving downloads read-only.
+- **Release hosting needs a decision by 31 December 2026.** `switcher3way-releases` is the live
+  update source and must stay public and unarchived. The main repo's `latest` is pinned at the
+  1.6.1 bridge for old installs; that pin expires at year end (`NOTES-3WAY.md`).
 - **Icon optical balance** — S/Э/Є are fine; could optically size-match if desired.
 - **Git:** work happens on feature branches merged into `main` via PRs on
   `WhisKeySwitch/Switcher3way` (origin; the old `yaremenko2205/switcher3w` URL redirects there).
@@ -426,4 +465,4 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
 - `openspec/` — OpenSpec capability specs back-filled from the code (`CAPABILITIES.md` is the
   overview; validate with `openspec validate --specs`). Software updates are a first-class
   capability (`specs/software-updates/`) since July 2026 — the updater targets only the fork's
-  own releases, hosted on the main repo since August 2026.
+  own releases, hosted on `switcher3way-releases`.

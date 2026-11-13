@@ -1,7 +1,7 @@
-# Switcher3way
+# Switcher3Way
 
 <p align="center">
-  <img src="icon.png" width="128" alt="Switcher3way icon">
+  <img src="icon.png" width="128" alt="Switcher3Way icon">
 </p>
 
 <p align="center">
@@ -9,19 +9,19 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/WhisKeySwitch/Switcher3way/releases/latest"><img src="https://img.shields.io/github/v/release/WhisKeySwitch/Switcher3way?label=latest&color=blue" alt="Latest release"></a>
+  <a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest"><img src="https://img.shields.io/github/v/release/WhisKeySwitch/switcher3way-releases?label=latest&color=blue" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/macOS-13%2B-black?logo=apple&logoColor=white" alt="macOS 13+">
   <a href="https://apps.microsoft.com/detail/9MXFXL7GG3C5"><img src="https://img.shields.io/badge/Windows-Microsoft%20Store-0078D4?logo=windows&logoColor=white" alt="Windows — Microsoft Store"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-free%20to%20use-brightgreen" alt="Free to use"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/WhisKeySwitch/Switcher3way/releases/latest"><b>⬇&nbsp; Download for macOS</b></a>
+  <a href="https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest"><b>⬇&nbsp; Download for macOS</b></a>
   &nbsp;·&nbsp;
   <a href="https://apps.microsoft.com/detail/9MXFXL7GG3C5"><b>⬇&nbsp; Get it for Windows</b></a>
 </p>
 
-Typed `ghbdtn` when you meant `привет` — or `ghbdsn` when you meant `привіт`? Switcher3way notices words typed in the wrong layout and converts them, either **automatically as you type** or when you tap the **trigger key**. Unlike two-layout switchers, detection is **N-way**: the typed keystrokes are rendered through *every* installed layout, each candidate is validated against its own language's dictionary, and the app switches only when there's a single unambiguous winner. Precision-first: words valid in more than one language (e.g. `там` in both Ukrainian and Russian) are left alone.
+Typed `ghbdtn` when you meant `привет` — or `ghbdsn` when you meant `привіт`? Switcher3Way notices words typed in the wrong layout and converts them, either **automatically as you type** or when you tap the **trigger key**. Unlike two-layout switchers, detection is **N-way**: the typed keystrokes are rendered through *every* installed layout, each candidate is validated against its own language's dictionary, and the app switches only when there's a single unambiguous winner. Precision-first: words valid in more than one language (e.g. `там` in both Ukrainian and Russian) are left alone.
 
 ## Features
 
@@ -37,9 +37,9 @@ Typed `ghbdtn` when you meant `привет` — or `ghbdsn` when you meant `п�
 
 ## Install — macOS
 
-**Download the DMG** from the [latest release](https://github.com/WhisKeySwitch/Switcher3way/releases/latest), open it, and drag **Switcher3way.app** into **Applications**.
+**Download the DMG** from the [latest release](https://github.com/WhisKeySwitch/switcher3way-releases/releases/latest), open it, and drag **Switcher3way.app** into **Applications**.
 
-The app is unnotarized (no Apple Developer account), so the **first** launch is blocked by Gatekeeper if you double-click it — instead **right-click the app → Open**, then confirm. macOS remembers the choice, so later launches are normal.
+Releases from 1.6.2 onward are signed with an Apple Developer ID and notarized by Apple, with the notarization ticket stapled to both the disk image and the app — so it opens by double-clicking, with no Gatekeeper warning, and works offline. Earlier releases were unnotarized and needed right-click → **Open** on first launch; so does a copy you build yourself.
 
 On first launch the onboarding checklist asks for two macOS permissions — **Accessibility** (read and retype the mistyped word) and **Input Monitoring** (see keystrokes). Grants are detected live; the app restarts itself after Input Monitoring is granted.
 
@@ -49,7 +49,7 @@ On first launch the onboarding checklist asks for two macOS permissions — **Ac
 
 There is also a [direct-download MSI](https://github.com/WhisKeySwitch/Switcher3way/releases/tag/windows-v0.3.0) for anyone who can't use the Store. It needs the [Windows App Runtime 1.6](https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe) installed once and isn't code-signed (SmartScreen will warn — **More info → Run anyway**), but it updates itself and tracks the same version as the Store build.
 
-Windows needs no permission dialog. Switcher3way runs in the notification area and has no main window; Windows 11 hides new tray icons, so expand the notification area with the **^** chevron if you don't see the flag. Add a second keyboard layout first (**Settings → Time & language → Language & region**) — with only one layout there is nothing to convert between, and the app will tell you so.
+Windows needs no permission dialog. Switcher3Way runs in the notification area and has no main window; Windows 11 hides new tray icons, so expand the notification area with the **^** chevron if you don't see the flag. Add a second keyboard layout first (**Settings → Time & language → Language & region**) — with only one layout there is nothing to convert between, and the app will tell you so.
 
 ## Build it yourself
 
@@ -57,7 +57,7 @@ Windows needs no permission dialog. Switcher3way runs in the notification area a
 
 ```bash
 git clone https://github.com/WhisKeySwitch/Switcher3way.git
-cd Switcher3way
+cd Switcher3Way
 bash build_app.sh                    # SwiftPM release (universal), signed
 cp -R Switcher3way.app /Applications/
 open /Applications/Switcher3way.app
@@ -69,7 +69,7 @@ By default `build_app.sh` signs **ad-hoc**, which means macOS resets the Accessi
 
 ```powershell
 git clone https://github.com/WhisKeySwitch/Switcher3way.git
-cd Switcher3way
+cd Switcher3Way
 pwsh windows/build-msi.ps1           # direct-download installer
 pwsh windows/build-msix.ps1          # Microsoft Store package
 dotnet test windows/tests/Switcher3way.Core.Tests   # the decision core's suite
@@ -87,4 +87,6 @@ The Windows app is C# / WinUI 3 under [`windows/`](windows/); the layout-detecti
 
 ## Credits & license
 
-Forked from [rashn/RuSwitcher](https://github.com/rashn/RuSwitcher) (MIT) — a two-layout RU/EN switcher — and generalized to N-way with a reworked UI. MIT License; see [LICENSE](LICENSE).
+Forked from [rashn/RuSwitcher](https://github.com/rashn/RuSwitcher) (MIT) — a two-layout RU/EN switcher — and generalized to N-way with a reworked UI. The MIT licence permits this; rashn's copyright notice is retained in [LICENSE](LICENSE) as it requires.
+
+Switcher3Way itself is **free to use**, under the terms in [LICENSE](LICENSE), which also carries the notices of every third-party component it includes.

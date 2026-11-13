@@ -308,10 +308,15 @@ internal sealed class Engine
                 // threw the evidence away and left short words undecidable. But only a word with enough
                 // letters to mean something: "10", "e", "wt" used to lock the phrase too, and then the
                 // real words after them were refused for disagreeing (NWayResolver.SettlesPhrase).
+                // A word that is no word where it was typed is left alone, but a correction that spans
+                // it converts it with its neighbours instead of stranding it (convert-words-left-behind).
+                var keptLang = LangOf(_catalog.CurrentLayoutId() ?? "");
                 _phrase.Record(word, kept, 1,
                                keep.ValidInCurrent && NWayResolver.SettlesPhrase(kept)
-                                   ? new PhraseTracker.WordKind.Locked(LangOf(_catalog.CurrentLayoutId() ?? ""))
-                                   : new PhraseTracker.WordKind.Neutral(), gen);
+                                   ? new PhraseTracker.WordKind.Locked(keptLang)
+                                   : keep.Reason == KeepReason.NotAWordAnywhere
+                                       ? new PhraseTracker.WordKind.Unrecognised(keptLang)
+                                       : new PhraseTracker.WordKind.Neutral(), gen);
                 break;
             }
 

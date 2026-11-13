@@ -1,4 +1,5 @@
 import Foundation
+import Switcher3wCore
 import ServiceManagement
 
 /// Centralized settings storage via UserDefaults
@@ -198,16 +199,23 @@ final class SettingsManager: @unchecked Sendable {
     }
 
     /// Language used for wrong-layout words whose letter core is valid in MORE than one
-    /// other language (the uk/ru shared vocabulary — «город», «там»): "uk"/"ru" — convert
-    /// to that language; "off" — leave such words alone (the pre-phrase behavior).
+    /// other language (the uk/ru shared vocabulary — «город», «там»; Bulgarian `нещо`, which reads
+    /// as Ukrainian `луна` from the same keys): a Cyrillic language code — convert to that language
+    /// when it is one of the tied ones; "off" — leave such words alone (the pre-phrase behavior).
     /// Default "uk". Read live on every evaluation — no restart needed.
     var ambiguousLang: String {
         get {
             let v = defaults.string(forKey: Keys.ambiguousLang) ?? "uk"
-            return ["uk", "ru", "off"].contains(v) ? v : "uk"
+            return Self.ambiguousLangChoices.contains(v) ? v : "uk"
         }
         set { defaults.set(newValue, forKey: Keys.ambiguousLang) }
     }
+
+    /// The values `ambiguousLang` accepts: every language a tie can be between, plus "off".
+    /// English is not one — English ties nothing, since it shares its script with no other
+    /// supported language.
+    static let ambiguousLangChoices: Set<String> =
+        Set(LanguageProfile.all.values.filter { $0.script != .latin }.map(\.code)).union(["off"])
 
     /// issue #10: show the layout flag at the text caret (beta). OFF by default.
     /// Show what a conversion changed, next to the caret. Defaults to ON — the whole point is that

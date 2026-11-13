@@ -30,3 +30,18 @@
 
 - [~] 4.1 (in progress — shipped in 1.5.1, watching the log) Run the app with debug log through a normal day; confirm no self-contradictory
       `VALID`-but-kept lines appear, and any quarantine episodes log with recovery
+
+## 5. Quarantine must not hand the word to the sibling (2026-09-24)
+
+- [x] 5.1 Field log 2026-09-16..24: six `Вітаю`/`Привіт`/`Вирішено` → Russian misspellings and
+      seven unopposed ru conversions of uk/ru shared words, all inside uk quarantine windows;
+      the ambiguity preference (uk) was never consulted because uk was not a candidate
+- [x] 5.2 `DictionaryValidating.isQuarantined` (default false; sentinel implements) so the
+      resolver can tell "installed but lying" from "not installed"
+- [x] 5.3 `NWayResolver.evaluate`: quarantined languages stay in `byLang` as untrusted
+      candidates; a word-shaped untrusted rendering contests a sibling win (keep,
+      `.dictionaryUntrusted`) unless the phrase backs the winner; typing in the quarantined
+      language keeps with the quarantine named; the rescue sees the candidate by shape
+- [x] 5.4 `QuarantinedCandidateTests` (7 cases) — the `Вітаю`/`тебе` field cases, phrase override,
+      shapeless renders not contesting, healthy path unchanged; `swift test` 130 green
+

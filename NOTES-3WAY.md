@@ -99,6 +99,18 @@ How it works (`UpdateChecker.swift` + `UpdateInstaller.swift`):
 version.json`) — it's the updater's checksum source of truth. Keep the sha256 in the release
 notes too (human verification + fallback).
 
+**What the update alert shows.** Add `notes` to `version.json` before tagging — plain text, one
+entry per interface language, under ~700 characters each (en at least; uk and ru for this
+audience). `create_dmg.sh` keeps the key when it writes the checksum back. The alert shows the
+user's language, else `en`, else the release description stripped of markdown
+(`ReleaseNotes.swift`). Copies before 1.7.2 ignore `notes` and show the first 700 characters of the
+description raw, so open the description with a plain-text summary shorter than that — no
+heading, no `**`. 1.7.1 is the first release shaped this way.
+
+```json
+"notes": { "en": "…", "uk": "…", "ru": "…" }
+```
+
 (The trigger's ambiguous-word layout fix — `*-fix-collapsed-layout-candidates` — shipped in
 1.3.0 and its release notes called it out, as intended.)
 
@@ -108,8 +120,74 @@ The 5-second ⌥ *undo* after an auto-switch retypes the original text correctly
 layout-toggle-back can be wrong in pure 3-way (it was built around a pair). Proper fix: record the
 pre-switch layout ID in the conversion state and restore it on undo.
 
-## Full notarized distribution (optional)
+## Two build flavours
 
-`create_dmg.sh` already supports Developer-ID signing + `notarytool` + stapling. With an Apple
-Developer account, set the signing identity / keychain profile it expects and it produces a DMG
-that installs with zero Gatekeeper friction on any Mac.
+One source, two outputs (see `openspec/changes/ship-an-app-store-variant`):
+
+```bash
+bash build_app.sh              # direct: unsandboxed, Developer ID, self-updating → ./Switcher3way.app
+bash build_app.sh --appstore   # App Store: sandboxed, no updater → ./dist/appstore/Switcher3way.app
+```
+
+They differ in three ways and nothing else: the App Store flavour compiles with
+`SWITCHER_APPSTORE` (set by `Package.swift` from the environment), signs with
+`signing/appstore.entitlements`, and uses the bundle identifier `com.switcher3way.appstore`. The
+direct flavour keeps `com.switcher3way.app`, because that identifier holds the Accessibility and
+Input Monitoring grants on every machine the app is already installed on.
+
+Both bundles are called `Switcher3way.app` — same product — so install one in `/Applications` and
+the other in `~/Applications` to run them side by side. Do compare them: **their password-field
+protection is not the same.** The sandbox forbids inspecting another application's Accessibility
+elements, so in the App Store flavour the subrole and label signals report `unavailable` and the
+verdict rests on the secure-input flag and the password-manager list. `diagpw` prints all four
+signals in both flavours and names which ones could not run.
+
+`Switcher3wCore` is compiled identically in both — verified by comparing the object file — so
+detection can never differ between them.
+
+## Notarized distribution
+
+`create_dmg.sh` signs with Developer ID, notarizes the **app bundle** and staples it, then signs,
+notarizes and staples the **DMG** — both, deliberately: a bundle dragged out of an unstapled image
+falls back to an online Gatekeeper check and fails offline, and an unsigned container makes some
+Macs distrust the app extracted from it.
+
+Setup is one-time and lives in `signing/README.md`: a Developer ID Application certificate, a
+`notarytool` keychain profile, and `signing/developer-id.conf` filled in. Nothing is hardcoded —
+the script used to carry the *upstream* project's Developer ID, which would have failed
+notarization under this account.
+
+```bash
+bash create_dmg.sh                    # signed + notarized + stapled, ready to ship
+SKIP_NOTARIZE=1 bash create_dmg.sh    # local test image; will NOT pass Gatekeeper elsewhere
+```
+
+**Where a notarized release may be published.** Until the last self-signed installs have
+crossed over, a Developer ID release goes to `switcher3way-releases` ONLY, never to the main
+repo. Copies still at 1.5.2 or earlier poll the main repo and carry no `RSReleaseTeamID`, so
+they fall back to comparing certificate bytes — and a Developer ID signature can never match a
+self-signed one. If the main repo's `latest` becomes a notarized build, every one of those
+installs fails its update silently and forever, with no way to reach it.
+
+**The pin expires on 31 December 2026.** Decided 22 September 2026: leave the main repo's
+`latest` at 1.6.1 until the end of the year, then stop. After that date, either publish releases
+to both repos again or archive the pin deliberately — an install that has not been launched in
+three months is not coming back, and a pinned channel nobody remembers is how a repo ends up
+serving a year-old build as its newest. Whoever reads this after that date: the decision has
+expired, make a new one.
+
+So the main repo's `latest` stays pinned at the bridge (1.6.1). A straggler updates to the
+bridge, and the bridge points it at `switcher3way-releases`, where the real latest lives. Only
+once those installs are gone does publishing to both stop mattering — and by then the main repo
+is private anyway.
+
+**Migrating from the self-signed identity.** The switch changes the app's designated requirement,
+which drops Accessibility and Input Monitoring. That path is already handled:
+`AppDelegate.runPermissionWizard` notices "granted before, gone now", runs `tccutil reset` to clear
+the stale entries (which would otherwise show as ticked but do nothing), and opens the onboarding
+checklist with a reset notice. Users re-grant twice, once.
+
+The updater needs no such rescue as long as `signing/developer-id.conf` is filled in **before** the
+last self-signed release is cut — see "Why the Team ID is stamped into the bundle" in
+`signing/README.md`. If a self-signed build ships without `RSReleaseTeamID`, it can never
+auto-update to a Developer ID build and those installs must re-download by hand.

@@ -94,6 +94,14 @@ public final class DictionarySentinel: DictionaryValidating {
         }
     }
 
+    /// True while the language sits in quarantine. Read-only: it never probes, so a caller that
+    /// asks it after `isAvailable` sees the state that answer was based on.
+    public func isQuarantined(_ lang: String) -> Bool {
+        guard wrapped.isAvailable(lang) else { return false }
+        if case .quarantined(let until) = health[lang], now() < until { return true }
+        return false
+    }
+
     public func isValidWord(_ word: String, lang: String) -> Bool {
         wrapped.isValidWord(word, lang: lang)
     }

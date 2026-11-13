@@ -1,10 +1,10 @@
-# Switcher3way — User Guide
+# Switcher3Way — User Guide
 
 *Also available in: [Українська](user-guide.uk.md) · [Русский](user-guide.ru.md)*
 
-Switcher3way notices when you've typed a word in the wrong keyboard layout and fixes it —
+Switcher3Way notices when you've typed a word in the wrong keyboard layout and fixes it —
 retyping the word in the layout you meant and switching the keyboard for you. It works across
-**all** your installed layouts (e.g. English, Ukrainian, Russian), not just a pair.
+**all** your installed layouts (e.g. English, Ukrainian, Russian, Bulgarian), not just a pair.
 
 It runs in the **menu bar** on macOS and in the **notification area** on Windows. This guide is
 written with the macOS names for menus and settings; the Windows app has the same settings under
@@ -23,7 +23,7 @@ the same names, reached from the tray icon.
 
 ## How detection works
 
-When you finish a word, Switcher3way renders the keystrokes you actually pressed through
+When you finish a word, Switcher3Way renders the keystrokes you actually pressed through
 **every keyboard layout installed on your Mac** that has a macOS dictionary, and checks each
 candidate word against its own language's dictionary. Only when exactly **one** candidate is a
 valid word does it convert and switch the layout.
@@ -61,8 +61,10 @@ screen untouched and converted a moment later, together with the first word long
 question — or, in a message where every word is short, as soon as two of them agree. A word left alone
 because it was truly the only thing you typed is always fixable with one tap of the trigger.
 
-Words valid in **both Ukrainian and Russian** (`там`, `добре`) get special treatment: they are
-converted to the **language for ambiguous words** (Settings → Auto-fix; Ukrainian by default).
+Words valid in **both Ukrainian and Russian** (`там`, `добре`) — or in Bulgarian and one of them —
+get special treatment: they are converted to the **language for ambiguous words** (Settings →
+Auto-fix; Ukrainian by default). If you write Bulgarian and also have the Ukrainian layout enabled,
+choose Bulgarian there: `нещо` typed on the English layout is also the Ukrainian `луна`.
 If the phrase you're typing later turns out to be the other language — a word appears that's
 valid **only** in it — the earlier ambiguous words are re-converted automatically, in one step
 you can undo with a single trigger tap. Set the option to *Do not convert* to keep such words
@@ -72,16 +74,27 @@ untouched instead.
 
 macOS requires two permissions before any layout switcher can work:
 
-| Permission | Why Switcher3way needs it |
+| Permission | Why Switcher3Way needs it |
 |---|---|
-| **Accessibility** | To read and retype the mistyped word |
-| **Input Monitoring** | To see your keystrokes and the trigger key |
+| **Accessibility** | To replace a word typed in the wrong layout, and to keep away from password fields |
+| **Input Monitoring** | To see what you type, so it can catch the wrong layout |
 
 On first launch a **setup checklist** window opens. For each permission, click **Open
-Settings**, flip the switch for Switcher3way in System Settings → Privacy & Security, and come
-back — the checklist detects the grant by itself within a couple of seconds. After Input
+Settings**, flip the switch for Switcher3Way, and come back — the checklist detects the grant by
+itself within a couple of seconds.
+
+The list is in System Settings → **Privacy & Security**. On macOS 26 and earlier, Accessibility
+and Input Monitoring are separate entries there; **macOS 27 renamed and merged them** into a
+single list called **Device Control and Data Access** (the name may appear translated in your
+language). If Switcher3Way is not already listed, add it with the **+** button at the bottom of
+the list — on macOS 27 the app cannot raise that dialog for you. After Input
 Monitoring is granted, the app restarts itself once (macOS requires it). The same window offers
 a **Launch at login** switch.
+
+**The App Store version asks for one permission, not two.** It requires macOS 27 and needs only
+**Device Control and Data Access**, which on macOS 27 also covers seeing what you type — so its
+checklist has a single step and it never asks for Input Monitoring or restarts itself. Nothing you
+type leaves your Mac in either version.
 
 Closing the window loses nothing: your grants stay, and the checklist can be reopened from the
 menu (**Check Permissions…** — the item appears only while something is missing).
@@ -101,7 +114,7 @@ Click the icon to open the menu:
   version.
 - **Quick toggles** — *Auto-fix as I type*, *Layout sound*, *Flag at cursor*. These mirror the
   corresponding switches in Settings.
-- **Pause Switcher3way ▸** — see [Pausing the app](#pausing-the-app).
+- **Pause Switcher3Way ▸** — see [Pausing the app](#pausing-the-app).
 - **Help (⌘?)** — opens this guide right in the app, in your interface language.
 - **Settings… (⌘,)** and **Quit (⌘Q)**.
 
@@ -116,7 +129,7 @@ Two optional signals about layout changes (both off by default):
 ## Converting by hand: the trigger key
 
 Typed a word in the wrong layout? Tap the **trigger key** — by itself, without any other key —
-and Switcher3way converts the **last word** you typed and switches the layout. If you select
+and Switcher3Way converts the **last word** you typed and switches the layout. If you select
 text first, the selection is converted instead.
 
 Tap the trigger **again without typing anything in between** to step through the other layouts:
@@ -151,7 +164,7 @@ make it `видно` in Ukrainian, then tap: Russian, then back to `dblyj`. So u
 one tap when there is only one other candidate, and one tap per remaining layout otherwise.
 
 **Learning from undo:** if Auto-fix converted a word and you immediately undo it with the
-trigger, Switcher3way offers to add that word to the **Never convert** list so it won't be
+trigger, Switcher3Way offers to add that word to the **Never convert** list so it won't be
 touched again. The offer arrives as a notification with a **Add to exceptions** button — it
 never interrupts your typing, and ignoring it simply leaves the lists unchanged.
 
@@ -166,7 +179,7 @@ If an app doesn't tell macOS where its cursor is, the badge appears near the win
 
 **When there's nothing to convert:** the trigger always answers. If it can't do anything it tells
 you why, at the cursor and as a notification, rather than appearing dead. The usual reason is that
-only one keyboard layout is installed — Switcher3way converts *between* the layouts your system
+only one keyboard layout is installed — Switcher3Way converts *between* the layouts your system
 has, so with a single one there is nothing to convert between; add Ukrainian or Russian and try
 again. You'll also see it when nothing has been typed or selected yet, when the text is already
 right for the current layout, and when a selection is longer than 200 characters.
@@ -188,12 +201,18 @@ holds back when:
 
 Words in **Always convert** are converted even if the dictionary doesn't know them.
 
-**Ambiguous words and phrases.** A word valid in both Ukrainian and Russian converts to the
+**Ambiguous words and phrases.** A word valid in more than one of your Cyrillic languages converts to the
 *language for ambiguous words* (default: Ukrainian). Auto-fix then remembers the phrase you're
 typing (until Enter, a click, an arrow key, or an app switch). If a later word is valid in only
 one language, the phrase's ambiguous words are re-converted to that language together with it —
 one replacement, one trigger-tap undo. Phrases that mix clearly-Ukrainian and clearly-Russian
 words are never touched retroactively.
+
+**Bulgarian, and phonetic layouts.** Auto-fix converts into the standard **Bulgarian** layout. The
+**Bulgarian – Phonetic** layout puts Cyrillic letters on the Latin keys that sound alike, so an
+English typo such as `reda` is already a Bulgarian word (`реда`) there — Auto-fix therefore never
+converts *into* it. Typing *on* it works as usual, and the trigger still reaches it. (macOS only:
+the Windows app handles Bulgarian on its own terms.)
 
 **Jargon and names the dictionaries don't know.** Slang, tech loanwords and names (`апка`,
 `айді`, `Kyiv`) are valid in no dictionary, so for a long time they simply stayed as typed.
@@ -236,13 +255,14 @@ Open with **⌘,** from the menu. Four tabs:
 ### Auto-fix
 
 The automatic-conversion master switch, the **Language for ambiguous words** popup
-(Ukrainian / Russian / Do not convert — see *Auto-fix* above), and the exception lists.
+(Ukrainian / Russian / Do not convert, plus Bulgarian when a Bulgarian layout is enabled — see
+*Auto-fix* above), and the exception lists.
 
 ### Advanced
 
 - **Show layout flag at the cursor** (beta) — briefly shows the layout flag next to the text
   caret after a switch (the same *Flag at cursor* feature described above).
-- **Remote Desktop mode** (beta) — for Apple Screen Sharing: run Switcher3way on the remote Mac
+- **Remote Desktop mode** (beta) — for Apple Screen Sharing: run Switcher3Way on the remote Mac
   too and enable this on both.
 - **Debug logging** — off by default; when enabled the app writes
   `~/Library/Logs/Switcher3w/switcher3w.log` (rotated at 5 MB). **Show Log File** reveals it in
@@ -255,14 +275,14 @@ App name and version.
 
 ## Pausing the app
 
-**Menu → Pause Switcher3way ▸** offers **30 minutes**, **1 hour**, or **until restart**.
+**Menu → Pause Switcher3Way ▸** offers **30 minutes**, **1 hour**, or **until restart**.
 While paused, nothing converts and the status icon shows **⏸**. Timed pauses resume
 automatically — even if the app is relaunched in between; "until restart" ends when the app is
 restarted. Select **Resume** to end any pause immediately.
 
 ## Updates
 
-Switcher3way checks its own [releases page](https://github.com/WhisKeySwitch/Switcher3way/releases)
+Switcher3Way checks its own [releases page](https://github.com/WhisKeySwitch/Switcher3way/releases)
 shortly after launch and once a day, and offers new versions in a dialog. **Install and
 Relaunch** downloads the update, verifies it (checksum and code-signing identity), replaces
 the app, and relaunches — your permissions are kept. **Later** asks again on the next check;
@@ -321,7 +341,7 @@ the word being decided about, on the line where a conversion is decided; that li
 reached for a password field, because the check above runs first. If you have had logging on
 and want the history gone, delete `~/Library/Logs/Switcher3w/`.
 
-**Notifications.** Switcher3way notifies you in exactly two cases: a rewrite it could not apply,
+**Notifications.** Switcher3Way notifies you in exactly two cases: a rewrite it could not apply,
 and the offer to remember a word after you undo a conversion. It never notifies on success. If
 you decline notification permission, both simply go to the log and nothing else changes.
 

@@ -1,4 +1,5 @@
 import AppKit
+import Switcher3wCore
 import Carbon
 
 /// Settings window: toolbar tabs in the System Settings style (W1/W2),
@@ -155,9 +156,13 @@ final class SettingsWindowController {
         systemBox.addRow(FormUI.row(title: L10n.settingsPerAppLayout,
                                     control: FormUI.makeSwitch(isOn: settings.perAppLayout,
                                                                target: self, action: #selector(perAppLayoutChanged))))
+#if !SWITCHER_APPSTORE
+        // No automatic-update preference in the App Store flavour: there is nothing it could
+        // control, and offering a dead switch is worse than offering none.
         systemBox.addRow(FormUI.row(title: L10n.settingsCheckUpdates,
                                     control: FormUI.makeSwitch(isOn: settings.checkForUpdates,
                                                                target: self, action: #selector(checkUpdatesChanged))))
+#endif
         let langPopup = NSPopUpButton()
         populateLanguagePopup(langPopup)
         langPopup.target = self
@@ -291,12 +296,17 @@ final class SettingsWindowController {
 
     private func populateAmbiguousPopup(_ popup: NSPopUpButton) {
         popup.removeAllItems()
-        // Own-language names, matching the interface-language dropdown convention.
-        let options: [(id: String, title: String)] = [
-            ("uk", "Українська"),
-            ("ru", "Русский"),
-            ("off", L10n.settingsAmbiguousOff),
-        ]
+        // Own-language names, matching the interface-language dropdown convention. Ukrainian and
+        // Russian are always offered, as before; Bulgarian when a Bulgarian layout is enabled, or
+        // when it is the stored choice — opening Settings must never rewrite the setting.
+        let stored = SettingsManager.shared.ambiguousLang
+        let enabled = Set(LayoutSwitcher.installedLayouts().compactMap {
+            LayoutSwitcher.languageCode($0).map { String($0.prefix(2)) }
+        })
+        var options: [(id: String, title: String)] = ["uk", "ru", "bg"]
+            .filter { ["uk", "ru"].contains($0) || enabled.contains($0) || stored == $0 }
+            .compactMap { code in LanguageProfile.of(code).map { (code, $0.nativeName) } }
+        options.append(("off", L10n.settingsAmbiguousOff))
         for option in options {
             popup.addItem(withTitle: option.title)
             popup.menu?.items.last?.representedObject = option.id as NSString
@@ -373,10 +383,12 @@ final class SettingsWindowController {
         onAutoSwitchChanged?(enabled)
     }
 
+#if !SWITCHER_APPSTORE
     @objc private func checkUpdatesChanged(_ sender: NSSwitch) {
         SettingsManager.shared.checkForUpdates = sender.state == .on
         UpdateChecker.shared.startSchedule()   // apply immediately: starts or stops the daily timer
     }
+#endif
 
     @objc private func launchAtLoginChanged(_ sender: NSSwitch) {
         SettingsManager.shared.launchAtLogin = sender.state == .on
