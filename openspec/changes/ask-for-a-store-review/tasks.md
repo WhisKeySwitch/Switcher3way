@@ -167,8 +167,8 @@ than read off.
       guides are the single source of truth and compile into the Help window.
 - [x] 8.2 `CLAUDE.md` Windows section: the new diagnostics switches alongside `diagtoast` and friends,
       and the counters' location.
-- [x] 8.3 `whats-new.md`: 0.7.0 copy in all four listing languages (en/uk/ru/bg), 1,240–1,286 characters
-      each against the Store's 1,500 cap, including the #120 phrase-correction bullet. `release-notes.md` is the **MSI** channel's text and is
+- [x] 8.3 `whats-new.md`: 0.7.0 copy in all four listing languages (en/uk/ru/bg), 998–1,016 characters
+      each against the Store's 1,500 cap. Shipped with 0.7.0. `release-notes.md` is the **MSI** channel's text and is
       deliberately not written yet — the Store ships first, and the MSI release is a separate decision.
 - [x] 8.4 Confirm the privacy posture is still accurate wherever it is stated — the app counts
       conversions locally and transmits nothing, and the Store listing should not have to be changed to
