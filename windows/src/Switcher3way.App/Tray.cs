@@ -14,9 +14,26 @@ internal sealed class Tray : IDisposable
     private readonly Win32Tray _tray;
     private readonly CaretChip _chip;
     private readonly UpdateChecker _updater;
+    private readonly ReviewPrompt _review;
     private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
     private readonly DispatcherQueueTimer _poll;
     private string _iconKey = "";
+
+    /// <summary>
+    /// Any window of ours on screen. The review ask must not appear on top of Settings, Help, the
+    /// welcome flow or an update prompt — it would be a second dialog the user did not ask for, over
+    /// one they did.
+    /// </summary>
+    private bool AnyOwnWindowOpen()
+    {
+        // Settings, Help and onboarding null themselves out on Closed, so a reference means "open".
+        if (_settingsWindow is not null || _helpWindow is not null || _onboarding is not null) return true;
+        // The flyout does NOT: it is created once and reused, so a reference only means it has been
+        // opened at some point. Asking it whether it is visible is the difference between suppressing
+        // the ask while a menu is up and suppressing it for the rest of the install's life.
+        try { return _flyout is not null && _flyout.AppWindow.IsVisible; }
+        catch { return false; }
+    }
 
     public Tray()
     {
@@ -37,13 +54,30 @@ internal sealed class Tray : IDisposable
         // innocent reason, which hides this one completely.
         if (_settings.LoadFailed)
             Toast.ShowError(Loc.T("notify.settingsLost.title"), Loc.T("notify.settingsLost"));
-        _engine.Notify += m => { Diagnostics.Log($"notify: {m}"); Toast.ShowError(m); };
-        _engine.Undone += (original, converted) => Toast.OfferNeverConvert(original, converted);
+        // Counts what the app has done for this user, and owns the Store review ask. The automatic ask
+        // is unarmed in this release (no calibrated threshold exists yet) — the counters still run,
+        // because they run with debug logging off and are what will calibrate it.
+        _review = new ReviewPrompt(_settings, _dispatcher,
+                                   secondsSinceKeystroke: () => _engine.SecondsSinceKeystroke,
+                                   ownWindowOpen: AnyOwnWindowOpen);
+
+        _engine.Notify += m =>
+        {
+            Diagnostics.Log($"notify: {m}");
+            _review.NoteFailure();   // no asking for praise in the hour after a rewrite went wrong
+            Toast.ShowError(m);
+        };
+        _engine.Undone += (original, converted) =>
+        {
+            _dispatcher.TryEnqueue(_review.NoteUndone);
+            Toast.OfferNeverConvert(original, converted);
+        };
         _engine.Hint += (title, body, chip) => ShowHint(title, body, chip);
 
         // Conversions are raised from the engine's worker thread — marshal to the UI thread.
         _engine.Converted += info => _dispatcher.TryEnqueue(() =>
         {
+            _review.NoteConverted(info);
             if (Diagnostics.NoChip) return;
             _chip.Show(info.Original, info.Converted, _settings.TriggerLabel);
         });
@@ -62,7 +96,9 @@ internal sealed class Tray : IDisposable
         // Poll the foreground layout so the flag follows it live (also picks up pause expiry).
         _poll = _dispatcher.CreateTimer();
         _poll.Interval = TimeSpan.FromMilliseconds(400);
-        _poll.Tick += (_, _) => RefreshIcon();
+        // The same poll carries the review ask: it needs a moment when the user is not typing, and this
+        // is already the timer that watches for one. No second timer.
+        _poll.Tick += (_, _) => { RefreshIcon(); _review.Evaluate(); };
         _poll.Start();
     }
 
@@ -80,7 +116,18 @@ internal sealed class Tray : IDisposable
     }
 
     // ---- Menu (rebuilt on every open, so checkmarks are live) --------------------------------
-    private Row[] BuildMenu() => new[]
+    private Row[] BuildMenu()
+    {
+        var rows = new List<Row>(BaseMenu());
+        // Rating is a Store concept: an unpackaged install has no listing to review and the platform
+        // call cannot succeed for it, so the row is absent there rather than present and broken.
+        if (PackageInfo.IsPackaged)
+            rows.Insert(rows.FindIndex(r => r.Text == Loc.T("menu.quit")) - 1,
+                        new Row(Loc.T("menu.rate"), () => _review.RateNow()));
+        return rows.ToArray();
+    }
+
+    private Row[] BaseMenu() => new[]
     {
         new Row(Loc.T("menu.autoSwitch"), () => Toggle(() => _settings.Enabled = !_settings.Enabled), _settings.Enabled),
         new Row(Loc.T("menu.autofix"), () => Toggle(() => _settings.AutoFix = !_settings.AutoFix), _settings.AutoFix),
@@ -111,7 +158,8 @@ internal sealed class Tray : IDisposable
         try
         {
             _flyout ??= new TrayFlyoutWindow(_settings, RefreshIcon, OpenSettings, Quit,
-                                             _updater.CheckManually, OpenHelp);
+                                             _updater.CheckManually, OpenHelp,
+                                             rate: PackageInfo.IsPackaged ? () => _review.RateNow() : null);
             _flyout.ShowNearTray();
             return true;
         }
@@ -167,6 +215,15 @@ internal sealed class Tray : IDisposable
         }
     }
 
+    /// <summary>Diagnostics only (`diagreview`): show the review ask now, bypassing every threshold.</summary>
+    internal void DiagShowReviewAsk() => _review.Show(automatic: false);
+
+    /// <summary>
+    /// Diagnostics only (`diagreviewstore`): go straight to the Store's rating dialog and log its
+    /// status, with no ask window in front of it.
+    /// </summary>
+    internal void DiagRequestStoreReview() => _review.RateNow();
+
     /// <summary>
     /// Diagnostics only (`diagcaret`): focus the Settings search box as a WinUI caret target and return
     /// that window's handle, so the probe can query it directly instead of the foreground window.
@@ -187,7 +244,8 @@ internal sealed class Tray : IDisposable
         {
             if (_settingsWindow is null)
             {
-                _settingsWindow = new SettingsWindow(_settings, RefreshIcon);
+                _settingsWindow = new SettingsWindow(_settings, RefreshIcon,
+                    onRate: PackageInfo.IsPackaged ? () => _review.RateNow() : null);
                 _settingsWindow.Closed += (_, _) => _settingsWindow = null;
             }
             _settingsWindow.Activate();
@@ -238,6 +296,7 @@ internal sealed class Tray : IDisposable
     public void Dispose()
     {
         _poll.Stop();
+        _review.Flush();   // the counters are kept in memory between day changes — don't lose the session
         _engine.Stop();
         _chip.Dispose();
         _tray.Dispose();

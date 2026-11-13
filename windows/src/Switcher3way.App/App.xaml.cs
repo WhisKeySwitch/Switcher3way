@@ -56,6 +56,23 @@ public partial class App : Application
                 Diagnostics.LogAlways("diagtoastoffer: remember-word notification…");
                 Toast.OfferNeverConvert("ghbdsn", "привіт");
             }
+            // The review ask would otherwise take weeks of real use to see once, and it ships unarmed
+            // besides. `diagreview` shows it now, bypassing every threshold, so the window, its
+            // translations and its three outcomes can be checked in either flavour.
+            if (args2.Any(a => a.Equals("diagreview", StringComparison.OrdinalIgnoreCase)))
+            {
+                Diagnostics.LogAlways("diagreview: showing the review ask…");
+                _tray.DiagShowReviewAsk();
+            }
+            // And the Store call on its own. In a sideloaded package this is EXPECTED to log a failure
+            // status — the dialog needs a Store-issued licence — and that is the result: it proves the
+            // call path and the window handle are wired, which is otherwise indistinguishable from the
+            // call never having been made. The dialog itself is verified through a package flight.
+            if (args2.Any(a => a.Equals("diagreviewstore", StringComparison.OrdinalIgnoreCase)))
+            {
+                Diagnostics.LogAlways("diagreviewstore: invoking the Store rating dialog…");
+                _tray.DiagRequestStoreReview();
+            }
             // Which source the chip's position comes from, probed repeatedly so focus can be moved
             // between apps while it runs — the chip itself only appears after a real conversion, which
             // synthetic input cannot trigger.

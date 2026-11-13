@@ -288,6 +288,11 @@
                         <HyperlinkButton x:Name="L_Website" NavigateUri="https://whiskeyswitch.github.io/Switcher3way/" />
                         <HyperlinkButton x:Name="L_GitHub" NavigateUri="https://github.com/WhisKeySwitch/Switcher3way" />
                     </StackPanel>
+                    <!-- Store builds only; collapsed otherwise, since an MSI install has no listing
+                         to review. Shown here as well as in the tray because this is where a row of
+                         this kind conventionally lives, and because it stays reachable after the
+                         user has permanently declined the ask. -->
+                    <Button x:Name="B_Rate" Click="Rate_Click" Visibility="Collapsed" Margin="0,4,0,0" />
                 </StackPanel>
             </Grid>
         </ScrollViewer>

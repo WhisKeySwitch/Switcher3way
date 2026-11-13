@@ -291,6 +291,14 @@ automatic check off in **Settings → General → Check for updates automaticall
 always check manually via **menu → Check for Updates…**. Update checks talk only to GitHub
 and send nothing about you or your typing.
 
+## Rating the app
+
+If you installed Switcher3way from the **Microsoft Store**, the tray menu and **Settings → About**
+both carry **Rate Switcher3way…**, which opens the Store's own rating dialog without leaving the app.
+It is there whenever you want it; the app does not interrupt you to ask.
+
+The direct-download (MSI) build has no such entry, because there is no Store listing attached to it.
+
 ## Privacy
 
 Detection and conversion happen **entirely locally on your Mac** — no telemetry, no
@@ -306,6 +314,12 @@ keystroke at a time turned out to be unreliable: applications sometimes received
 corrections, which is nearly all of them, are typed and never touch the clipboard. The text is always
 your own, on its way back into your document, and nothing is stored or sent — but a clipboard-history
 tool may record that momentary entry, as it would for anything you copy.
+
+**What the app counts.** Switcher3way keeps a running count of how many words it has fixed for you,
+how many separate days it has fixed something on, and the date you first ran it. These are plain
+numbers in your settings file: no words, no record of when any individual correction happened, and
+nothing is sent anywhere. They exist so the app can tell whether it has been useful to you before it
+ever considers asking you to rate it.
 
 **Password fields.** Neither Auto-fix, nor the trigger, nor the badge does anything while a
 password field has focus. A field counts as one when *any* of these is true:

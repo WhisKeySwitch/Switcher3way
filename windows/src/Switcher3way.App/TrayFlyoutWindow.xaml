@@ -79,6 +79,11 @@
             <Button x:Name="UpdatesButton" Style="{StaticResource Row}" Click="Updates_Click">
                 <TextBlock x:Name="T_Updates" VerticalAlignment="Center" />
             </Button>
+            <!-- Store builds only. Collapsed in the MSI build, where there is no listing to review;
+                 always present otherwise, so rating never depends on having been asked. -->
+            <Button x:Name="RateButton" Style="{StaticResource Row}" Click="Rate_Click" Visibility="Collapsed">
+                <TextBlock x:Name="T_Rate" VerticalAlignment="Center" />
+            </Button>
 
             <Border Height="1" Margin="6,2" Background="{ThemeResource CardStrokeColorDefaultBrush}" />
             <Button Style="{StaticResource Row}" Click="Quit_Click">

@@ -55,13 +55,23 @@ public sealed class NWayResolver
     public const int RescueFloor = 4;
 
     /// <summary>
-    /// Whether a lone held word may settle on the strength of having no vowel in the language it
-    /// was typed in (<c>щт</c> for "on"). OFF: measured on macOS against the vowel-less abbreviation
-    /// fixture with the real dictionaries, the rule converted 8 of 76 legitimate tokens even with the
-    /// same-text exclusion (смс→cvc, тг→nu, мс→vc, dst→вые, tl→ед). The bar is zero. The Windows
-    /// measurement (<c>VowelLessHeldWordTests</c>, Hunspell) is re-read on every test run.
+    /// Whether a lone held word may settle on the strength of having no vowel in the language it was
+    /// typed in (<c>щт</c> for "on"). <b>ON for Windows since 0.7.0</b>, on the measurement the rule
+    /// was always gated behind: <c>VowelLessHeldWordTests</c> re-measures it against the vowel-less
+    /// abbreviation fixture with the real Hunspell dictionaries on every test run, and it reads
+    /// <b>0 of 76</b>. It was 8/76 when the rule was written; the short-word allow-list removed the
+    /// rest, because most of them were junk winners rather than genuine ambiguity.
+    ///
+    /// <b>This deliberately diverges from macOS, which keeps it off.</b> The change that introduced
+    /// the rule set the bar at zero *on both* ports, and `NSSpellChecker` still measures 2/76
+    /// (<c>смс</c>, <c>мс</c>). The divergence is accepted rather than overlooked: the rule is
+    /// identical on both sides and only the dictionary behind it differs, so holding Windows at a
+    /// precision cost it does not have would be punishing Windows users for a macOS dictionary
+    /// weakness. The ports already differ in what they can validate — Bulgarian exists only here —
+    /// and this constant is per-platform by construction for that reason. Flip macOS the day its
+    /// fixture reads zero, and delete this paragraph when it does.
     /// </summary>
-    public const bool VowelLessHeldWordEnabled = false;
+    public const bool VowelLessHeldWordEnabled = true;
 
     /// <summary>
     /// The vowel-less held-word rule as a predicate: a held word reading as exactly one language,

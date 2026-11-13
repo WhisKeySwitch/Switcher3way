@@ -147,7 +147,9 @@ public class FieldLogMissesTests
         Assert.False(NWayResolver.HeldWordSettlesAlone("nfr", new[] { new Winner("uk", "uk", "так"), new Winner("ru", "ru", "так") }, "aeiouy", enabled: true), "ambiguous");
         Assert.False(NWayResolver.HeldWordSettlesAlone("хз", new[] { new Winner("ru", "ru", "хз") }, "аеєиіїоуюя", enabled: true), "same text");
         Assert.False(NWayResolver.HeldWordSettlesAlone("щт", on, "", enabled: true), "unknown vowels: cannot call it vowel-less");
-        Assert.False(NWayResolver.HeldWordSettlesAlone("щт", on, "аеєиіїоуюя"), "switched off until the measurement admits it");
-        Assert.False(NWayResolver.VowelLessHeldWordEnabled);
+        // The default argument now says yes: the fixture measured 0/76 on Hunspell and the rule was
+        // admitted in 0.7.0. Windows only — macOS still reads 2/76 and keeps it off.
+        Assert.True(NWayResolver.HeldWordSettlesAlone("щт", on, "аеєиіїоуюя"), "admitted at 0/76");
+        Assert.True(NWayResolver.VowelLessHeldWordEnabled);
     }
 }

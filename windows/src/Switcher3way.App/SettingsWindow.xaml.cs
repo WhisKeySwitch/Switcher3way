@@ -51,12 +51,15 @@ public sealed partial class SettingsWindow : Window
 
     private readonly SettingsManager _s;
     private readonly Action _onChanged;
+    /// <summary>Opens the Store rating dialog. Null in an unpackaged build, where the row is hidden.</summary>
+    private readonly Action? _onRate;
     private bool _loading;
 
-    public SettingsWindow(SettingsManager s, Action onChanged)
+    public SettingsWindow(SettingsManager s, Action onChanged, Action? onRate = null)
     {
         _s = s;
         _onChanged = onChanged;
+        _onRate = onRate;
         this.InitializeComponent();
         AppWindow.Resize(new SizeInt32(620, 660));
 
@@ -181,6 +184,9 @@ public sealed partial class SettingsWindow : Window
         T_Copyright.Text = Loc.T("about.copyright");
         L_Website.Content = Loc.T("about.website");
         L_GitHub.Content = Loc.T("about.github");
+        B_Rate.Content = Loc.T("menu.rate");
+        // Absent rather than disabled in an unpackaged build: there is no listing to review.
+        B_Rate.Visibility = _onRate is null ? Visibility.Collapsed : Visibility.Visible;
         T_ApplyNote.Text = Loc.T("settings.applyNote");
         B_Close.Content = Loc.T("common.close");
 
@@ -230,6 +236,8 @@ public sealed partial class SettingsWindow : Window
     }
 
     private void Close_Click(object s, RoutedEventArgs e) => this.Close();
+
+    private void Rate_Click(object s, RoutedEventArgs e) => _onRate?.Invoke();
 
     // ---- Auto-fix ---------------------------------------------------------------------------
     private void AutoFixToggle_Toggled(object s, RoutedEventArgs e) { if (_loading) return; _s.AutoFix = AutoFixToggle.IsOn; Commit(); }
