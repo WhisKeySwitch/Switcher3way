@@ -30,7 +30,7 @@ Windows terms (Win32/WinUI constraints, what the user sees), not by what macOS d
 pwsh windows/build-msi.ps1 -Version 0.4.0           # direct-download installer (WiX)
 pwsh windows/build-msix.ps1 -Version 0.4.0          # Store package → windows/dist/
 pwsh windows/build-msix.ps1 -Sideload -Sign         # a package you can actually install locally
-dotnet test windows/tests/Switcher3way.Core.Tests   # 178 tests, no app or permissions needed
+dotnet test windows/tests/Switcher3way.Core.Tests   # 247 tests, no app or permissions needed
 python windows/tools/verify-typo-guard.py           # drives the installed app, reads its own log
 ```
 
@@ -390,13 +390,16 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   releases (`switcher3way-releases`), modernized UI (toolbar-tab
   Settings, onboarding checklist, status-first menu with Pause), stable signing, abort-safe
   retype with phrase-aware ambiguity resolution.
-- **Windows — Store on 0.6.1; 0.7.0 built and awaiting submission** (October 2026). 0.7.0 carries two
-  things: the rating feature (`openspec/changes/ask-for-a-store-review`) — an in-app "Rate
+- **Windows — Store on 0.6.1; 0.7.0 built and awaiting submission** (rebuilt 2026-11-13). 0.7.0
+  carries three things: the Windows half of macOS 1.7.3's `convert-words-left-behind` (#120) — a word
+  no dictionary knows, a single letter included, now converts when a phrase correction already spans
+  it, and `ShortWords.cs` was regenerated with a Bulgarian list for the first time; the rating feature (`openspec/changes/ask-for-a-store-review`) — an in-app "Rate
   Switcher3way" entry plus a once-ever ask gated on 75 conversions / 5 active days / 14 days installed
   — and the **vowel-less held-word rule switched on**, which had been waiting since 1.6.0 for its
   fixture to read zero and now does (0/76 on Hunspell; macOS stays off at 2/76, a deliberate
   divergence recorded on the constant). The corpora are unmoved by the flip: recall 57.5% / 69.9%,
-  0 mangled paragraphs, uk typos 1/1399, en typos 1/1049, short typos 0/403 — all identical to 1.6.0.
+  0 mangled paragraphs, uk typos 1/1399, en typos 1/1049, short typos 0/403 — all identical to 1.6.0,
+  and re-measured identical after #120 was merged in (247 tests).
   The package is
   `windows/dist/Switcher3way-0.7.0-x64-store.msix`, identity verified as 0.7.0.0 by reading the
   manifest out of the artifact. **Not yet flighted** — the Store rating dialog needs a Store-issued
