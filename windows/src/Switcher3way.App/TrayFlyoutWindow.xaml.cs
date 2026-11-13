@@ -24,10 +24,12 @@ public sealed partial class TrayFlyoutWindow : Window
     private readonly Action _quit;
     private readonly Action _checkUpdates;
     private readonly Action _openHelp;
+    /// <summary>Opens the Store rating dialog. Null in an unpackaged build, where the row stays hidden.</summary>
+    private readonly Action? _rate;
     private bool _loading;
 
     public TrayFlyoutWindow(SettingsManager s, Action changed, Action openSettings, Action quit,
-                            Action checkUpdates, Action openHelp)
+                            Action checkUpdates, Action openHelp, Action? rate = null)
     {
         _s = s;
         _changed = changed;
@@ -35,6 +37,7 @@ public sealed partial class TrayFlyoutWindow : Window
         _quit = quit;
         _checkUpdates = checkUpdates;
         _openHelp = openHelp;
+        _rate = rate;
         this.InitializeComponent();
 
         // Borderless, no taskbar entry, always on top — a context-menu-shaped window.
@@ -93,6 +96,8 @@ public sealed partial class TrayFlyoutWindow : Window
         T_Settings.Text = Loc.T("menu.settings");
         T_Help.Text = Loc.T("menu.help");
         T_Updates.Text = Loc.T("menu.checkUpdates");
+        T_Rate.Text = Loc.T("menu.rate");
+        RateButton.Visibility = _rate is null ? Visibility.Collapsed : Visibility.Visible;
         T_Quit.Text = Loc.T("menu.quit");
         PauseRestart.Content = Loc.T("menu.pause.untilRestart");
 
@@ -123,6 +128,8 @@ public sealed partial class TrayFlyoutWindow : Window
 
     private void Settings_Click(object s, RoutedEventArgs e) { AppWindow.Hide(); _openSettings(); }
     private void Help_Click(object s, RoutedEventArgs e) { AppWindow.Hide(); _openHelp(); }
+
+    private void Rate_Click(object s, RoutedEventArgs e) { AppWindow.Hide(); _rate?.Invoke(); }
     private void Updates_Click(object s, RoutedEventArgs e) { AppWindow.Hide(); _checkUpdates(); }
     private void Quit_Click(object s, RoutedEventArgs e) { AppWindow.Hide(); _quit(); }
 

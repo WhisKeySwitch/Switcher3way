@@ -213,6 +213,28 @@ read the same files and the swap is invisible to them.
 **Only one of the two can run** for the same reason — the single-instance mutex and the data directory
 are shared. Whichever starts first wins; stop one before launching the other.
 
+**The Store rating dialog cannot be sideload-tested at all, and this one has no workaround.**
+`StoreContext.RequestRateAndReviewAppAsync` needs a Store-issued licence for the package, which a
+sideloaded build does not have, so the dialog the user actually sees cannot be made to appear on this
+machine by any amount of local testing. Notifications at least have a sideload answer; this does not.
+
+What *can* be checked locally, and should be before every release that touches it:
+
+```powershell
+Switcher3way.exe diagreview        # the app's own ask: window, translations, Rate / Not now / No thanks
+Switcher3way.exe diagreviewstore   # straight to the Store call, logs its status
+```
+
+`diagreviewstore` on a sideload is **expected to fail**, and that is the test: it proves the call path
+and the window-handle initialisation are wired, which is otherwise indistinguishable from the call never
+having been made. An unpackaged build logs `review: unpackaged build — no Store listing to rate`.
+
+**Before publishing a release that changes the rating flow**, verify the real dialog through a Partner
+Center **package flight** to your own account, and open it there. This is a checklist line rather than a
+suggestion because it is the step release pressure removes, and skipping it ships a dialog nobody has
+seen. The product id in the fallback deep link is `9MXFXL7GG3C5`; it must match the Identity in
+`Package.appxmanifest`.
+
 **Notifications must be tested on the packaged build, not the MSI one.** `AppNotificationManager` is the
 one API whose behaviour differs between the flavours: unpackaged it creates its own activator, packaged it
 looks the activator up in the package's COM registration. A missing manifest declaration therefore breaks

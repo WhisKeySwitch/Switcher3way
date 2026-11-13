@@ -43,6 +43,30 @@ public sealed class SettingsManager
     public bool TriggerDoubleTap { get; set; } = true;
     public DateTime? PausedUntil { get; set; }
 
+    // ---- usage counters, for the Store review ask -------------------------------------------
+    //
+    // Counts only. No words, no per-conversion timestamps, nothing transmitted — the same line the
+    // debug log holds when it records that a key was buffered but never which one. They exist to time
+    // one local decision (see StoreReview) and they run with debug logging OFF, which is the whole
+    // point: the 48-day development log held 25 conversions because it only exists on days somebody
+    // enabled it, and that is why this release ships the ask unarmed.
+
+    /// <summary>Lifetime automatic conversions the app applied and the user did not undo.</summary>
+    public int ConversionCount { get; set; }
+    /// <summary>First run, so an ask can require an installation to be more than a few days old.</summary>
+    public DateTime? FirstRunUtc { get; set; }
+    /// <summary>Distinct days on which at least one conversion was applied.</summary>
+    public int ActiveDays { get; set; }
+    /// <summary>The last day counted into <see cref="ActiveDays"/>, so it increments once per day.</summary>
+    public DateTime? LastActiveDay { get; set; }
+    /// <summary>
+    /// How far the review ask has got: see <see cref="StoreReview.AskState"/>. Stored as a string so a
+    /// value written by a newer build degrades to "do not ask" rather than to "ask again".
+    /// </summary>
+    public string ReviewAskState { get; set; } = "NotAsked";
+    /// <summary>When the ask was last shown, for the re-arm interval.</summary>
+    public DateTime? ReviewAskedUtc { get; set; }
+
     /// <summary>Apps (exe names) where auto-conversion is suppressed — terminals, password managers, RDP.</summary>
     public List<string> DeniedApps { get; set; } = new(DefaultDeniedApps);
     /// <summary>Words never to auto-convert (matched on either side of the pair, case-insensitive).</summary>

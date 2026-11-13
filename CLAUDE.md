@@ -58,7 +58,7 @@ is how a whole test session once ran against the wrong binary. `windows/RELEASIN
 - **Debug log:** Settings → Advanced → Debug logging, then
   `%APPDATA%\Switcher3way\Logs\switcher3way.log`. Diagnostics switches: `diaghint`, `diagtoast`,
   `diagtoastoffer`, `diagcaret`, `diagcaretwinui`, `diagpw`, `diagrewrite`, `diagnochip`, `diagui`,
-  `selftest`. **Every auto decision is logged, including the decision to do nothing** — leaving a word
+  `diagreview`, `diagreviewstore`, `selftest`. **Every auto decision is logged, including the decision to do nothing** — leaving a word
   alone is the app's most common action and moves nothing on screen, so without a reason line a guard
   that works and a guard that never ran leave identical evidence. That ambiguity has already produced
   one "it does nothing" report that turned out to be correct behaviour.
@@ -83,6 +83,18 @@ is how a whole test session once ran against the wrong binary. `windows/RELEASIN
 - Injected input is deliberately *accepted* (only the app's own `dwExtraInfo`-tagged events are
   ignored), so Remote Desktop and remappers work — and so trigger behaviour can be driven end to end
   by a script.
+- **The Store review ask** (`openspec/changes/ask-for-a-store-review`) asks once, at 75 conversions
+  across 5 active days on an install at least 14 days old; `StoreReview` in Core decides it and is
+  unit-tested, and a permanent "Rate Switcher3way" row (tray + Settings → About) is there regardless,
+  packaged builds only. Two things are worth knowing before touching the numbers. **The Windows debug
+  log cannot measure usage** — it only exists on days somebody enabled it, and 48 days of it held 25
+  applied conversions, all test words; the thresholds were set against eight days of *continuous*
+  macOS logging instead (114 fixes, 48 auto + 66 manual, over 8 days). **Manual trigger fixes
+  outnumber automatic ones**, which is why both count toward the threshold and only extra taps of the
+  same candidate cycle do not. The counters in `settings.json` (`ConversionCount`, `ActiveDays`,
+  `FirstRunUtc`) run with debug logging *off* — counts only: no words, no per-conversion timestamps,
+  nothing transmitted. `Thresholds.Shipping.Calibrated = false` is the rollback switch: it disables
+  the automatic ask and leaves the manual row.
 
 ## Quick start (IDE)
 
@@ -340,11 +352,23 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   releases (on the main repo since the August 2026 consolidation), modernized UI (toolbar-tab
   Settings, onboarding checklist, status-first menu with Pause), stable signing, abort-safe
   retype with phrase-aware ambiguity resolution.
-- **Windows — 0.4.0 on both channels** (August 2026), also the typo-guard release. Live on the
-  Microsoft Store after three certification failures on 10.1.2.10 Functionality: silent trigger, then
-  injected input being discarded, then notifications dropped entirely in the packaged build. The
-  lesson from all three: **verify in the flavour that ships.** The MSI keeps a `windows-v*`
-  pre-release tag so `/releases/latest` stays the macOS DMG for the macOS updater.
+- **Windows — Store on 0.6.1; 0.7.0 built and awaiting submission** (October 2026). 0.7.0 carries two
+  things: the rating feature (`openspec/changes/ask-for-a-store-review`) — an in-app "Rate
+  Switcher3way" entry plus a once-ever ask gated on 75 conversions / 5 active days / 14 days installed
+  — and the **vowel-less held-word rule switched on**, which had been waiting since 1.6.0 for its
+  fixture to read zero and now does (0/76 on Hunspell; macOS stays off at 2/76, a deliberate
+  divergence recorded on the constant). The corpora are unmoved by the flip: recall 57.5% / 69.9%,
+  0 mangled paragraphs, uk typos 1/1399, en typos 1/1049, short typos 0/403 — all identical to 1.6.0.
+  The package is
+  `windows/dist/Switcher3way-0.7.0-x64-store.msix`, identity verified as 0.7.0.0 by reading the
+  manifest out of the artifact. **Not yet flighted** — the Store rating dialog needs a Store-issued
+  licence and so cannot be exercised by any sideload; `RELEASING.md` carries the flight as a checklist
+  line. The MSI channel still sits at 0.6.1 and is a separate decision.
+  Earlier: 0.4.0 (August 2026), the typo-guard release, reached the Store only after three
+  certification failures on 10.1.2.10 Functionality — silent trigger, then injected input being
+  discarded, then notifications dropped entirely in the packaged build. The lesson from all three:
+  **verify in the flavour that ships.** The MSI keeps a `windows-v*` pre-release tag so
+  `/releases/latest` stays the macOS DMG for the macOS updater.
 - **Both ports now refuse to convert a typo** (August 2026). The resolver used to reason "not a word
   here, a word there, therefore wrong keyboard", which cannot express the likelier explanation — you
   mistyped your own language — so it converted typos and took the layout with them. A user left over
@@ -371,8 +395,11 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   report as a missing entry first, and add it with a coverage case. Bulgarian and Serbian have no
   list at all and fall through to the dictionary alone, which is the pre-fix behaviour.
 - **Lone short messages** ("Hi", "no", "так" as the whole message) still need the trigger: the held
-  run wants two short words, and the vowel-less extension measured 8/76 false conversions
-  (`VowelLessHeldWordMeasurement` prints the number every run; flip the constant if it ever reads 0).
+  run wants two short words. The **vowel-less** slice of this is now fixed on Windows — a lone word
+  with no vowel of the typed language (`щт`/on) settles on its own since 0.7.0, admitted at the 0/76
+  the rule was always gated behind. Words with vowels still wait. **macOS keeps it off at 2/76**, so
+  the two ports deliberately differ here; `VowelLessHeldWordTests` reprints both numbers every run,
+  and the macOS constant flips the day its fixture reads zero.
 - **Package size** — 94% of the 46.7 MB Windows package is the bundled .NET + WinUI runtime;
   dictionaries are 5%. Trimming measures at **68% off** (45.9 → 14.5 MB compressed) and breaks three
   things, two of them silently — most seriously browser password-field detection, because

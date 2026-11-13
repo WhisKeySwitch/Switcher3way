@@ -4,8 +4,31 @@ using Switcher3way.Dictionaries;
 
 namespace Switcher3way.App;
 
+/// <summary>
+/// Which path applied a conversion. The on-screen feedback treats them alike; anything counting how
+/// useful the app has been must not, because the manual cycle raises one of these per *step* and
+/// three taps to reach the right language would otherwise score three.
+///
+/// A trigger tap that fixes a word does count as the app being useful — a field log over eight days
+/// of ordinary use found 66 manual conversions against 48 automatic ones, so excluding them measures
+/// well under half of what the app does, and under-measures hardest for the people using it most.
+/// What must not count is the second and third tap of the same cycle, which is one fix being steered,
+/// not several fixes.
+/// </summary>
+internal enum ConversionSource
+{
+    /// <summary>The ordinary auto-fix at a word boundary.</summary>
+    Auto,
+    /// <summary>A retro-correction: an earlier segment rewritten once the phrase settled.</summary>
+    Retro,
+    /// <summary>The first application of a manual trigger — one fix the user asked for.</summary>
+    Manual,
+    /// <summary>A further tap cycling to another candidate. Feedback only; the same fix, restated.</summary>
+    ManualCycleStep,
+}
+
 /// <summary>A successful conversion, for the on-screen feedback (caret chip / toast).</summary>
-internal sealed record ConversionInfo(string Original, string Converted, string Lang);
+internal sealed record ConversionInfo(string Original, string Converted, string Lang, ConversionSource Source);
 
 /// <summary>Empty override list (used by the self-test).</summary>
 internal sealed class EmptyAlwaysConvert : IAlwaysConvertList
@@ -65,10 +88,22 @@ internal sealed class Engine
     public event Action<string>? Notify;
     private DateTime _lastNotify = DateTime.MinValue;
 
+    /// <summary>
+    /// When a key was last seen, so a surface that takes focus can wait for the user to stop typing.
+    /// Written from the hook thread and read from the UI thread; a <c>long</c> tick count rather than a
+    /// <see cref="DateTime"/> field so the read can never tear.
+    /// </summary>
+    private long _lastKeyTicks = DateTime.UtcNow.Ticks;
+    private DateTime _lastKeyUtc { set => Interlocked.Exchange(ref _lastKeyTicks, value.Ticks); }
+
+    /// <summary>Seconds since the last keystroke the hook saw.</summary>
+    public double SecondsSinceKeystroke =>
+        (DateTime.UtcNow - new DateTime(Interlocked.Read(ref _lastKeyTicks), DateTimeKind.Utc)).TotalSeconds;
+
     /// <summary>A conversion that reached the screen: what was typed, what replaced it, target language.</summary>
     public event Action<ConversionInfo>? Converted;
-    private void RaiseConverted(string original, string converted, string layoutId) =>
-        Converted?.Invoke(new ConversionInfo(original.TrimEnd(), converted.TrimEnd(), LangOf(layoutId)));
+    private void RaiseConverted(string original, string converted, string layoutId, ConversionSource source) =>
+        Converted?.Invoke(new ConversionInfo(original.TrimEnd(), converted.TrimEnd(), LangOf(layoutId), source));
 
     /// <summary>
     /// A conversion the user undid: the text and layout are back to what they typed. Carries the
@@ -170,7 +205,7 @@ internal sealed class Engine
                 _work.Add(() => AutoConvert(word, boundary));
         };
         _monitor.TriggerPressed += OnTrigger;
-        _monitor.Typed += () => { lock (_cycleLock) _cycle = null; };
+        _monitor.Typed += () => { lock (_cycleLock) _cycle = null; _lastKeyUtc = DateTime.UtcNow; };
         _monitor.ForegroundChanged += hwnd => _work.Add(() => OnForegroundChanged(hwnd));
         // Phrase resets/extra-spaces are marshaled onto the worker so all tracker mutation is single-threaded.
         _monitor.PhraseReset += () => _work.Add(ResetPhrase);
@@ -407,7 +442,7 @@ internal sealed class Engine
             var path = LayoutSwitcher.SwitchForeground(d.TargetLayoutId);
             Diagnostics.Log($"  auto: \"{d.Original}\" -> \"{d.Converted}\" [{LangLabel(d.TargetLayoutId)}] via {path} : {res}");
             _phrase.Record(word, d.Converted, 1, kind, gen);
-            RaiseConverted(d.Original, d.Converted, d.TargetLayoutId);
+            RaiseConverted(d.Original, d.Converted, d.TargetLayoutId, ConversionSource.Auto);
             SeedCancelCycle(d.Original, d.Converted, boundary, d.TargetLayoutId, prevLayout);
         }
         else if (res == TextRewriter.Result.Aborted)
@@ -459,7 +494,7 @@ internal sealed class Engine
             _settledLang = lang;
             _heldLang = null;
             _heldRun = 0;
-            RaiseConverted(corr.OldSegment.TrimEnd(), corr.NewSegment.TrimEnd(), layoutId);
+            RaiseConverted(corr.OldSegment.TrimEnd(), corr.NewSegment.TrimEnd(), layoutId, ConversionSource.Retro);
             SeedCancelCycle(corr.OldSegment.TrimEnd(), corr.NewSegment.TrimEnd(), ' ', layoutId, prevLayout);
         }
         else
@@ -484,7 +519,7 @@ internal sealed class Engine
             Diagnostics.Log($"  auto: phrase -> [{LangLabel(d.TargetLayoutId)}] \"{newSeg.TrimEnd()}\" via {path} : {res}");
             _phrase.Confirm(corr, gen);
             _phrase.Record(word, d.Converted, 1, new PhraseTracker.WordKind.Locked(lang), gen);
-            RaiseConverted(d.Original, d.Converted, d.TargetLayoutId);
+            RaiseConverted(d.Original, d.Converted, d.TargetLayoutId, ConversionSource.Retro);
             // One trigger tap cancels the whole segment, not just the last word.
             SeedCancelCycle(corr.OldSegment + d.Original, corr.NewSegment + d.Converted, boundary,
                             d.TargetLayoutId, prevLayout);
@@ -740,8 +775,12 @@ internal sealed class Engine
             NotifyFailure(res);
             return;
         }
-        // Feedback on manual conversions too, but not on the final restore-to-original step.
-        else if (!restore) RaiseConverted(cyc.Plan.Original, text, targetId);
+        // Feedback on manual conversions too, but not on the final restore-to-original step. Only the
+        // first step is a fix; the rest are the user steering the same fix through the candidates, and
+        // counting each of them would score one trigger tap three times.
+        else if (!restore)
+            RaiseConverted(cyc.Plan.Original, text, targetId,
+                           cyc.Step == 0 ? ConversionSource.Manual : ConversionSource.ManualCycleStep);
         // The restore step is the user rejecting a conversion — the moment to offer to remember it.
         // The first candidate is what had been on screen, so that is the word to suppress.
         else if (cyc.Plan.Candidates.Count > 0)
