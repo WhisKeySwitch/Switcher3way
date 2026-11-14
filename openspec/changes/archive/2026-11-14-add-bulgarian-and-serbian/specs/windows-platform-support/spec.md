@@ -11,6 +11,10 @@ Adding a language SHALL NOT reduce detection quality for the languages already s
 - **WHEN** the application validates a candidate word
 - **THEN** it SHALL consult the bundled dictionaries only, without network access
 
+#### Scenario: Validate without installed OS language packs
+- **WHEN** the target language's operating-system spellcheck feature is not installed
+- **THEN** the system SHALL still validate words for that language using the bundled dictionaries
+
 #### Scenario: A language's shape rules are supplied with its dictionary
 - **WHEN** a language is bundled
 - **THEN** the data its heuristics depend on — the letters it uses and which of them are vowels — SHALL be supplied for that language, since a heuristic that silently has no data for a language answers for it anyway
