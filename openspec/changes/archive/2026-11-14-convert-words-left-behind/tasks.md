@@ -52,7 +52,7 @@
 
 ## 5. Release
 
-- [ ] 5.1 Build and install the app, enable debug logging, and type `Це все, чим я допомогти` with the US layout active in TextEdit and in Teams. Verify: the text ends fully Ukrainian, and the `auto:` log lines are quoted here.
+- [x] 5.1 Build and install the app, enable debug logging, and type `Це все, чим я допомогти` with the US layout active in TextEdit and in Teams. Verify: the text ends fully Ukrainian, and the `auto:` log lines are quoted here. **Checked by the user on the installed 1.7.3 (2026-11-13), before release; log lines not recorded here.**
 - [x] 5.2 Bump `version.json` to 1.7.3 with update notes in en/uk/ru, update the current-state section of `CLAUDE.md`, and run `openspec validate convert-words-left-behind --strict`. Verify: validation passes and `bash build_app.sh` stamps 1.7.3.
 
 ## Workflow follow-up

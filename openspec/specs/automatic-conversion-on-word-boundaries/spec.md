@@ -3,7 +3,9 @@
 ## Purpose
 
 The system SHALL automatically detect likely incorrect-layout words at word boundaries and SHALL perform a conversion only when the input passes the configured safety gates.
+
 ## Requirements
+
 ### Requirement: Evaluate words at word boundaries
 The system SHALL inspect the current word when a word boundary is detected and evaluate it for possible automatic conversion.
 
@@ -18,11 +20,21 @@ The system SHALL inspect the current word when a word boundary is detected and e
 ### Requirement: Apply safety gates before converting
 The system SHALL reject automatic conversion for words whose letter core is a single letter, looks like an acronym or code identifier, or is otherwise excluded by policy. The safety gates SHALL be evaluated against the word's letter core — the input with leading and trailing non-letter characters removed — so that attached punctuation does not by itself prevent conversion.
 
+An apostrophe or hyphen *inside* the letter core SHALL NOT by itself fail the gates: contractions and hyphenated words (`you're`, `it's`, `кто-то`, `будь-ласка`) are ordinary words of the languages the app serves, and the same words already pass when typed in their own layout. Any other non-letter inside the core — a digit, a slash, an underscore — SHALL still be treated as code and rejected.
+
 The case-dependent vetoes SHALL be distinguished from the case-independent one. The all-caps veto and the internal-capital (camelCase) veto SHALL be skipped while Caps Lock is active, because under Caps Lock every letter is uppercase and neither signal carries information. The mixed-script veto — Latin and Cyrillic letters in the same token — SHALL be applied regardless of Caps Lock, because a token drawn from two alphabets is a code identifier whatever the shift state was.
 
 #### Scenario: Reject single-letter or code-like input
 - **WHEN** the typed input's letter core is a single letter, all caps, mixed-script, or otherwise matches the soft-gate exclusions
 - **THEN** the system SHALL leave the text unchanged
+
+#### Scenario: A contraction or hyphenated word passes the gates
+- **WHEN** the typed input renders in an alternative language as a word whose letter core contains an internal apostrophe or hyphen and is valid there (for example `You're` typed on a Cyrillic layout, or `Кто-то` typed on the Latin one)
+- **THEN** the system SHALL evaluate it for conversion exactly as it would a plain word, and SHALL convert it when it is valid in exactly one alternative language
+
+#### Scenario: Other internal punctuation is still code
+- **WHEN** the typed input's letter core contains an internal digit, slash, dot, or underscore
+- **THEN** the system SHALL reject it as a code identifier and leave the text unchanged
 
 #### Scenario: Mixed-script token with Caps Lock active
 - **WHEN** the input's letter core contains both Latin and Cyrillic letters and Caps Lock is active
@@ -67,7 +79,7 @@ The system SHALL change the active keyboard layout as a consequence of an automa
 - **THEN** the system SHALL switch to the target layout and update the status icon
 
 ### Requirement: Resolve ambiguous words by preferred language
-The system SHALL convert a word that is not valid in the current (typed) language but valid in more than one other installed language to the *preferred ambiguity language* configured in settings, instead of leaving it unchanged. When the setting is "do not convert", the system SHALL keep today's behavior and leave ambiguous words untouched. When the current phrase is already locked to a language (see phrase correction below), that locked language SHALL take precedence over the setting (unless the setting is "do not convert").
+The system SHALL convert a word that is not valid in the current (typed) language but valid in more than one other installed language to the *preferred ambiguity language* configured in settings, instead of leaving it unchanged. When the setting is "do not convert", the system SHALL keep today's behavior and leave ambiguous words untouched. When the current phrase is already locked to a language (see phrase correction below) **and that language is one of the word's candidates**, the locked language SHALL take precedence over the setting (unless the setting is "do not convert"). When the phrase is locked to a language that is *not* among the candidates — the phrase reads as English and the word is valid in Ukrainian and Russian — the lock says nothing about which candidate is right, and the system SHALL fall back to the configured preference.
 
 #### Scenario: Ambiguous word converts to the preferred language
 - **WHEN** the user types a word in the wrong layout whose letter core is valid in both Ukrainian and Russian (e.g. «добре») and the preferred ambiguity language is Ukrainian
@@ -81,8 +93,12 @@ The system SHALL convert a word that is not valid in the current (typed) languag
 - **WHEN** the current phrase already contains a word valid in exactly one language (e.g. a ru-only word) and a new ambiguous word is typed in the wrong layout
 - **THEN** the system SHALL convert the ambiguous word to the phrase's locked language, even if the preference names another language
 
+#### Scenario: A lock outside the candidates yields to the preference
+- **WHEN** the current phrase is locked to a language that is not one of the ambiguous word's candidate languages (e.g. locked to English, word valid in Ukrainian and Russian) and the preference is a language
+- **THEN** the system SHALL convert the word to the preferred language, mark it as a defaulted conversion, and record in the log that the preference was used because the lock was not a candidate
+
 ### Requirement: Correct defaulted words when the phrase language is disambiguated
-The system SHALL track the words typed since the last hard reset (Enter, Tab, arrows, mouse click, app or focus switch — the same events that reset the word buffer) as the current phrase. When a word valid in exactly one language arrives and the phrase contains words previously converted by the ambiguity default to a *different* language, the system SHALL re-convert those defaulted words to the newly established language in a single text replacement together with the current word, and switch the layout to it. If the phrase also contains a word locked to a conflicting language, the system SHALL NOT re-convert anything (contradictory phrase — precision-first). Words that were not defaulted (valid in the typed language, kept, or already locked) SHALL keep their on-screen text during the correction.
+The system SHALL track the words typed since the last hard reset (Enter, Tab, arrows, mouse click, app or focus switch — the same events that reset the word buffer) as the current phrase. When a word valid in exactly one language arrives and the phrase contains words previously converted by the ambiguity default to a *different* language, the system SHALL re-convert those defaulted words to the newly established language in a single text replacement together with the current word, and switch the layout to it. If the phrase also contains a word locked to a conflicting language, the system SHALL NOT re-convert anything (contradictory phrase — precision-first). Words valid in the language they were typed in, and words already locked, SHALL keep their on-screen text during the correction. A word that was left alone because it is not a word in the language it was typed in — including a single letter, which is never judged alone — SHALL be converted with the segment when the correction already spans it, and SHALL NOT by itself start a correction.
 
 #### Scenario: Russian-only word re-converts earlier defaulted words
 - **WHEN** the phrase contains words defaulted to Ukrainian (e.g. «добре») and the user then types a word valid only in Russian in the wrong layout
@@ -99,6 +115,18 @@ The system SHALL track the words typed since the last hard reset (Enter, Tab, ar
 #### Scenario: Phrase correction is undoable
 - **WHEN** a phrase correction has replaced a segment and the user activates the manual trigger with no input in between
 - **THEN** the system SHALL restore the segment's previous on-screen text and the pre-correction layout, following the standard conversion-undo cycle
+
+#### Scenario: A word nobody recognised is not left behind inside a correction
+- **WHEN** the user, on the English layout, types the keys of `Це все, чим я допомогти`, the words before `чим` are held, `чим` was left alone as not a word anywhere, `я` was left alone as a single letter, and `допомогти` then converts to Ukrainian with a phrase correction
+- **THEN** the corrected segment SHALL read `Це все, чим я допомогти` in the Ukrainian layout, with no Latin word left between the converted ones
+
+#### Scenario: A word nobody recognised does not start a correction
+- **WHEN** the phrase's only earlier word is one left alone as not a word anywhere (an English typo such as `Exchanfe`), with no held or defaulted word before it, and the next word converts to Ukrainian
+- **THEN** the system SHALL convert only the current word and SHALL leave the earlier unrecognised word as typed
+
+#### Scenario: A word valid where it was typed stays as typed
+- **WHEN** a correction spans a word that was left alone because it is valid in the language it was typed in
+- **THEN** the system SHALL reproduce that word's on-screen text unchanged
 
 ### Requirement: Defer in remote or secure contexts
 The system SHALL avoid automatic conversion when the active context is a secure input field, a control
@@ -185,4 +213,3 @@ The plausibility test SHALL be derived from measurement over a fixture of real t
 #### Scenario: A rescued word remains manually reversible
 - **WHEN** a word was converted by the rescue path and the user taps the manual trigger
 - **THEN** the system SHALL cycle the word back through the candidate layouts to its original form, exactly as for any other automatic conversion
-
