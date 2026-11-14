@@ -390,8 +390,7 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   releases (`switcher3way-releases`), modernized UI (toolbar-tab
   Settings, onboarding checklist, status-first menu with Pause), stable signing, abort-safe
   retype with phrase-aware ambiguity resolution.
-- **Windows — Store on 0.7.0; 0.7.1 built and awaiting submission** (November 2026). 0.7.0 is live
-  and installed from the Store on the dev machine (Store-signed, Oct 12). It carries the rating feature
+- **Windows — 0.7.1 live on the Store** (November 2026). 0.7.0 before it carries the rating feature
   (`openspec/changes/ask-for-a-store-review`) — an in-app "Rate Switcher3way" entry plus a once-ever
   ask gated on 75 conversions / 5 active days / 14 days installed — and the **vowel-less held-word
   rule switched on**, which had been waiting since 1.6.0 for its fixture to read zero and now does
@@ -402,7 +401,7 @@ permission state. `rslog(...)` is the logger; auto-convert decisions log as `aut
   before and after: recall 57.5% / 69.9%, 0 mangled paragraphs, uk typos 1/1399, en typos 1/1049,
   short typos 0/403, vowel-less 0/76 (247 tests). The package is
   `windows/dist/Switcher3way-0.7.1-x64-store.msix`, identity verified as 0.7.1.0 by reading the
-  manifest out of the artifact. The MSI channel still sits at 0.6.1 and is a separate decision.
+  manifest out of the artifact, and is live on the Store since November 2026. The MSI channel still sits at 0.6.1 and is a separate decision.
   Earlier: 0.4.0 (August 2026), the typo-guard release, reached the Store only after three
   certification failures on 10.1.2.10 Functionality — silent trigger, then injected input being
   discarded, then notifications dropped entirely in the packaged build. The lesson from all three:
