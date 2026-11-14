@@ -28,3 +28,6 @@ windows/publish/
 # Python bytecode from windows/tools/*.py
 __pycache__/
 *.pyc
+
+# App Store build output (packages, signed bundle, provisioning profile)
+/dist/
