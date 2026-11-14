@@ -3,7 +3,9 @@
 ## Purpose
 
 The system SHALL automatically detect likely incorrect-layout words at word boundaries and SHALL perform a conversion only when the input passes the configured safety gates.
+
 ## Requirements
+
 ### Requirement: Evaluate words at word boundaries
 The system SHALL inspect the current word when a word boundary is detected and evaluate it for possible automatic conversion.
 
@@ -82,7 +84,7 @@ The system SHALL convert a word that is not valid in the current (typed) languag
 - **THEN** the system SHALL convert the ambiguous word to the phrase's locked language, even if the preference names another language
 
 ### Requirement: Correct defaulted words when the phrase language is disambiguated
-The system SHALL track the words typed since the last hard reset (Enter, Tab, arrows, mouse click, app or focus switch — the same events that reset the word buffer) as the current phrase. When a word valid in exactly one language arrives and the phrase contains words previously converted by the ambiguity default to a *different* language, the system SHALL re-convert those defaulted words to the newly established language in a single text replacement together with the current word, and switch the layout to it. If the phrase also contains a word locked to a conflicting language, the system SHALL NOT re-convert anything (contradictory phrase — precision-first). Words that were not defaulted (valid in the typed language, kept, or already locked) SHALL keep their on-screen text during the correction.
+The system SHALL track the words typed since the last hard reset (Enter, Tab, arrows, mouse click, app or focus switch — the same events that reset the word buffer) as the current phrase. When a word valid in exactly one language arrives and the phrase contains words previously converted by the ambiguity default to a *different* language, the system SHALL re-convert those defaulted words to the newly established language in a single text replacement together with the current word, and switch the layout to it. If the phrase also contains a word locked to a conflicting language, the system SHALL NOT re-convert anything (contradictory phrase — precision-first). Words valid in the language they were typed in, and words already locked, SHALL keep their on-screen text during the correction. A word that was left alone because it is not a word in the language it was typed in — including a single letter, which is never judged alone — SHALL be converted with the segment when the correction already spans it, and SHALL NOT by itself start a correction.
 
 #### Scenario: Russian-only word re-converts earlier defaulted words
 - **WHEN** the phrase contains words defaulted to Ukrainian (e.g. «добре») and the user then types a word valid only in Russian in the wrong layout
@@ -99,6 +101,18 @@ The system SHALL track the words typed since the last hard reset (Enter, Tab, ar
 #### Scenario: Phrase correction is undoable
 - **WHEN** a phrase correction has replaced a segment and the user activates the manual trigger with no input in between
 - **THEN** the system SHALL restore the segment's previous on-screen text and the pre-correction layout, following the standard conversion-undo cycle
+
+#### Scenario: A word nobody recognised is not left behind inside a correction
+- **WHEN** the user, on the English layout, types the keys of `Це все, чим я допомогти`, the words before `чим` are held, `чим` was left alone as not a word anywhere, `я` was left alone as a single letter, and `допомогти` then converts to Ukrainian with a phrase correction
+- **THEN** the corrected segment SHALL read `Це все, чим я допомогти` in the Ukrainian layout, with no Latin word left between the converted ones
+
+#### Scenario: A word nobody recognised does not start a correction
+- **WHEN** the phrase's only earlier word is one left alone as not a word anywhere (an English typo such as `Exchanfe`), with no held or defaulted word before it, and the next word converts to Ukrainian
+- **THEN** the system SHALL convert only the current word and SHALL leave the earlier unrecognised word as typed
+
+#### Scenario: A word valid where it was typed stays as typed
+- **WHEN** a correction spans a word that was left alone because it is valid in the language it was typed in
+- **THEN** the system SHALL reproduce that word's on-screen text unchanged
 
 ### Requirement: Defer in remote or secure contexts
 The system SHALL avoid automatic conversion when the active context is a secure input field, a control
@@ -185,4 +199,3 @@ The plausibility test SHALL be derived from measurement over a fixture of real t
 #### Scenario: A rescued word remains manually reversible
 - **WHEN** a word was converted by the rescue path and the user taps the manual trigger
 - **THEN** the system SHALL cycle the word back through the candidate layouts to its original form, exactly as for any other automatic conversion
-
